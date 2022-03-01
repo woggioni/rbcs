@@ -1,0 +1,66 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'application'
+    id 'maven-publish'
+}
+
+group = 'net.woggioni'
+
+version = '0.1'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: getProperty('slf4j.version')
+    implementation group: 'com.h2database', name: 'h2', version: getProperty('h2.version')
+    implementation group: 'io.netty', name: 'netty-codec-http', version: getProperty('netty.version')
+
+    runtimeOnly group: 'org.slf4j', name: 'slf4j-simple', version: getProperty('slf4j.version')
+
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: getProperty('junit.jupiter.version')
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-params', version: getProperty('junit.jupiter.version')
+    testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: getProperty('junit.jupiter.version')
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+if(JavaVersion.current() > JavaVersion.VERSION_1_8) {
+    tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME) {
+        options.release = 8
+    }
+}
+
+//lombok {
+//    version = getProperty('lombok.version')
+//}
+
+run {
+    systemProperty 'org.slf4j.simpleLogger.defaultLogLevel', 'trace'
+}
+
+application {
+    mainClassName = 'net.woggioni.gcs.GradleBuildCacheServer'
+}
+
+wrapper {
+    distributionType = Wrapper.DistributionType.BIN
+    gradleVersion = getProperty('gradle.version')
+}
+
+publishing {
+    repositories {
+        maven {
+            url = 'https://mvn.woggioni.net/'
+        }
+    }
+    publications {
+        maven(MavenPublication) {
+            from(components["java"])
+        }
+    }
+}

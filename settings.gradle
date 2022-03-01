@@ -1,0 +1,15 @@
+pluginManagement {
+    repositories {
+        maven {
+            url = 'https://woggioni.net/mvn/'
+        }
+        gradlePluginPortal()
+    }
+
+    plugins {
+        id "net.woggioni.gradle.lombok" version "0.1"
+        id 'org.jetbrains.kotlin.jvm' version getProperty('kotlin.version')
+    }
+}
+
+rootProject.name = 'gbcs'
