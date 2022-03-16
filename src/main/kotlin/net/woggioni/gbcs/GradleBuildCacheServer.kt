@@ -1,4 +1,4 @@
-package net.woggioni.gcs
+package net.woggioni.gbcs
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.ByteBuf
@@ -9,11 +9,9 @@ import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
-import io.netty.channel.ChannelOutboundHandlerAdapter
 import io.netty.channel.ChannelPromise
 import io.netty.channel.DefaultFileRegion
 import io.netty.channel.EventLoopGroup
-import io.netty.channel.FileRegion
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
@@ -22,7 +20,6 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse
 import io.netty.handler.codec.http.DefaultHttpContent
 import io.netty.handler.codec.http.DefaultHttpResponse
 import io.netty.handler.codec.http.FullHttpRequest
-import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpContentCompressor
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
@@ -54,19 +51,19 @@ class GradleBuildCacheServer {
     internal class HttpChunkContentCompressor(threshold : Int, vararg  compressionOptions: CompressionOptions = emptyArray())
         : HttpContentCompressor(threshold, *compressionOptions) {
         override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise) {
-            var msg: Any? = msg
-            if (msg is ByteBuf) {
+            var message: Any? = msg
+            if (message is ByteBuf) {
                 // convert ByteBuf to HttpContent to make it work with compression. This is needed as we use the
                 // ChunkedWriteHandler to send files when compression is enabled.
-                val buff = msg
+                val buff = message
                 if (buff.isReadable) {
                     // We only encode non empty buffers, as empty buffers can be used for determining when
                     // the content has been flushed and it confuses the HttpContentCompressor
                     // if we let it go
-                    msg = DefaultHttpContent(buff)
+                    message = DefaultHttpContent(buff)
                 }
             }
-            super.write(ctx, msg, promise)
+            super.write(ctx, message, promise)
         }
     }
 
@@ -267,6 +264,7 @@ class GradleBuildCacheServer {
         private const val HTTP_PORT = 8080
         @JvmStatic
         fun main(args: Array<String>) {
+            Thread.currentThread().contextClassLoader = GradleBuildCacheServer::class.java.classLoader
             GradleBuildCacheServer().run()
         }
 

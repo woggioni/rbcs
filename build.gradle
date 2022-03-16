@@ -1,12 +1,14 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm'
-    id 'application'
+    id 'net.woggioni.gradle.envelope'
     id 'maven-publish'
 }
 
+import net.woggioni.gradle.envelope.EnvelopeJarTask
+
 group = 'net.woggioni'
 
-version = '0.1'
+version = getProperty('gbcs.version')
 
 repositories {
     mavenCentral()
@@ -16,7 +18,7 @@ dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-api', version: getProperty('slf4j.version')
     implementation group: 'io.netty', name: 'netty-codec-http', version: getProperty('netty.version')
 
-    runtimeOnly group: 'org.slf4j', name: 'slf4j-simple', version: getProperty('slf4j.version')
+    runtimeOnly group: 'org.slf4j', name: 'slf4j-jdk14', version: getProperty('slf4j.version')
 
     testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: getProperty('junit.jupiter.version')
     testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-params', version: getProperty('junit.jupiter.version')
@@ -24,27 +26,30 @@ dependencies {
 }
 
 java {
-    withJavadocJar()
     withSourcesJar()
 }
 
-if(JavaVersion.current() > JavaVersion.VERSION_1_8) {
-    tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME) {
-        options.release = 8
-    }
+tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
+    modularity.inferModulePath = true
+    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs=' + project.sourceSets.main.output.asPath
+    options.release = 11
 }
 
-run {
-    systemProperty 'org.slf4j.simpleLogger.defaultLogLevel', 'trace'
-}
-
-application {
-    mainClassName = 'net.woggioni.gcs.GradleBuildCacheServer'
+Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', EnvelopeJarTask.class) {
+    mainModule = 'net.woggioni.gbcs'
+    mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
+    systemProperty 'java.util.logging.config.class', 'net.woggioni.gbcs.LoggingConfig'
+    systemProperty 'log.config.source', 'logging.properties'
 }
 
 wrapper {
     distributionType = Wrapper.DistributionType.BIN
     gradleVersion = getProperty('gradle.version')
+}
+
+def envelopeJarArtifact = artifacts.add('archives', envelopeJarTaskProvider.get().archiveFile.get().asFile) {
+    type = 'jar'
+    builtBy envelopeJarTaskProvider
 }
 
 publishing {
@@ -55,7 +60,7 @@ publishing {
     }
     publications {
         maven(MavenPublication) {
-            from(components["java"])
+            artifact envelopeJarArtifact
         }
     }
 }

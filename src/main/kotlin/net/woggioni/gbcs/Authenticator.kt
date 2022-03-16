@@ -1,4 +1,4 @@
-package net.woggioni.gcs
+package net.woggioni.gbcs
 
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelFutureListener

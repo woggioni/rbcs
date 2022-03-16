@@ -1,9 +1,15 @@
-package net.woggioni.gcs
+package net.woggioni.gbcs
 
 import io.netty.channel.ChannelHandlerContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.logging.LogManager
+
+
+
 
 inline fun <reified T> T.contextLogger() = LoggerFactory.getLogger(T::class.java)
 
@@ -103,5 +109,26 @@ inline fun log(log : Logger, ctx : ChannelHandlerContext,
     if(log.filter()) {
         val clientAddress = (ctx.channel().remoteAddress() as InetSocketAddress).address.hostAddress
         log.loggerMethod(clientAddress + " - " + messageBuilder())
+    }
+}
+
+
+class LoggingConfig {
+
+    init {
+        val logManager = LogManager.getLogManager()
+        System.getProperty("log.config.source")?.let withSource@ { source ->
+            val urls = LoggingConfig::class.java.classLoader.getResources(source)
+            while(urls.hasMoreElements()) {
+                val url = urls.nextElement()
+                url.openStream().use { inputStream ->
+                    logManager.readConfiguration(inputStream)
+                    return@withSource
+                }
+            }
+            Path.of(source).takeIf(Files::exists)
+                ?.let(Files::newInputStream)
+                ?.use(logManager::readConfiguration)
+        }
     }
 }

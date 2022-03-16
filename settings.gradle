@@ -1,13 +1,20 @@
 pluginManagement {
     repositories {
         maven {
+            content {
+                includeModule 'net.woggioni.gradle', 'envelope'
+                includeModule 'net.woggioni.gradle.envelope', 'net.woggioni.gradle.envelope.gradle.plugin'
+                includeModule 'net.woggioni.gradle', 'lombok'
+                includeModule 'net.woggioni.gradle.lombok', 'net.woggioni.gradle.lombok.gradle.plugin'
+            }
             url = 'https://woggioni.net/mvn/'
         }
         gradlePluginPortal()
     }
 
     plugins {
-        id "net.woggioni.gradle.lombok" version "0.1"
+        id "net.woggioni.gradle.lombok" version getProperty('lombok.gradle.plugin.version')
+        id "net.woggioni.gradle.envelope" version getProperty('envelope.gradle.plugin.version')
         id 'org.jetbrains.kotlin.jvm' version getProperty('kotlin.version')
     }
 }
