@@ -11,10 +11,17 @@ group = 'net.woggioni'
 version = getProperty('gbcs.version')
 
 repositories {
+    maven {
+        url = 'https://woggioni.net/mvn'
+        content {
+            includeModule 'net.woggioni', 'jwo'
+        }
+    }
     mavenCentral()
 }
 
 dependencies {
+    implementation group: 'net.woggioni', name: 'jwo', version: getProperty('jwo.version')
     implementation group: 'org.slf4j', name: 'slf4j-api', version: getProperty('slf4j.version')
     implementation group: 'io.netty', name: 'netty-codec-http', version: getProperty('netty.version')
 

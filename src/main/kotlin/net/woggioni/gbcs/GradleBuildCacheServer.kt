@@ -34,10 +34,12 @@ import io.netty.handler.stream.ChunkedNioFile
 import io.netty.handler.stream.ChunkedWriteHandler
 import io.netty.util.concurrent.DefaultEventExecutorGroup
 import io.netty.util.concurrent.EventExecutorGroup
+import net.woggioni.jwo.JWO
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
 import java.util.AbstractMap.SimpleEntry
@@ -208,8 +210,15 @@ class GradleBuildCacheServer {
                     }
                     val content = msg.content()
                     val file = cacheDir.resolve(digestString(key.toByteArray()))
-                    Files.newOutputStream(file).use {
-                        content.readBytes(it, content.readableBytes())
+                    val tmpFile = Files.createTempFile(cacheDir, null, ".tmp")
+                    try {
+                        Files.newOutputStream(tmpFile).use {
+                            content.readBytes(it, content.readableBytes())
+                        }
+                        Files.move(tmpFile, file, StandardCopyOption.ATOMIC_MOVE)
+                    } catch (t : Throwable) {
+                        Files.delete(tmpFile)
+                        throw t
                     }
                     val response = DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.CREATED,
                             Unpooled.copiedBuffer(key.toByteArray()))
@@ -268,18 +277,6 @@ class GradleBuildCacheServer {
             GradleBuildCacheServer().run()
         }
 
-        private val hexArray = "0123456789ABCDEF".toCharArray()
-
-        fun bytesToHex(bytes: ByteArray): String {
-            val hexChars = CharArray(bytes.size * 2)
-            for (j in bytes.indices) {
-                val v: Int = bytes[j].toInt().and(0xFF)
-                hexChars[j * 2] = hexArray[v ushr 4]
-                hexChars[j * 2 + 1] = hexArray[v and 0x0F]
-            }
-            return String(hexChars)
-        }
-
         fun digest(data : ByteArray,
                    md : MessageDigest = MessageDigest.getInstance("MD5")) : ByteArray {
             md.update(data)
@@ -288,7 +285,7 @@ class GradleBuildCacheServer {
 
         fun digestString(data : ByteArray,
                    md : MessageDigest = MessageDigest.getInstance("MD5")) : String {
-            return bytesToHex(digest(data, md))
+            return JWO.bytesToHex(digest(data, md))
         }
     }
 }
