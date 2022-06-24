@@ -5,6 +5,7 @@ plugins {
 }
 
 import net.woggioni.gradle.envelope.EnvelopeJarTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = 'net.woggioni'
 
@@ -15,21 +16,24 @@ repositories {
         url = 'https://woggioni.net/mvn'
         content {
             includeModule 'net.woggioni', 'jwo'
+            includeGroup 'com.lys'
         }
     }
     mavenCentral()
 }
 
 dependencies {
-    implementation group: 'net.woggioni', name: 'jwo', version: getProperty('jwo.version')
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: getProperty('slf4j.version')
-    implementation group: 'io.netty', name: 'netty-codec-http', version: getProperty('netty.version')
+    implementation platform(group: 'com.lys', name: 'lys-dependencies', version: getProperty('lys.version'))
 
-    runtimeOnly group: 'org.slf4j', name: 'slf4j-jdk14', version: getProperty('slf4j.version')
+    implementation group: 'net.woggioni', name: 'jwo'
+    implementation group: 'org.slf4j', name: 'slf4j-api'
+    implementation group: 'io.netty', name: 'netty-codec-http'
 
-    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: getProperty('junit.jupiter.version')
-    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-params', version: getProperty('junit.jupiter.version')
-    testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: getProperty('junit.jupiter.version')
+    runtimeOnly group: 'org.slf4j', name: 'slf4j-jdk14'
+
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api'
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-params'
+    testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine'
 }
 
 java {
@@ -39,7 +43,13 @@ java {
 tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
     modularity.inferModulePath = true
     options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs=' + project.sourceSets.main.output.asPath
-    options.release = 11
+    options.release = 17
+}
+
+tasks.named("compileKotlin", KotlinCompile.class) {
+    kotlinOptions {
+        jvmTarget = 17
+    }
 }
 
 Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', EnvelopeJarTask.class) {
