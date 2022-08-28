@@ -1,6 +1,6 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm'
-    id 'net.woggioni.gradle.envelope'
+    alias catalog.plugins.kotlin
+    alias catalog.plugins.envelope
     id 'maven-publish'
 }
 
@@ -23,17 +23,15 @@ repositories {
 }
 
 dependencies {
-    implementation platform(group: 'com.lys', name: 'lys-dependencies', version: getProperty('lys.version'))
+    implementation catalog.jwo
+    implementation catalog.slf4j.api
+    implementation catalog.netty.codec.http
 
-    implementation group: 'net.woggioni', name: 'jwo'
-    implementation group: 'org.slf4j', name: 'slf4j-api'
-    implementation group: 'io.netty', name: 'netty-codec-http'
+    runtimeOnly catalog.slf4j.jdk14
 
-    runtimeOnly group: 'org.slf4j', name: 'slf4j-jdk14'
-
-    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api'
-    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-params'
-    testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine'
+    testImplementation catalog.junit.jupiter.api
+    testImplementation catalog.junit.jupiter.params
+    testRuntimeOnly catalog.junit.jupiter.engine
 }
 
 java {
