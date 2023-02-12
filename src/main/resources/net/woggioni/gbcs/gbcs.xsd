@@ -1,8 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xs:schema elementFormDefault="qualified" targetNamespace="urn:gradle-build-cache-server" version="1.0"
            xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gbcs="urn:gradle-build-cache-server">
     <xs:element name="server" type="gbcs:serverType"/>
+
     <xs:complexType name="serverType">
         <xs:sequence minOccurs="0">
             <xs:element name="bind" type="gbcs:bindType"/>
@@ -10,6 +11,7 @@
             <xs:element name="groups" type="gbcs:groupsType"/>
             <xs:element name="tls" type="gbcs:tlsType"/>
         </xs:sequence>
+        <xs:attribute name="path" type="xs:string"/>
     </xs:complexType>
 
     <xs:complexType name="bindType">
@@ -39,28 +41,28 @@
     </xs:complexType>
 
     <xs:complexType name="tlsType">
-        <xs:attribute name="name" type="xs:string" use="required"/>
-    </xs:complexType>
-
-
-    <xs:complexType name="instancesType">
-        <xs:sequence>
-            <xs:element maxOccurs="unbounded" minOccurs="0" name="instance" type="contour:instanceType"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="instanceType">
         <xs:all>
-            <xs:element name="database" type="contour:databaseType"/>
-            <xs:element name="application-properties" type="contour:propertiesType"/>
-            <xs:element name="corda-node" type="contour:cordaNodeType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="keystore" type="gbcs:keyStoreType" minOccurs="0"/>
+            <xs:element name="truststore" type="gbcs:trustStoreType" minOccurs="0"/>
         </xs:all>
-        <xs:attribute name="name" type="xs:token" use="required"/>
+        <xs:attribute name="verify-clients" type="xs:boolean" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="keyStoreType">
+        <xs:attribute name="file" type="xs:string" use="required"/>
+        <xs:attribute name="password" type="xs:string"/>
+        <xs:attribute name="key-alias" type="xs:string" use="required"/>
+        <xs:attribute name="key-password" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="trustStoreType">
+        <xs:attribute name="file" type="xs:string" use="required"/>
+        <xs:attribute name="password" type="xs:string"/>
     </xs:complexType>
 
     <xs:complexType name="propertiesType">
         <xs:sequence>
-            <xs:element maxOccurs="unbounded" minOccurs="0" name="property" type="contour:propertyType"/>
+            <xs:element maxOccurs="unbounded" minOccurs="0" name="property" type="gbcs:propertyType"/>
         </xs:sequence>
     </xs:complexType>
 
@@ -72,114 +74,10 @@
         </xs:simpleContent>
     </xs:complexType>
 
-    <xs:complexType name="servicesType">
-        <xs:all>
-            <xs:element name="postgresDatabase" type="contour:postgresDatabaseType"/>
-            <xs:element name="mailhogServer" type="contour:mailhogServerType"/>
-        </xs:all>
-    </xs:complexType>
-
     <xs:complexType name="hostAndPortType">
         <xs:attribute name="host" type="xs:string" use="required"/>
         <xs:attribute name="port" type="xs:unsignedShort" use="required"/>
     </xs:complexType>
 
-    <xs:complexType name="postgresDatabaseType">
-        <xs:all>
-            <xs:element name="container-name" type="xs:token"/>
-            <xs:element name="port" type="xs:unsignedShort"/>
-            <xs:element name="password" type="xs:token"/>
-            <xs:element name="image" type="xs:token"/>
-        </xs:all>
-    </xs:complexType>
 
-    <xs:complexType name="mailhogServerType">
-        <xs:all>
-            <xs:element name="container-name" type="xs:token"/>
-            <xs:element name="http-port" type="xs:unsignedShort"/>
-            <xs:element name="smtp-port" type="xs:unsignedShort"/>
-            <xs:element name="image" type="xs:token"/>
-        </xs:all>
-    </xs:complexType>
-
-    <xs:complexType name="codeType">
-        <xs:all>
-            <xs:element name="front-end" type="contour:codeRepositoryType"/>
-            <xs:element name="back-end" type="contour:codeRepositoryType"/>
-            <xs:element name="cordapps" type="contour:codeRepositoryType"/>
-        </xs:all>
-    </xs:complexType>
-
-    <xs:complexType name="codeRepositoryType">
-        <xs:attribute name="location" type="xs:token" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="databaseType">
-        <xs:all>
-            <xs:element name="url" type="xs:string"/>
-            <xs:element name="name">
-                <xs:complexType>
-                    <xs:simpleContent>
-                        <xs:extension base="xs:string"/>
-                    </xs:simpleContent>
-                </xs:complexType>
-            </xs:element>
-        </xs:all>
-    </xs:complexType>
-
-    <xs:complexType name="urlType">
-        <xs:simpleContent>
-            <xs:extension base="xs:string"/>
-        </xs:simpleContent>
-    </xs:complexType>
-
-    <xs:complexType name="jvmType">
-        <xs:attribute name="location" type="xs:token" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="artifactsType">
-        <xs:all>
-            <xs:element name="contract-cordapp" type="contour:mavenArtifactType"/>
-            <xs:element name="workflow-cordapp" type="contour:mavenArtifactType"/>
-            <xs:element name="business-tool-cordapp" type="contour:mavenArtifactType"/>
-            <xs:element name="spring-backend" type="contour:mavenArtifactType"/>
-        </xs:all>
-    </xs:complexType>
-
-    <xs:complexType name="mavenArtifactType">
-        <xs:attribute name="groupId" type="xs:string" use="required"/>
-        <xs:attribute name="artifactId" type="xs:string" use="required"/>
-        <xs:attribute name="version" type="xs:string" use="required"/>
-        <xs:attribute name="ext" type="xs:string" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="cordaNodeType">
-        <xs:choice>
-            <xs:element name="config" type="contour:simpleCordaConfigType"/>
-            <xs:element name="configFile" type="xs:string"/>
-        </xs:choice>
-        <xs:attribute name="x500Name" type="xs:string" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="rpcUsersType">
-        <xs:sequence>
-            <xs:element name="user" type="contour:rpcUserType" minOccurs="0" maxOccurs="unbounded"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="rpcUserType">
-        <xs:attribute name="name" type="xs:string" use="required"/>
-        <xs:attribute name="password" type="xs:string" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="simpleCordaConfigType">
-        <xs:all>
-            <xs:element name="h2Port" type="xs:unsignedShort"/>
-            <xs:element name="devMode" type="xs:boolean"/>
-            <xs:element name="p2p-address" type="contour:hostAndPortType"/>
-            <xs:element name="rpc-address" type="contour:hostAndPortType"/>
-            <xs:element name="rpc-admin-address" type="contour:hostAndPortType"/>
-            <xs:element name="rpc-users" type="contour:rpcUsersType"/>
-        </xs:all>
-    </xs:complexType>
 </xs:schema>

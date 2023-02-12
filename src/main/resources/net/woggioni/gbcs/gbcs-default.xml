@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<server xmlns="urn:gradle-build-cache-server">
-    <bind host="127.0.0.1" port="5680"/>
+<server xmlns="urn:gradle-build-cache-server" path="/cache">
+    <bind host="127.0.0.1" port="11443"/>
     <cache path="/tmp/gbcs"/>
     <groups>
         <readers>
@@ -10,5 +10,5 @@
 <!--            <user name="writer"/>-->
         </writers>
     </groups>
-    <tls name=""/>
+    <tls verify-clients="true"/>
 </server>

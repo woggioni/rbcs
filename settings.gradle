@@ -11,6 +11,7 @@ pluginManagement {
         }
         gradlePluginPortal()
     }
+    includeBuild('../envelope')
 }
 
 dependencyResolutionManagement {
@@ -30,3 +31,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = 'gbcs'
+

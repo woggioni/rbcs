@@ -1,11 +1,5 @@
 package net.woggioni.gbcs
 
-import org.slf4j.LoggerFactory
-import org.w3c.dom.Document
-import org.xml.sax.ErrorHandler
-import org.xml.sax.SAXNotRecognizedException
-import org.xml.sax.SAXNotSupportedException
-import org.xml.sax.SAXParseException
 import java.net.URL
 import javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD
 import javax.xml.XMLConstants.ACCESS_EXTERNAL_SCHEMA
@@ -15,7 +9,60 @@ import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.validation.Schema
 import javax.xml.validation.SchemaFactory
+import org.slf4j.LoggerFactory
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+import org.w3c.dom.Node
+import org.w3c.dom.NodeList
+import org.xml.sax.ErrorHandler
+import org.xml.sax.SAXNotRecognizedException
+import org.xml.sax.SAXNotSupportedException
+import org.xml.sax.SAXParseException
 
+class NodeListIterator(private val nodeList: NodeList) : Iterator<Node> {
+    private var cursor : Int = 0
+    override fun hasNext(): Boolean {
+        return cursor < nodeList.length
+    }
+
+    override fun next(): Node {
+        return if (hasNext()) nodeList.item(cursor++) else throw NoSuchElementException()
+    }
+}
+
+class ElementIterator(parent: Element, name: String? = null) : Iterator<Element> {
+    private val it: NodeListIterator
+    private val name: String?
+    private var next: Element?
+
+    init {
+        it = NodeListIterator(parent.childNodes)
+        this.name = name
+        next = getNext()
+    }
+
+    override fun hasNext(): Boolean {
+        return next != null
+    }
+
+    override fun next(): Element {
+        val result = next ?: throw NoSuchElementException()
+        next = getNext()
+        return result
+    }
+
+    private fun getNext(): Element? {
+        var result: Element? = null
+        while (it.hasNext()) {
+            val node: Node = it.next()
+            if (node is Element && (name == null || name == node.tagName)) {
+                result = node
+                break
+            }
+        }
+        return result
+    }
+}
 
 object Xml {
 
@@ -66,17 +113,15 @@ object Xml {
         }
     }
 
-    private fun getSchema(schemaResourceURL: String): Schema {
+    fun getSchema(schema: URL): Schema {
         val sf = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
         sf.setFeature(FEATURE_SECURE_PROCESSING, true)
-        disableProperty(sf, ACCESS_EXTERNAL_SCHEMA)
-        disableProperty(sf, ACCESS_EXTERNAL_DTD)
-        val schemaUrl: URL = Xml::class.java.classLoader.getResource(schemaResourceURL)
-                ?: throw IllegalStateException(String.format("Missing configuration schema '%s'", schemaResourceURL))
-        return sf.newSchema(schemaUrl)
+//        disableProperty(sf, ACCESS_EXTERNAL_SCHEMA)
+//        disableProperty(sf, ACCESS_EXTERNAL_DTD)
+        return sf.newSchema(schema)
     }
 
-    private fun newDocumentBuilderFactory(schemaResourceURL: String?): DocumentBuilderFactory {
+    fun newDocumentBuilderFactory(): DocumentBuilderFactory {
         val dbf = DocumentBuilderFactory.newInstance()
         dbf.setFeature(FEATURE_SECURE_PROCESSING, true)
         disableProperty(dbf, ACCESS_EXTERNAL_SCHEMA)
@@ -84,35 +129,31 @@ object Xml {
         dbf.isExpandEntityReferences = false
         dbf.isIgnoringComments = true
         dbf.isNamespaceAware = true
-        val sf = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
-        sf.setFeature(FEATURE_SECURE_PROCESSING, true)
-        disableProperty(sf, ACCESS_EXTERNAL_SCHEMA)
-        disableProperty(sf, ACCESS_EXTERNAL_DTD)
-        if (schemaResourceURL != null) {
-            dbf.schema = getSchema(schemaResourceURL)
-        }
         return dbf
     }
 
-    fun newDocumentBuilder(resource: URL, schemaResourceURL: String?): DocumentBuilder {
-        val db = newDocumentBuilderFactory(schemaResourceURL).newDocumentBuilder()
-        db.setErrorHandler(XmlErrorHandler(resource))
-        return db
-    }
+//    fun newDocumentBuilder(resource: URL, schemaResourceURL: String?): DocumentBuilder {
+//        val db = newDocumentBuilderFactory(schemaResourceURL).newDocumentBuilder()
+//        db.setErrorHandler(XmlErrorHandler(resource))
+//        return db
+//    }
 
-    fun parseXmlResource(resource: URL, schemaResourceURL: String?): Document {
-        val db = newDocumentBuilder(resource, schemaResourceURL)
-        return resource.openStream().use(db::parse)
-    }
+//    fun parseXmlResource(resource: URL, schemaResourceURL: String?): Document {
+//        val db = newDocumentBuilder(resource, schemaResourceURL)
+//        return resource.openStream().use(db::parse)
+//    }
+//
+//    fun newDocumentBuilder(resource: URL): DocumentBuilder {
+//        val db = newDocumentBuilderFactory(null).newDocumentBuilder()
+//        db.setErrorHandler(XmlErrorHandler(resource))
+//        return db
+//    }
 
-    fun newDocumentBuilder(resource: URL): DocumentBuilder {
-        val db = newDocumentBuilderFactory(null).newDocumentBuilder()
-        db.setErrorHandler(XmlErrorHandler(resource))
-        return db
-    }
+//    fun parseXmlResource(resource: URL): Document {
+//        val db = newDocumentBuilder(resource, null)
+//        return resource.openStream().use(db::parse)
+//    }
 
-    fun parseXmlResource(resource: URL): Document {
-        val db = newDocumentBuilder(resource, null)
-        return resource.openStream().use(db::parse)
-    }
+    fun Element.asIterable() = Iterable { ElementIterator(this, null) }
+    fun NodeList.asIterable() = Iterable { NodeListIterator(this) }
 }

@@ -1,3 +1,5 @@
+import java.net.URLStreamHandlerFactory;
+
 module net.woggioni.gbcs {
     requires java.xml;
     requires java.logging;
@@ -12,4 +14,6 @@ module net.woggioni.gbcs {
     requires net.woggioni.jwo;
 
     exports net.woggioni.gbcs;
+    opens net.woggioni.gbcs to net.woggioni.envelope;
+    uses java.net.URLStreamHandlerFactory;
 }

@@ -1,5 +1,5 @@
 plugins {
-    alias catalog.plugins.kotlin
+    alias catalog.plugins.kotlin.jvm
     alias catalog.plugins.envelope
     id 'maven-publish'
 }
@@ -55,11 +55,19 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', E
     mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
     systemProperty 'java.util.logging.config.class', 'net.woggioni.gbcs.LoggingConfig'
     systemProperty 'log.config.source', 'logging.properties'
+
+    manifest {
+        attributes([
+            'Add-Exports' : 'java.base/sun.security.x509'
+        ])
+    }
 }
 
-wrapper {
-    distributionType = Wrapper.DistributionType.BIN
-    gradleVersion = getProperty('gradle.version')
+envelopeRun {
+
+    mainModule = 'net.woggioni.envelope'
+    modularity.inferModulePath = true
+    jvmArgs('--add-exports=java.base/sun.security.x509=io.netty.handler')
 }
 
 def envelopeJarArtifact = artifacts.add('archives', envelopeJarTaskProvider.get().archiveFile.get().asFile) {
