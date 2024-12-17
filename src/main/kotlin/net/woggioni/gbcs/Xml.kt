@@ -1,5 +1,7 @@
 package net.woggioni.gbcs
 
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.net.URL
 import javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD
 import javax.xml.XMLConstants.ACCESS_EXTERNAL_SCHEMA
@@ -7,14 +9,17 @@ import javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING
 import javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.Source
+import javax.xml.transform.stream.StreamSource
 import javax.xml.validation.Schema
 import javax.xml.validation.SchemaFactory
+import net.woggioni.jwo.xml.Xml
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 import org.w3c.dom.NodeList
-import org.xml.sax.ErrorHandler
+import org.xml.sax.ErrorHandler as ErrHandler
 import org.xml.sax.SAXNotRecognizedException
 import org.xml.sax.SAXNotSupportedException
 import org.xml.sax.SAXParseException
@@ -66,10 +71,10 @@ class ElementIterator(parent: Element, name: String? = null) : Iterator<Element>
 
 object Xml {
 
-    private class XmlErrorHandler(private val fileURL: URL) : ErrorHandler {
+    class ErrorHandler(private val fileURL: URL) : ErrHandler {
 
         companion object {
-            private val log = LoggerFactory.getLogger(XmlErrorHandler::class.java)
+            private val log = LoggerFactory.getLogger(ErrorHandler::class.java)
         }
 
         override fun warning(ex: SAXParseException) {
@@ -118,7 +123,16 @@ object Xml {
         sf.setFeature(FEATURE_SECURE_PROCESSING, true)
 //        disableProperty(sf, ACCESS_EXTERNAL_SCHEMA)
 //        disableProperty(sf, ACCESS_EXTERNAL_DTD)
+        sf.errorHandler = ErrorHandler(schema)
         return sf.newSchema(schema)
+    }
+
+    fun getSchema(inputStream: InputStream): Schema {
+        val sf = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
+        sf.setFeature(FEATURE_SECURE_PROCESSING, true)
+//        disableProperty(sf, ACCESS_EXTERNAL_SCHEMA)
+//        disableProperty(sf, ACCESS_EXTERNAL_DTD)
+        return sf.newSchema(StreamSource(inputStream))
     }
 
     fun newDocumentBuilderFactory(): DocumentBuilderFactory {
@@ -129,6 +143,7 @@ object Xml {
         dbf.isExpandEntityReferences = false
         dbf.isIgnoringComments = true
         dbf.isNamespaceAware = true
+        dbf.isValidating = false
         return dbf
     }
 

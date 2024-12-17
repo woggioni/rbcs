@@ -1,6 +1,7 @@
-import java.net.URLStreamHandlerFactory;
+import net.woggioni.gbcs.url.ClasspathUrlStreamHandlerFactoryProvider;
 
 module net.woggioni.gbcs {
+    requires java.sql;
     requires java.xml;
     requires java.logging;
     requires kotlin.stdlib;
@@ -14,6 +15,8 @@ module net.woggioni.gbcs {
     requires net.woggioni.jwo;
 
     exports net.woggioni.gbcs;
-    opens net.woggioni.gbcs to net.woggioni.envelope;
+    exports net.woggioni.gbcs.url;
+//    opens net.woggioni.gbcs to net.woggioni.envelope;
+    provides java.net.URLStreamHandlerFactory with ClasspathUrlStreamHandlerFactoryProvider;
     uses java.net.URLStreamHandlerFactory;
 }

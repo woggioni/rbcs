@@ -1,14 +1,48 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<server xmlns="urn:gradle-build-cache-server" path="/cache">
+<gbcs:server xmlns:gbcs="urn:net.woggioni.gbcs" path="/cache" useVirtualThreads="false">
     <bind host="127.0.0.1" port="11443"/>
     <cache path="/tmp/gbcs"/>
-    <groups>
-        <readers>
-<!--            <user name="reader"/>-->
-        </readers>
-        <writers>
-<!--            <user name="writer"/>-->
-        </writers>
-    </groups>
-    <tls verify-clients="true"/>
-</server>
+    <authorization>
+        <users>
+            <user name="user1" password="password"/>
+            <user name="user2" password="password"/>
+            <user name="user3" password="password"/>
+            <user name="user4" password="password"/>
+            <user name="user5" password="password">
+                <roles>
+                    <reader/>
+                    <writer/>
+                </roles>
+            </user>
+        </users>
+        <groups>
+            <group name="group1">
+                <users>
+                    <user ref="user1"/>
+                </users>
+                <roles>
+                    <reader/>
+                    <writer/>
+                </roles>
+            </group>
+            <group name="group2">
+                <users>
+                    <user ref="user1"/>
+                    <user ref="user2"/>
+                </users>
+                <roles>
+                    <reader/>
+                    <writer/>
+                </roles>
+            </group>
+        </groups>
+    </authorization>
+    <tls-certificate-authorization>
+        <group-extractor attribute-name="CN" pattern="(.*)"/>
+        <user-extractor attribute-name="CN" pattern="(.*)"/>
+    </tls-certificate-authorization>
+<!--    <tls verify-clients="false">-->
+<!--        <keystore file="" key-alias=""/>-->
+<!--        <truststore file=""/>-->
+<!--    </tls>-->
+</gbcs:server>

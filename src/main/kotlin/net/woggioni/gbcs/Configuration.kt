@@ -21,6 +21,7 @@ data class KeyStore(
 data class TrustStore(
     val file : Path,
     val password : String?,
+    val checkCertificateStatus : Boolean
 )
 
 data class Configuration(
@@ -28,18 +29,26 @@ data class Configuration(
     val host : String,
     val port : Int,
     val users : Map<String, Set<Role>>,
+    val groups : Map<String, Set<Role>>,
     val tlsConfiguration: TlsConfiguration?,
-    val serverPath : String
+    val serverPath : String,
+    val useVirtualThread : Boolean
 ) {
     companion object {
         fun parse(document : Element) : Configuration {
 
             var cacheFolder = Paths.get(System.getProperty("user.home")).resolve(".gbcs")
-            var host : String = "127.0.0.1"
-            var port : Int = 11080
-            var users = emptyMap<String, Set<Role>>()
+            var host = "127.0.0.1"
+            var port = 11080
+            val users = emptyMap<String, Set<Role>>()
+            val groups = emptyMap<String, Set<Role>>()
             var tlsConfiguration : TlsConfiguration? = null
-            var serverPath = "/"
+            val serverPath = document.getAttribute("path")
+                .takeIf(String::isNotEmpty)
+                ?: "/"
+            val useVirtualThread = document.getAttribute("useVirtualThreads")
+                .takeIf(String::isNotEmpty)
+                ?.let(String::toBoolean) ?: false
 
             for(child in document.asIterable()) {
                 when(child.nodeName) {
@@ -62,8 +71,8 @@ data class Configuration(
                                     val trustStoreFile = Paths.get(granChild.getAttribute("file"))
                                     val trustStorePassword = granChild.getAttribute("password")
                                         .takeIf(String::isNotEmpty)
-                                    val keyAlias = granChild.getAttribute("server-key-alias")
-                                    val keyPasswordPassword = granChild.getAttribute("server-key-password")
+                                    val keyAlias = granChild.getAttribute("key-alias")
+                                    val keyPasswordPassword = granChild.getAttribute("password")
                                         .takeIf(String::isNotEmpty)
                                     keyStore = KeyStore(
                                         trustStoreFile,
@@ -76,9 +85,14 @@ data class Configuration(
                                     val trustStoreFile = Paths.get(granChild.getAttribute("file"))
                                     val trustStorePassword = granChild.getAttribute("password")
                                         .takeIf(String::isNotEmpty)
+                                    val checkCertificateStatus = granChild.getAttribute("check-certificate-status")
+                                        .takeIf(String::isNotEmpty)
+                                        ?.let(String::toBoolean)
+                                        ?: false
                                     trustStore = TrustStore(
                                         trustStoreFile,
-                                        trustStorePassword
+                                        trustStorePassword,
+                                        checkCertificateStatus
                                     )
                                 }
                             }
@@ -89,7 +103,7 @@ data class Configuration(
 
             }
 
-            return Configuration(cacheFolder, host, port, users, tlsConfiguration, serverPath)
+            return Configuration(cacheFolder, host, port, users, groups, tlsConfiguration, serverPath, useVirtualThread)
         }
     }
 }

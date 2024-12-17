@@ -13,13 +13,15 @@ import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.util.AbstractMap.SimpleEntry
+import java.util.Arrays
 import java.util.Base64
-import java.util.ServiceLoader
+import java.util.concurrent.Executors
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
 import io.netty.channel.ChannelDuplexHandler
+import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
@@ -30,11 +32,13 @@ import io.netty.channel.EventLoopGroup
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.handler.codec.DecoderException
 import io.netty.handler.codec.compression.CompressionOptions
 import io.netty.handler.codec.http.DefaultFullHttpResponse
 import io.netty.handler.codec.http.DefaultHttpContent
 import io.netty.handler.codec.http.DefaultHttpResponse
 import io.netty.handler.codec.http.FullHttpRequest
+import io.netty.handler.codec.http.FullHttpResponse
 import io.netty.handler.codec.http.HttpContentCompressor
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
@@ -44,16 +48,23 @@ import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpServerCodec
 import io.netty.handler.codec.http.HttpUtil
+import io.netty.handler.codec.http.HttpVersion
 import io.netty.handler.codec.http.LastHttpContent
+import io.netty.handler.ssl.ClientAuth
+import io.netty.handler.ssl.SslContext
 import io.netty.handler.ssl.SslContextBuilder
-import io.netty.handler.ssl.util.SelfSignedCertificate
 import io.netty.handler.stream.ChunkedNioFile
 import io.netty.handler.stream.ChunkedWriteHandler
 import io.netty.util.concurrent.DefaultEventExecutorGroup
+import io.netty.util.concurrent.DefaultThreadFactory
 import io.netty.util.concurrent.EventExecutorGroup
+import net.woggioni.gbcs.url.ClasspathUrlStreamHandlerFactoryProvider
+import javax.net.ssl.SSLPeerUnverifiedException
 import net.woggioni.jwo.Application
 import net.woggioni.jwo.JWO
 import net.woggioni.jwo.Tuple2
+import java.net.URI
+import java.util.concurrent.ForkJoinPool
 
 
 class GradleBuildCacheServer(private val cfg : Configuration) {
@@ -125,6 +136,33 @@ class GradleBuildCacheServer(private val cfg : Configuration) {
 
     private class ServerInitializer(private val cfg : Configuration) : ChannelInitializer<Channel>() {
 
+        private fun createSslCtx(tlsConfiguration : TlsConfiguration) : SslContext {
+            val keyStore = tlsConfiguration.keyStore
+            return if(keyStore == null) {
+                throw IllegalArgumentException("No keystore configured")
+            } else {
+                val javaKeyStore = loadKeystore(keyStore.file, keyStore.password)
+                val serverKey = javaKeyStore.getKey(
+                    keyStore.keyAlias, keyStore.keyPassword?.let(String::toCharArray)) as PrivateKey
+                val serverCert : Array<X509Certificate> = Arrays.stream(javaKeyStore.getCertificateChain(keyStore.keyAlias))
+                    .map { it as X509Certificate }
+                    .toArray {size -> Array<X509Certificate?>(size) { null } }
+                SslContextBuilder.forServer(serverKey, *serverCert).apply {
+                    if(tlsConfiguration.verifyClients) {
+                        clientAuth(ClientAuth.REQUIRE)
+                        val trustStore = tlsConfiguration.trustStore
+                        if (trustStore != null) {
+                            val ts = loadKeystore(trustStore.file, trustStore.password)
+                            trustManager(
+                                ClientCertificateValidator.getTrustManager(ts, trustStore.checkCertificateStatus))
+                        }
+                    }
+                }.build()
+            }
+        }
+
+        private val sslContext : SslContext? = cfg.tlsConfiguration?.let(this::createSslCtx)
+
         companion object {
             val group: EventExecutorGroup = DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors())
             fun loadKeystore(file : Path, password : String?) : KeyStore {
@@ -132,13 +170,13 @@ class GradleBuildCacheServer(private val cfg : Configuration) {
                     .map(Tuple2<String, String>::get_2)
                     .orElseThrow {
                         IllegalArgumentException(
-                            "Keystore file '${file}' must have .jks or p12 extension")
+                            "Keystore file '${file}' must have .jks, .p12, .pfx extension")
                     }
-                val keystore = when(ext.lowercase()) {
+                val keystore = when(ext.substring(1).lowercase()) {
                     "jks" -> KeyStore.getInstance("JKS")
                     "p12", "pfx" -> KeyStore.getInstance("PKCS12")
                     else -> throw IllegalArgumentException(
-                        "Keystore file '${file}' must have .jks or p12 extension")
+                        "Keystore file '${file}' must have .jks, .p12, .pfx extension")
                 }
                 Files.newInputStream(file).use {
                     keystore.load(it, password?.let(String::toCharArray))
@@ -148,34 +186,17 @@ class GradleBuildCacheServer(private val cfg : Configuration) {
         }
 
         override fun initChannel(ch: Channel) {
+            val userAuthorizer = UserAuthorizer(cfg.users)
             val pipeline = ch.pipeline()
-            val tlsConfiguration = cfg.tlsConfiguration
-            if(tlsConfiguration != null) {
-                val ssc = SelfSignedCertificate()
-                val keyStore = tlsConfiguration.keyStore
-                val sslCtx = if(keyStore == null) {
-                    SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build()
-                } else {
-                    val javaKeyStore = loadKeystore(keyStore.file, keyStore.password)
-                    val serverKey = javaKeyStore.getKey(
-                        keyStore.keyAlias, keyStore.keyPassword?.let(String::toCharArray)) as PrivateKey
-                    val serverCert = javaKeyStore.getCertificateChain(keyStore.keyAlias) as Array<X509Certificate>
-                    SslContextBuilder.forServer(serverKey, *serverCert).build()
-                }
-                val sslHandler = sslCtx.newHandler(ch.alloc())
+            if(sslContext != null) {
+                val sslHandler = sslContext.newHandler(ch.alloc())
                 pipeline.addLast(sslHandler)
-                if(tlsConfiguration.verifyClients) {
-                    val trustStore = tlsConfiguration.trustStore?.let {
-                        loadKeystore(it.file, it.password)
-                    }
-                    pipeline.addLast(ClientCertificateValidator.of(sslHandler, trustStore))
-                }
             }
             pipeline.addLast(HttpServerCodec())
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
             pipeline.addLast(HttpObjectAggregator(Int.MAX_VALUE))
-//            pipeline.addLast(NettyHttpBasicAuthenticator(mapOf("user" to "password")) { user, _ -> user == "user" })
+//            pipeline.addLast(NettyHttpBasicAuthenticator(mapOf("user" to "password")), userAuthorizer)
             pipeline.addLast(group, ServerHandler(cfg.cacheFolder, cfg.serverPath))
             pipeline.addLast(ExceptionHandler())
             Files.createDirectories(cfg.cacheFolder)
@@ -184,9 +205,25 @@ class GradleBuildCacheServer(private val cfg : Configuration) {
 
     private class ExceptionHandler : ChannelDuplexHandler() {
         private val log = contextLogger()
+
+        private val NOT_AUTHORIZED: FullHttpResponse = DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN, Unpooled.EMPTY_BUFFER).apply {
+            headers()[HttpHeaderNames.CONTENT_LENGTH] = "0"
+        }
         override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-            log.error(cause.message, cause)
-            ctx.close()
+            when(cause) {
+                is DecoderException -> {
+                    log.error(cause.message, cause)
+                    ctx.close()
+                }
+                is SSLPeerUnverifiedException -> {
+                    ctx.writeAndFlush(NOT_AUTHORIZED.retainedDuplicate()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
+                }
+                else -> {
+                     log.error(cause.message, cause)
+                     ctx.close()
+                 }
+            }
         }
     }
 
@@ -288,35 +325,62 @@ class GradleBuildCacheServer(private val cfg : Configuration) {
         }
     }
 
-    fun run() {
-        // Create the multithreaded event loops for the server
-        val bossGroup: EventLoopGroup = NioEventLoopGroup()
-        val workerGroup: EventLoopGroup = NioEventLoopGroup()
-        try {
-            // A helper class that simplifies server configuration
-            val httpBootstrap = ServerBootstrap()
+    class ServerHandle(
+        private val httpChannel : ChannelFuture,
+        private val bossGroup: EventLoopGroup,
+        private val workerGroup: EventLoopGroup) : AutoCloseable {
 
-            // Configure the server
-            httpBootstrap.group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel::class.java)
-                    .childHandler(ServerInitializer(cfg))
-                    .option(ChannelOption.SO_BACKLOG, 128)
-                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+        private val closeFuture : ChannelFuture = httpChannel.channel().closeFuture()
 
-            // Bind and start to accept incoming connections.
-            val bindAddress = InetSocketAddress(cfg.host, cfg.port)
-            val httpChannel = httpBootstrap.bind(bindAddress).sync()
-
-            // Wait until server socket is closed
-            httpChannel.channel().closeFuture().sync()
-        } finally {
-            workerGroup.shutdownGracefully()
-            bossGroup.shutdownGracefully()
+        fun shutdown() : ChannelFuture {
+            return httpChannel.channel().close()
         }
+
+        override fun close() {
+            try {
+                closeFuture.sync()
+            } finally {
+                val fut1 = workerGroup.shutdownGracefully()
+                val fut2 = if(bossGroup !== workerGroup) {
+                    bossGroup.shutdownGracefully()
+                } else null
+                fut1.sync()
+                fut2?.sync()
+            }
+        }
+    }
+
+    fun run() : ServerHandle {
+        // Create the multithreaded event loops for the server
+        val bossGroup = NioEventLoopGroup()
+        val serverSocketChannel = NioServerSocketChannel::class.java
+        val workerGroup = if(cfg.useVirtualThread) {
+            NioEventLoopGroup(0, Executors.newVirtualThreadPerTaskExecutor())
+        } else {
+            NioEventLoopGroup(0, Executors.newWorkStealingPool())
+        }
+        // A helper class that simplifies server configuration
+        val bootstrap = ServerBootstrap().apply {
+            // Configure the server
+            group(bossGroup, workerGroup)
+            channel(serverSocketChannel)
+            childHandler(ServerInitializer(cfg))
+            option(ChannelOption.SO_BACKLOG, 128)
+            childOption(ChannelOption.SO_KEEPALIVE, true)
+        }
+
+
+        // Bind and start to accept incoming connections.
+        val bindAddress = InetSocketAddress(cfg.host, cfg.port)
+        val httpChannel = bootstrap.bind(bindAddress).sync()
+        return ServerHandle(httpChannel, bossGroup, workerGroup)
     }
 
     companion object {
 
+        private val log by lazy {
+            contextLogger()
+        }
         private const val PROTOCOL_HANDLER = "java.protocol.handler.pkgs"
         private const val HANDLERS_PACKAGE = "net.woggioni.gbcs.url"
 
@@ -341,13 +405,9 @@ class GradleBuildCacheServer(private val cfg : Configuration) {
             resetCachedUrlHandlers()
         }
 
-        @JvmStatic
-        fun main(args: Array<String>) {
-            SelfSignedCertificate()
-            ServiceLoader.load(javaClass.module.layer, URLStreamHandlerFactory::class.java).stream().forEach {
-                println(it.type())
-            }
-//            registerUrlProtocolHandler()
+        fun loadConfiguration(args: Array<String>) : Configuration {
+            registerUrlProtocolHandler()
+            URL.setURLStreamHandlerFactory(ClasspathUrlStreamHandlerFactoryProvider())
             Thread.currentThread().contextClassLoader = GradleBuildCacheServer::class.java.classLoader
             val app = Application.builder("gbcs")
                 .configurationDirectoryEnvVar("GBCS_CONFIGURATION_DIR")
@@ -355,30 +415,39 @@ class GradleBuildCacheServer(private val cfg : Configuration) {
                 .build()
             val confDir = app.computeConfigurationDirectory()
             val configurationFile = confDir.resolve("gbcs.xml")
-
+            log.info { "here" }
             if(!Files.exists(configurationFile)) {
                 Files.createDirectories(confDir)
-                val defaultConfigurationFileResourcePath = "net/woggioni/gbcs/gbcs-default.xml"
-                val defaultConfigurationFileResource = GradleBuildCacheServer.javaClass.classLoader
-                    .getResource(defaultConfigurationFileResourcePath)
-                    ?: throw IllegalStateException(
-                        "Missing default configuration file 'classpath:$defaultConfigurationFileResourcePath'")
+                val defaultConfigurationFileResourcePath = "classpath:net/woggioni/gbcs/gbcs-default.xml"
+                val defaultConfigurationFileResource = URI(defaultConfigurationFileResourcePath).toURL()
                 Files.newOutputStream(configurationFile).use { outputStream ->
                     defaultConfigurationFileResource.openStream().use { inputStream ->
                         JWO.copy(inputStream, outputStream)
                     }
                 }
             }
-            val schemaResource  = "net/woggioni/gbcs/gbcs.xsd"
-            val schemaUrl = URL("classpath:net/woggioni/gbcs/gbcs.xsd")
-//            val schemaUrl = GradleBuildCacheServer::class.java.classLoader.getResource(schemaResource)
-//                ?: throw IllegalStateException("Missing configuration schema '$schemaResource'")
-            val schemaUrl2 = URL(schemaUrl.toString())
+//            val schemaUrl = javaClass.getResource("/net/woggioni/gbcs/gbcs.xsd")
+            val schemaUrl = URL.of(URI("classpath:net/woggioni/gbcs/gbcs.xsd"), null)
             val dbf = Xml.newDocumentBuilderFactory()
+//            dbf.schema = Xml.getSchema(this::class.java.module.getResourceAsStream("/net/woggioni/gbcs/gbcs.xsd"))
             dbf.schema = Xml.getSchema(schemaUrl)
-            val doc = Files.newInputStream(configurationFile)
-                .use(dbf.newDocumentBuilder()::parse)
-            GradleBuildCacheServer(Configuration.parse(doc.documentElement)).run()
+            val db = dbf.newDocumentBuilder().apply {
+                setErrorHandler(Xml.ErrorHandler(schemaUrl))
+            }
+            val doc = Files.newInputStream(configurationFile).use(db::parse)
+            return Configuration.parse(doc.documentElement)
+        }
+
+        @JvmStatic
+        fun main(args: Array<String>) {
+            val configuration = loadConfiguration(args)
+//            Runtime.getRuntime().addShutdownHook(Thread {
+//                    Thread.sleep(5000)
+//                    javaClass.classLoader.loadClass("net.woggioni.jwo.exception.ChildProcessException")
+//                }
+//            )
+            GradleBuildCacheServer(configuration).run().use {
+            }
         }
 
         fun digest(data : ByteArray,
@@ -391,5 +460,15 @@ class GradleBuildCacheServer(private val cfg : Configuration) {
                    md : MessageDigest = MessageDigest.getInstance("MD5")) : String {
             return JWO.bytesToHex(digest(data, md))
         }
+    }
+}
+
+object GraalNativeImageConfiguration {
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val conf = GradleBuildCacheServer.loadConfiguration(args)
+        val handle  = GradleBuildCacheServer(conf).run()
+        Thread.sleep(10_000)
+        handle.shutdown()
     }
 }

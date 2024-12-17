@@ -1,19 +1,33 @@
 plugins {
+    id 'application'
     alias catalog.plugins.kotlin.jvm
+    alias catalog.plugins.graalvm.native.image
+    alias catalog.plugins.graalvm.jlink
     alias catalog.plugins.envelope
     id 'maven-publish'
 }
 
 import net.woggioni.gradle.envelope.EnvelopeJarTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 group = 'net.woggioni'
 
 version = getProperty('gbcs.version')
 
+application {
+    mainModule = 'net.woggioni.gbcs'
+    mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
+//    mainClass = 'net.woggioni.gbcs.NettyPingServer'
+}
+
+configureNativeImage {
+    mainClass = 'net.woggioni.gbcs.GraalNativeImageConfiguration'
+}
+
 repositories {
     maven {
-        url = 'https://woggioni.net/mvn'
+        url = getProperty('gitea.maven.url')
         content {
             includeModule 'net.woggioni', 'jwo'
             includeGroup 'com.lys'
@@ -27,7 +41,11 @@ dependencies {
     implementation catalog.slf4j.api
     implementation catalog.netty.codec.http
 
-    runtimeOnly catalog.slf4j.jdk14
+//    runtimeOnly catalog.slf4j.jdk14
+    runtimeOnly catalog.logback.classic
+//    // https://mvnrepository.com/artifact/org.fusesource.jansi/jansi
+//    runtimeOnly group: 'org.fusesource.jansi', name: 'jansi', version: '2.4.1'
+
 
     testImplementation catalog.junit.jupiter.api
     testImplementation catalog.junit.jupiter.params
@@ -36,39 +54,37 @@ dependencies {
 
 java {
     withSourcesJar()
+    modularity.inferModulePath = true
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+//        vendor = JvmVendorSpec.GRAAL_VM
+    }
+}
+
+test {
+    useJUnitPlatform()
 }
 
 tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
-    modularity.inferModulePath = true
     options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs=' + project.sourceSets.main.output.asPath
-    options.release = 17
 }
 
+tasks.withType(JavaCompile) {
+    modularity.inferModulePath = true
+    options.release = 21
+}
+
+
 tasks.named("compileKotlin", KotlinCompile.class) {
-    kotlinOptions {
-        jvmTarget = 17
-    }
+    compilerOptions.jvmTarget = JvmTarget.JVM_21
 }
 
 Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', EnvelopeJarTask.class) {
-    mainModule = 'net.woggioni.gbcs'
-    mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
-    systemProperty 'java.util.logging.config.class', 'net.woggioni.gbcs.LoggingConfig'
-    systemProperty 'log.config.source', 'logging.properties'
-
-    manifest {
-        attributes([
-            'Add-Exports' : 'java.base/sun.security.x509'
-        ])
-    }
+//    systemProperties['java.util.logging.config.class'] = 'net.woggioni.gbcs.LoggingConfig'
+//    systemProperties['log.config.source'] = 'logging.properties'
+    systemProperties['logback.configurationFile'] = 'classpath:logback.xml'
 }
 
-envelopeRun {
-
-    mainModule = 'net.woggioni.envelope'
-    modularity.inferModulePath = true
-    jvmArgs('--add-exports=java.base/sun.security.x509=io.netty.handler')
-}
 
 def envelopeJarArtifact = artifacts.add('archives', envelopeJarTaskProvider.get().archiveFile.get().asFile) {
     type = 'jar'

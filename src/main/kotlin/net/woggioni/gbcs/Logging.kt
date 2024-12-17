@@ -8,9 +8,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.logging.LogManager
 
-
-
-
 inline fun <reified T> T.contextLogger() = LoggerFactory.getLogger(T::class.java)
 
 inline fun Logger.traceParam(messageBuilder : () -> Pair<String, Array<Any>>) {

@@ -1,23 +1,17 @@
 pluginManagement {
     repositories {
+        mavenLocal()
         maven {
-            content {
-                includeModule 'net.woggioni.gradle', 'envelope'
-                includeModule 'net.woggioni.gradle.envelope', 'net.woggioni.gradle.envelope.gradle.plugin'
-                includeModule 'net.woggioni.gradle', 'lombok'
-                includeModule 'net.woggioni.gradle.lombok', 'net.woggioni.gradle.lombok.gradle.plugin'
-            }
-            url = 'https://woggioni.net/mvn/'
+            url = getProperty('gitea.maven.url')
         }
         gradlePluginPortal()
     }
-    includeBuild('../envelope')
 }
 
 dependencyResolutionManagement {
     repositories {
         maven {
-            url = 'https://woggioni.net/mvn/'
+            url = getProperty('gitea.maven.url')
             content {
                 includeGroup 'com.lys'
             }
@@ -26,6 +20,7 @@ dependencyResolutionManagement {
     versionCatalogs {
         catalog {
             from group: 'com.lys', name: 'lys-catalog', version: getProperty('lys.version')
+            version('envelope', '2024.12.15')
         }
     }
 }
