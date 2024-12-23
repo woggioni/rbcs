@@ -3,7 +3,7 @@ package net.woggioni.gbcs
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpRequest
 
-class UserAuthorizer(private val users: Map<String, Set<Role>>) : Authorizer {
+class RoleAuthorizer : Authorizer {
 
     companion object {
         private val METHOD_MAP = mapOf(
@@ -12,11 +12,11 @@ class UserAuthorizer(private val users: Map<String, Set<Role>>) : Authorizer {
         )
     }
 
-    override fun authorize(user: String, request: HttpRequest) = users[user]?.let { roles ->
+    override fun authorize(roles: Set<Role>, request: HttpRequest) : Boolean {
         val allowedMethods = roles.asSequence()
             .mapNotNull(METHOD_MAP::get)
             .flatten()
             .toSet()
-        request.method() in allowedMethods
-    } ?: false
+        return request.method() in allowedMethods
+    }
 }

@@ -1,9 +1,8 @@
 plugins {
-    id 'application'
+    id 'java-library'
     alias catalog.plugins.kotlin.jvm
-    alias catalog.plugins.graalvm.native.image
-    alias catalog.plugins.graalvm.jlink
     alias catalog.plugins.envelope
+    alias catalog.plugins.sambal
     id 'maven-publish'
 }
 
@@ -13,16 +12,11 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 group = 'net.woggioni'
 
-version = getProperty('gbcs.version')
+version = project.currentTag ?: "${getProperty('gbcs.version')}.${project.gitRevision[0..10]}"
 
-application {
+envelopeJar {
     mainModule = 'net.woggioni.gbcs'
     mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
-//    mainClass = 'net.woggioni.gbcs.NettyPingServer'
-}
-
-configureNativeImage {
-    mainClass = 'net.woggioni.gbcs.GraalNativeImageConfiguration'
 }
 
 repositories {
@@ -43,10 +37,9 @@ dependencies {
 
 //    runtimeOnly catalog.slf4j.jdk14
     runtimeOnly catalog.logback.classic
-//    // https://mvnrepository.com/artifact/org.fusesource.jansi/jansi
-//    runtimeOnly group: 'org.fusesource.jansi', name: 'jansi', version: '2.4.1'
 
-
+    testImplementation catalog.bcprov.jdk18on
+    testImplementation catalog.bcpkix.jdk18on
     testImplementation catalog.junit.jupiter.api
     testImplementation catalog.junit.jupiter.params
     testRuntimeOnly catalog.junit.jupiter.engine
@@ -57,7 +50,6 @@ java {
     modularity.inferModulePath = true
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
-//        vendor = JvmVendorSpec.GRAAL_VM
     }
 }
 
@@ -67,6 +59,8 @@ test {
 
 tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
     options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs=' + project.sourceSets.main.output.asPath
+    options.javaModuleVersion = provider { version }
+    options.javaModuleMainClass = envelopeJar.mainClass
 }
 
 tasks.withType(JavaCompile) {
@@ -94,7 +88,17 @@ def envelopeJarArtifact = artifacts.add('archives', envelopeJarTaskProvider.get(
 publishing {
     repositories {
         maven {
-            url = 'https://mvn.woggioni.net/'
+            name = "Gitea"
+            url = uri(getProperty('gitea.maven.url'))
+
+            credentials(HttpHeaderCredentials) {
+                name = "Authorization"
+                value = "token ${System.getenv()["PUBLISHER_TOKEN"]}"
+            }
+
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
         }
     }
     publications {

@@ -1,10 +1,13 @@
 package net.woggioni.gbcs.url;
 
+import net.woggioni.jwo.Fun;
+
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
 import java.net.URLStreamHandlerFactory;
+import java.util.Optional;
 
 public class ClasspathUrlStreamHandlerFactoryProvider implements URLStreamHandlerFactory {
 
@@ -22,7 +25,9 @@ public class ClasspathUrlStreamHandlerFactoryProvider implements URLStreamHandle
         @Override
         protected URLConnection openConnection(URL u) throws IOException {
             final URL resourceUrl = classLoader.getResource(u.getPath());
-            return resourceUrl.openConnection();
+            return Optional.ofNullable(resourceUrl)
+                    .map((Fun<URL, URLConnection>) URL::openConnection)
+                    .orElseThrow(IOException::new);
         }
     }
 

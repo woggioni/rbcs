@@ -7,8 +7,11 @@
     <xs:complexType name="serverType">
         <xs:sequence minOccurs="0">
             <xs:element name="bind" type="gbcs:bindType" maxOccurs="1"/>
-            <xs:element name="cache" type="gbcs:cacheDirType" maxOccurs="1"/>
-            <xs:element name="authorization" type="gbcs:authorizationType" maxOccurs="1">
+            <xs:element name="cache" type="gbcs:cacheType" maxOccurs="1"/>
+<!--            <xs:choice>-->
+<!--                <xs:element name="fileSystemCache" type="fileSystemCacheType"/>-->
+<!--            </xs:choice>-->
+            <xs:element name="authorization" type="gbcs:authorizationType" minOccurs="0">
                 <xs:key name="userId">
                     <xs:selector xpath="users/user"/>
                     <xs:field xpath="@name"/>
@@ -18,10 +21,11 @@
                     <xs:field xpath="@ref"/>
                 </xs:keyref>
             </xs:element>
+            <xs:element name="authentication" type="gbcs:authenticationType" maxOccurs="1"/>
             <xs:element name="tls-certificate-authorization" type="gbcs:tlsCertificateAuthorizationType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="tls" type="gbcs:tlsType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
-        <xs:attribute name="path" type="xs:string"/>
+        <xs:attribute name="path" type="xs:string" use="optional"/>
         <xs:attribute name="useVirtualThreads" type="xs:boolean" use="optional"/>
     </xs:complexType>
 
@@ -30,8 +34,15 @@
         <xs:attribute name="port" type="xs:unsignedShort" use="required"/>
     </xs:complexType>
 
-    <xs:complexType name="cacheDirType">
+    <xs:complexType name="cacheType">
+        <xs:choice>
+            <xs:element name="file-system-cache" type="gbcs:fileSystemCacheType"/>
+        </xs:choice>
+    </xs:complexType>
+
+    <xs:complexType name="fileSystemCacheType">
         <xs:attribute name="path" type="xs:string" use="required"/>
+        <xs:attribute name="max-age" type="xs:string" default="P1D"/>
     </xs:complexType>
 
     <xs:complexType name="tlsCertificateAuthorizationType">
@@ -58,6 +69,14 @@
         </xs:all>
     </xs:complexType>
 
+    <xs:complexType name="authenticationType">
+        <xs:choice>
+            <xs:element name="basic"/>
+            <xs:element name="client-certificate" type="gbcs:tlsCertificateAuthorizationType"/>
+            <xs:element name="none"/>
+        </xs:choice>
+    </xs:complexType>
+
     <xs:complexType name="usersType">
         <xs:sequence>
             <xs:element name="user" type="gbcs:userType" minOccurs="0" maxOccurs="unbounded"/>
@@ -65,9 +84,6 @@
     </xs:complexType>
 
     <xs:complexType name="userType">
-        <xs:all minOccurs="0" maxOccurs="1">
-            <xs:element name="roles" type="gbcs:rolesType"/>
-        </xs:all>
         <xs:attribute name="name" type="xs:string" use="required"/>
         <xs:attribute name="password" type="xs:string" use="optional"/>
     </xs:complexType>

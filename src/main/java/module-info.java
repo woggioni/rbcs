@@ -1,9 +1,10 @@
 import net.woggioni.gbcs.url.ClasspathUrlStreamHandlerFactoryProvider;
 
-module net.woggioni.gbcs {
+open module net.woggioni.gbcs {
     requires java.sql;
     requires java.xml;
     requires java.logging;
+    requires java.naming;
     requires kotlin.stdlib;
     requires io.netty.buffer;
     requires io.netty.transport;
