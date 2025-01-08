@@ -1,8 +1,9 @@
 package net.woggioni.gbcs.test
 
 import io.netty.handler.codec.http.HttpResponseStatus
-import net.woggioni.gbcs.Xml
-import net.woggioni.gbcs.configuration.Configuration
+import net.woggioni.gbcs.base.Xml
+import net.woggioni.gbcs.api.Configuration
+import net.woggioni.gbcs.cache.FileSystemCacheConfiguration
 import net.woggioni.gbcs.configuration.Serializer
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order
@@ -15,28 +16,36 @@ import java.net.http.HttpResponse
 import java.nio.file.Path
 import java.time.Duration
 import java.util.Base64
+import java.util.zip.Deflater
 import kotlin.random.Random
 
 
-class NoAuthServerTest : AbstractServerTest() {
+class NoAuthServerTestKt : AbstractServerTestKt() {
 
     private lateinit var cacheDir : Path
 
     private val random = Random(101325)
     private val keyValuePair = newEntry(random)
+    private val serverPath = "/some/nested/path"
 
     override fun setUp() {
         this.cacheDir = testDir.resolve("cache")
-        cfg = Configuration.of(
-            cache = Configuration.FileSystemCache(this.cacheDir, maxAge = Duration.ofSeconds(3600 * 24)),
-            host = "127.0.0.1",
-            port = ServerSocket(0).localPort + 1,
-            users = emptyMap(),
-            groups = emptyMap(),
-            authentication = null,
-            useVirtualThread = true,
-            tls = null,
-            serverPath = "/"
+        cfg = Configuration(
+            "127.0.0.1",
+            ServerSocket(0).localPort + 1,
+            serverPath,
+            emptyMap(),
+            emptyMap(),
+            FileSystemCacheConfiguration(
+                this.cacheDir,
+                maxAge = Duration.ofSeconds(3600 * 24),
+                compressionEnabled = true,
+                digestAlgorithm = "MD5",
+                compressionLevel = Deflater.DEFAULT_COMPRESSION
+            ),
+            null,
+            null,
+            true,
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }
@@ -45,7 +54,7 @@ class NoAuthServerTest : AbstractServerTest() {
     }
 
     fun newRequestBuilder(key : String) = HttpRequest.newBuilder()
-        .uri(URI.create("http://${cfg.host}:${cfg.port}/$key"))
+        .uri(URI.create("http://${cfg.host}:${cfg.port}/$serverPath/$key"))
 
     fun newEntry(random : Random) : Pair<String, ByteArray> {
         val key = ByteArray(0x10).let {

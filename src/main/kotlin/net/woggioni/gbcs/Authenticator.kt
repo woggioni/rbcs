@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.util.ReferenceCountUtil
+import net.woggioni.gbcs.api.Role
 import java.security.SecureRandom
 import java.security.spec.KeySpec
 import java.util.Base64

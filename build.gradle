@@ -1,39 +1,197 @@
 plugins {
     id 'java-library'
+    id 'jvm-test-suite'
     alias catalog.plugins.kotlin.jvm
     alias catalog.plugins.envelope
     alias catalog.plugins.sambal
+    alias catalog.plugins.lombok
+    alias catalog.plugins.graalvm.native.image
     id 'maven-publish'
 }
 
 import net.woggioni.gradle.envelope.EnvelopeJarTask
+import net.woggioni.gradle.graalvm.NativeImagePlugin
+import net.woggioni.gradle.graalvm.NativeImageTask
+import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-group = 'net.woggioni'
 
-version = project.currentTag ?: "${getProperty('gbcs.version')}.${project.gitRevision[0..10]}"
+allprojects {
+    group = 'net.woggioni'
+
+    if(project.currentTag.isPresent()) {
+        version = project.currentTag
+    } else {
+        version = project.gitRevision.map { gitRevision ->
+            "${getProperty('gbcs.version')}.${gitRevision[0..10]}"
+        }
+    }
+
+    repositories {
+        maven {
+            url = getProperty('gitea.maven.url')
+            content {
+                includeModule 'net.woggioni', 'jwo'
+                includeModule 'net.woggioni', 'xmemcached'
+                includeGroup 'com.lys'
+            }
+        }
+        mavenCentral()
+    }
+
+    pluginManager.withPlugin('java-library') {
+        java {
+            withSourcesJar()
+            modularity.inferModulePath = true
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(21)
+                vendor = JvmVendorSpec.ORACLE
+            }
+        }
+
+        test {
+            useJUnitPlatform()
+        }
+
+        tasks.withType(JavaCompile) {
+            modularity.inferModulePath = true
+            options.release = 21
+        }
+    }
+
+    pluginManager.withPlugin(catalog.plugins.kotlin.jvm.get().pluginId) {
+        tasks.withType(KotlinCompile.class) {
+            compilerOptions.jvmTarget = JvmTarget.JVM_21
+        }
+    }
+
+    pluginManager.withPlugin(catalog.plugins.lombok.get().pluginId) {
+        lombok {
+            version = catalog.versions.lombok
+        }
+    }
+
+    pluginManager.withPlugin('maven-publish') {
+
+        publishing {
+            repositories {
+                maven {
+                    name = "Gitea"
+                    url = uri(getProperty('gitea.maven.url'))
+
+                    credentials(HttpHeaderCredentials) {
+                        name = "Authorization"
+                        value = "token ${System.getenv()["PUBLISHER_TOKEN"]}"
+                    }
+
+                    authentication {
+                        header(HttpHeaderAuthentication)
+                    }
+                }
+            }
+        }
+    }
+}
+
+Property<String> mainClassName = objects.property(String.class)
+mainClassName.set('net.woggioni.gbcs.GradleBuildCacheServer')
+
+tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
+    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs=' + project.sourceSets.main.output.asPath
+    options.javaModuleVersion = version
+    options.javaModuleMainClass = mainClassName
+}
+
+
+//tasks.named(JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME, JavaCompile) {
+//    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs.test=' + project.sourceSets.test.output.asPath
+//    classpath = configurations.testCompileClasspath + files(tasks.jar.archiveFile)
+//    modularity.inferModulePath = true
+//    javaModuleDetector
+//}
+
+//tasks.named(JavaPlugin.TEST_TASK_NAME, JavaForkOptions) {
+//    classpath = configurations.testRuntimeClasspath + project.files(tasks.jar.archiveFile) + project.sourceSets.test.output
+//    jvmArgumentProviders << new CommandLineArgumentProvider() {
+//        @CompileClasspath
+//        def kotlinClassesMain = kotlin.sourceSets.main.collect { it.kotlin.classesDirectory }
+//
+//        @CompileClasspath
+//        def kotlinClassesTest = kotlin.sourceSets.main.collect { it.kotlin.classesDirectory }
+
+//        @Override
+//        Iterable<String> asArguments() {
+//            return [
+//                "--patch-module",
+//                'net.woggioni.gbcs=' + kotlinClassesMain.collect { it.get().asFile.absolutePath },
+//                "--patch-module",
+//                'net.woggioni.gbcs.test=' + project.sourceSets.test.output.asPath,
+//            ]
+//        }
+//    }
+//}
+
+//configurations {
+//    integrationTestImplementation {
+//        attributes {
+//            attribute(LIBRARY_ELEMENTS_ATTRIBUTE, project.objects.named(LibraryElements.class, JAR))
+//        }
+//    }
+//
+//    integrationTestCompileClasspath {
+//        attributes {
+//            attribute(LIBRARY_ELEMENTS_ATTRIBUTE, project.objects.named(LibraryElements.class, JAR))
+//        }
+//    }
+//}
+//
 
 envelopeJar {
     mainModule = 'net.woggioni.gbcs'
-    mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
+    mainClass = mainClassName
+
+    extraClasspath = ["plugins"]
 }
 
-repositories {
-    maven {
-        url = getProperty('gitea.maven.url')
-        content {
-            includeModule 'net.woggioni', 'jwo'
-            includeGroup 'com.lys'
-        }
-    }
-    mavenCentral()
-}
+//
+//testing {
+//    suites {
+//        test {
+//            useJUnitJupiter(catalog.versions.junit.jupiter.get())
+//        }
+//
+//        integrationTest(JvmTestSuite) {
+//            dependencies {
+//                implementation project()
+//                implementation catalog.bcprov.jdk18on
+//                implementation catalog.bcpkix.jdk18on
+//                annotationProcessor catalog.lombok
+//                compileOnly catalog.lombok
+//                implementation project('gbcs-base')
+//                implementation project('gbcs-api')
+//
+//                runtimeOnly project("gbcs-memcached")
+//            }
+//
+//            targets {
+//                all {
+//                    testTask.configure {
+//                        shouldRunAfter(test)
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
 
 dependencies {
     implementation catalog.jwo
     implementation catalog.slf4j.api
     implementation catalog.netty.codec.http
+
+    implementation project('gbcs-base')
+    implementation project('gbcs-api')
 
 //    runtimeOnly catalog.slf4j.jdk14
     runtimeOnly catalog.logback.classic
@@ -43,40 +201,14 @@ dependencies {
     testImplementation catalog.junit.jupiter.api
     testImplementation catalog.junit.jupiter.params
     testRuntimeOnly catalog.junit.jupiter.engine
-}
 
-java {
-    withSourcesJar()
-    modularity.inferModulePath = true
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
-test {
-    useJUnitPlatform()
-}
-
-tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
-    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs=' + project.sourceSets.main.output.asPath
-    options.javaModuleVersion = provider { version }
-    options.javaModuleMainClass = envelopeJar.mainClass
-}
-
-tasks.withType(JavaCompile) {
-    modularity.inferModulePath = true
-    options.release = 21
-}
-
-
-tasks.named("compileKotlin", KotlinCompile.class) {
-    compilerOptions.jvmTarget = JvmTarget.JVM_21
+    testRuntimeOnly project("gbcs-memcached")
 }
 
 Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', EnvelopeJarTask.class) {
 //    systemProperties['java.util.logging.config.class'] = 'net.woggioni.gbcs.LoggingConfig'
 //    systemProperties['log.config.source'] = 'logging.properties'
-    systemProperties['logback.configurationFile'] = 'classpath:logback.xml'
+    systemProperties['logback.configurationFile'] = 'classpath:net/woggioni/gbcs/logback.xml'
 }
 
 
@@ -85,25 +217,37 @@ def envelopeJarArtifact = artifacts.add('archives', envelopeJarTaskProvider.get(
     builtBy envelopeJarTaskProvider
 }
 
+tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
+    mainClass = 'net.woggioni.gbcs.GraalNativeImageConfiguration'
+}
+
+tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
+    mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
+    useMusl = true
+    buildStaticImage = true
+}
+
 publishing {
-    repositories {
-        maven {
-            name = "Gitea"
-            url = uri(getProperty('gitea.maven.url'))
-
-            credentials(HttpHeaderCredentials) {
-                name = "Authorization"
-                value = "token ${System.getenv()["PUBLISHER_TOKEN"]}"
-            }
-
-            authentication {
-                header(HttpHeaderAuthentication)
-            }
-        }
-    }
     publications {
         maven(MavenPublication) {
             artifact envelopeJarArtifact
         }
     }
 }
+
+
+//tasks.named('check') {
+//    dependsOn(testing.suites.integrationTest)
+//}
+//
+//tasks.named("integrationTest", JavaForkOptions) {
+//    jvmArgumentProviders << new CommandLineArgumentProvider() {
+//        @Override
+//        Iterable<String> asArguments() {
+//            return [
+//                    "--patch-module",
+//                    'net.woggioni.gbcs.test=' + project.sourceSets.integrationTest.output.asPath,
+//            ]
+//        }
+//    }
+//}

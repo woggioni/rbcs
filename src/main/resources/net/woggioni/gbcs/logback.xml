@@ -15,5 +15,7 @@
     <root level="debug">
         <appender-ref ref="console"/>
     </root>
-    <logger name="io.netty" level="info"/>
+    <logger name="io.netty" level="debug"/>
+    <logger name="com.google.code.yanf4j" level="warn"/>
+    <logger name="net.rubyeye.xmemcached" level="warn"/>
 </configuration>

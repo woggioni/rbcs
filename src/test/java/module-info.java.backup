@@ -1,7 +1,0 @@
-module net.woggioni.gbcs.test {
-    requires org.junit.jupiter.api;
-    requires net.woggioni.gbcs;
-    requires kotlin.stdlib;
-    requires java.xml;
-    requires java.naming;
-}

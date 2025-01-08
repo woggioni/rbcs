@@ -1,32 +1,44 @@
 package net.woggioni.gbcs.test
 
-import net.woggioni.gbcs.configuration.Configuration
-import net.woggioni.gbcs.GradleBuildCacheServer
-import net.woggioni.gbcs.Xml
+import net.woggioni.gbcs.base.GBCS.toUrl
+import net.woggioni.gbcs.base.Xml
+import net.woggioni.gbcs.configuration.Parser
 import net.woggioni.gbcs.configuration.Serializer
 import net.woggioni.gbcs.url.ClasspathUrlStreamHandlerFactoryProvider
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 
-class ConfigurationTest {
+class ConfigurationTestKt {
 
-    @Test
-    fun test(@TempDir testDir : Path) {
-        URL.setURLStreamHandlerFactory(ClasspathUrlStreamHandlerFactoryProvider())
-        val dbf = Xml.newDocumentBuilderFactory(GradleBuildCacheServer.CONFIGURATION_SCHEMA_URL)
-        val db = dbf.newDocumentBuilder()
-        val configurationUrl = GradleBuildCacheServer.DEFAULT_CONFIGURATION_URL
-        val doc = configurationUrl.openStream().use(db::parse)
-        val cfg = Configuration.parse(doc)
+//    companion object {
+//        init {
+//            URL.setURLStreamHandlerFactory(ClasspathUrlStreamHandlerFactoryProvider())
+//        }
+//    }
+
+    @ValueSource(
+        strings = [
+            "classpath:net/woggioni/gbcs/test/gbcs-default.xml",
+            "classpath:net/woggioni/gbcs/test/gbcs-memcached.xml",
+        ]
+    )
+    @ParameterizedTest
+    fun test(configurationUrl: String, @TempDir testDir: Path) {
+        ClasspathUrlStreamHandlerFactoryProvider.install()
+        val doc = Xml.parseXml(configurationUrl.toUrl())
+        val cfg = Parser.parse(doc)
         val configFile = testDir.resolve("gbcs.xml")
         Files.newOutputStream(configFile).use {
             Xml.write(Serializer.serialize(cfg), it)
         }
-        val parsed = Configuration.parse(Xml.parseXml(configFile.toUri().toURL()))
+        Xml.write(Serializer.serialize(cfg), System.out)
+
+        val parsed = Parser.parse(Xml.parseXml(configFile.toUri().toURL()))
         Assertions.assertEquals(cfg, parsed)
     }
 }

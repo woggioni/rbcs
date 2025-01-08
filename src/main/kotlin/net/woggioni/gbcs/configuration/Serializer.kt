@@ -1,34 +1,37 @@
 package net.woggioni.gbcs.configuration
 
-import net.woggioni.gbcs.Xml
+import net.woggioni.gbcs.api.CacheProvider
+import net.woggioni.gbcs.api.Configuration
+import net.woggioni.gbcs.base.GBCS
+import net.woggioni.gbcs.base.Xml
 import org.w3c.dom.Document
 
 object Serializer {
 
-    private const val GBCS_NAMESPACE: String = "urn:net.woggioni.gbcs"
-    private const val GBCS_PREFIX: String = "gbcs"
-
     fun serialize(conf : Configuration) : Document {
-        return Xml.of(GBCS_NAMESPACE, GBCS_PREFIX + ":server") {
-            attr("userVirtualThreads", conf.useVirtualThread.toString())
-            conf.serverPath?.let { serverPath ->
+
+        val schemaLocations = CacheSerializers.index.values.asSequence().map {
+            it.xmlNamespace to it.xmlSchemaLocation
+        }.toMap()
+        return Xml.of(GBCS.GBCS_NAMESPACE_URI, GBCS.GBCS_PREFIX + ":server") {
+            attr("useVirtualThreads", conf.isUseVirtualThread.toString())
+//            attr("xmlns:xs", GradleBuildCacheServer.XML_SCHEMA_NAMESPACE_URI)
+            val value = schemaLocations.asSequence().map { (k, v) -> "$k $v" }.joinToString(" ")
+            attr("xs:schemaLocation",value , namespaceURI = GBCS.XML_SCHEMA_NAMESPACE_URI)
+
+            conf.serverPath
+                ?.takeIf(String::isNotEmpty)
+                ?.let { serverPath ->
                 attr("path", serverPath)
             }
             node("bind") {
                 attr("host", conf.host)
                 attr("port", conf.port.toString())
             }
-            node("cache") {
-                when(val cache = conf.cache) {
-                    is Configuration.FileSystemCache -> {
-                        node("file-system-cache") {
-                            attr("path", cache.root.toString())
-                            attr("max-age", cache.maxAge.toString())
-                        }
-                    }
-                    else -> throw NotImplementedError()
-                }
-            }
+            val cache = conf.cache
+            val serializer : CacheProvider<Configuration.Cache> =
+                (CacheSerializers.index[cache.namespaceURI to cache.typeName] as? CacheProvider<Configuration.Cache>) ?: throw NotImplementedError()
+            element.appendChild(serializer.serialize(doc, cache))
             node("authorization") {
                 node("users") {
                     for(user in conf.users.values) {
@@ -112,7 +115,7 @@ object Serializer {
                             trustStore.password?.let { password ->
                                 attr("password", password)
                             }
-                            attr("check-certificate-status", trustStore.checkCertificateStatus.toString())
+                            attr("check-certificate-status", trustStore.isCheckCertificateStatus.toString())
                         }
                     }
                 }

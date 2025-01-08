@@ -1,4 +1,4 @@
-package net.woggioni.gbcs
+package net.woggioni.gbcs.base
 
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Document
@@ -72,7 +72,7 @@ class ElementIterator(parent: Element, name: String? = null) : Iterator<Element>
     }
 }
 
-class Xml(private val doc: Document, val element: Element) {
+class Xml(val doc: Document, val element: Element) {
 
     class ErrorHandler(private val fileURL: URL) : ErrHandler {
 
@@ -127,7 +127,7 @@ class Xml(private val doc: Document, val element: Element) {
 
         fun getSchema(schema: URL): Schema {
             val sf = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
-            sf.setFeature(FEATURE_SECURE_PROCESSING, true)
+            sf.setFeature(FEATURE_SECURE_PROCESSING, false)
 //        disableProperty(sf, ACCESS_EXTERNAL_SCHEMA)
 //        disableProperty(sf, ACCESS_EXTERNAL_DTD)
             sf.errorHandler = ErrorHandler(schema)
@@ -144,13 +144,15 @@ class Xml(private val doc: Document, val element: Element) {
 
         fun newDocumentBuilderFactory(schemaResourceURL: URL?): DocumentBuilderFactory {
             val dbf = DocumentBuilderFactory.newInstance()
-            dbf.setFeature(FEATURE_SECURE_PROCESSING, true)
-            disableProperty(dbf, ACCESS_EXTERNAL_SCHEMA)
+            dbf.setFeature(FEATURE_SECURE_PROCESSING, false)
+//            disableProperty(dbf, ACCESS_EXTERNAL_SCHEMA)
+            dbf.setAttribute(ACCESS_EXTERNAL_SCHEMA, "all")
             disableProperty(dbf, ACCESS_EXTERNAL_DTD)
-            dbf.isExpandEntityReferences = false
+            dbf.isExpandEntityReferences = true
             dbf.isIgnoringComments = true
             dbf.isNamespaceAware = true
             dbf.isValidating = false
+            dbf.setFeature("http://apache.org/xml/features/validation/schema", true);
             schemaResourceURL?.let {
                 dbf.schema = getSchema(it)
             }
@@ -233,10 +235,11 @@ class Xml(private val doc: Document, val element: Element) {
 
     fun node(
         name: String,
+        namespaceURI : String? = null,
         attrs: Map<String, String> = emptyMap(),
         cb: Xml.(el: Element) -> Unit = {}
     ): Element {
-        val child = doc.createElement(name)
+        val child = doc.createElementNS(namespaceURI, name)
         for ((key, value) in attrs) {
             child.setAttribute(key, value)
         }
@@ -248,12 +251,16 @@ class Xml(private val doc: Document, val element: Element) {
     }
 
 
-    fun attrs(vararg attributes: Pair<String, String>) {
-        for (attr in attributes) element.setAttribute(attr.first, attr.second)
-    }
+//    fun attrs(vararg attributes: Pair<String, String>) {
+//        for (attr in attributes) element.setAttribute(attr.first, attr.second)
+//    }
+//
+//    fun attrs(vararg attributes: Pair<Pair<String?, String>, String>) {
+//        for (attr in attributes) element.setAttributeNS(attr.first.first, attr.first.second, attr.second)
+//    }
 
-    fun attr(key: String, value: String) {
-        element.setAttribute(key, value)
+    fun attr(key: String, value: String, namespaceURI : String? = null) {
+        element.setAttributeNS(namespaceURI, key, value)
     }
 
     fun text(txt: String) {

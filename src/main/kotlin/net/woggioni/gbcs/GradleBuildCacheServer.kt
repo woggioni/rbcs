@@ -42,22 +42,30 @@ import io.netty.handler.stream.ChunkedNioStream
 import io.netty.handler.stream.ChunkedWriteHandler
 import io.netty.util.concurrent.DefaultEventExecutorGroup
 import io.netty.util.concurrent.EventExecutorGroup
-import net.woggioni.gbcs.cache.Cache
-import net.woggioni.gbcs.cache.FileSystemCache
-import net.woggioni.gbcs.configuration.Configuration
+import net.woggioni.gbcs.api.Cache
+import net.woggioni.gbcs.api.Configuration
+import net.woggioni.gbcs.api.Role
+import net.woggioni.gbcs.api.exception.ContentTooLargeException
+import net.woggioni.gbcs.base.GBCS
+import net.woggioni.gbcs.base.Xml
+import net.woggioni.gbcs.base.GBCS.toUrl
+import net.woggioni.gbcs.base.contextLogger
+import net.woggioni.gbcs.base.debug
+import net.woggioni.gbcs.base.info
+import net.woggioni.gbcs.configuration.Parser
+import net.woggioni.gbcs.configuration.Serializer
 import net.woggioni.gbcs.url.ClasspathUrlStreamHandlerFactoryProvider
 import net.woggioni.jwo.Application
 import net.woggioni.jwo.JWO
 import net.woggioni.jwo.Tuple2
+import java.io.ByteArrayOutputStream
 import java.net.InetSocketAddress
-import java.net.URI
 import java.net.URL
 import java.net.URLStreamHandlerFactory
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyStore
-import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.util.Arrays
@@ -68,6 +76,7 @@ import java.util.regex.Pattern
 import javax.naming.ldap.LdapName
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLPeerUnverifiedException
+import kotlin.io.path.absolute
 
 
 class GradleBuildCacheServer(private val cfg: Configuration) {
@@ -107,7 +116,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         override fun authenticate(ctx: ChannelHandlerContext, req: HttpRequest): Set<Role>? {
             return try {
                 sslEngine.session.peerCertificates
-            } catch (es : SSLPeerUnverifiedException) {
+            } catch (es: SSLPeerUnverifiedException) {
                 null
             }?.takeIf {
                 it.isNotEmpty()
@@ -187,13 +196,13 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                         .map { it as X509Certificate }
                         .toArray { size -> Array<X509Certificate?>(size) { null } }
                 SslContextBuilder.forServer(serverKey, *serverCert).apply {
-                    if (tls.verifyClients) {
+                    if (tls.isVerifyClients) {
                         clientAuth(ClientAuth.OPTIONAL)
                         val trustStore = tls.trustStore
                         if (trustStore != null) {
                             val ts = loadKeystore(trustStore.file, trustStore.password)
                             trustManager(
-                                ClientCertificateValidator.getTrustManager(ts, trustStore.checkCertificateStatus)
+                                ClientCertificateValidator.getTrustManager(ts, trustStore.isCheckCertificateStatus)
                             )
                         }
                     }
@@ -259,7 +268,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         override fun initChannel(ch: Channel) {
             val pipeline = ch.pipeline()
             val auth = cfg.authentication
-            var authenticator : AbstractNettyHttpAuthenticator? = null
+            var authenticator: AbstractNettyHttpAuthenticator? = null
             if (auth is Configuration.BasicAuthentication) {
                 val roleAuthorizer = RoleAuthorizer()
                 authenticator = (NettyHttpBasicAuthenticator(cfg.users, roleAuthorizer))
@@ -268,7 +277,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                 val sslHandler = sslContext.newHandler(ch.alloc())
                 pipeline.addLast(sslHandler)
 
-                if(auth is Configuration.ClientCertificateAuthentication) {
+                if (auth is Configuration.ClientCertificateAuthentication) {
                     val roleAuthorizer = RoleAuthorizer()
                     authenticator = ClientCertificateAuthenticator(
                         roleAuthorizer,
@@ -282,16 +291,12 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
             pipeline.addLast(HttpObjectAggregator(Int.MAX_VALUE))
-            authenticator?.let{
+            authenticator?.let {
                 pipeline.addLast(it)
             }
-            val cacheImplementation = when(val cache = cfg.cache) {
-                is Configuration.FileSystemCache -> {
-                    FileSystemCache(cache.root, cache.maxAge)
-                }
-                else -> throw NotImplementedError()
-            }
-            pipeline.addLast(group, ServerHandler(cacheImplementation, cfg.serverPath))
+            val cacheImplementation = cfg.cache.materialize()
+            val prefix = Path.of("/").resolve(Path.of(cfg.serverPath ?: "/"))
+            pipeline.addLast(group, ServerHandler(cacheImplementation, prefix))
             pipeline.addLast(ExceptionHandler())
         }
     }
@@ -301,6 +306,12 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         private val NOT_AUTHORIZED: FullHttpResponse = DefaultFullHttpResponse(
             HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN, Unpooled.EMPTY_BUFFER
+        ).apply {
+            headers()[HttpHeaderNames.CONTENT_LENGTH] = "0"
+        }
+
+        private val TOO_BIG: FullHttpResponse = DefaultFullHttpResponse(
+            HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER
         ).apply {
             headers()[HttpHeaderNames.CONTENT_LENGTH] = "0"
         }
@@ -317,6 +328,11 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                         .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
                 }
 
+                is ContentTooLargeException -> {
+                    ctx.writeAndFlush(TOO_BIG.retainedDuplicate())
+                        .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
+                }
+
                 else -> {
                     log.error(cause.message, cause)
                     ctx.close()
@@ -325,7 +341,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         }
     }
 
-    private class ServerHandler(private val cache: Cache, private val serverPrefix: String?) :
+    private class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
         SimpleChannelInboundHandler<FullHttpRequest>() {
 
         companion object {
@@ -335,7 +351,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                 val uri = req.uri()
                 val i = uri.lastIndexOf('/')
                 if (i < 0) throw RuntimeException(String.format("Malformed request URI: '%s'", uri))
-                return uri.substring(0, i).takeIf(String::isNotEmpty) to uri.substring(i + 1)
+                return uri.substring(0, i) to uri.substring(i + 1)
             }
         }
 
@@ -343,9 +359,12 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             val keepAlive: Boolean = HttpUtil.isKeepAlive(msg)
             val method = msg.method()
             if (method === HttpMethod.GET) {
-                val (prefix, key) = splitPath(msg)
+//                val (prefix, key) = splitPath(msg)
+                val path = Path.of(msg.uri())
+                val prefix = path.parent
+                val key = path.fileName.toString()
                 if (serverPrefix == prefix) {
-                    cache.get(digestString(key.toByteArray()))?.let { channel ->
+                    cache.get(key)?.let { channel ->
                         log.debug(ctx) {
                             "Cache hit for key '$key'"
                         }
@@ -369,6 +388,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                                         .addListener(ChannelFutureListener.CLOSE)
                                 }
                             }
+
                             else -> {
                                 ctx.write(ChunkedNioStream(channel))
                                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
@@ -391,13 +411,24 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                     ctx.writeAndFlush(response)
                 }
             } else if (method === HttpMethod.PUT) {
-                val (prefix, key) = splitPath(msg)
+                val path = Path.of(msg.uri())
+                val prefix = path.parent
+                val key = path.fileName.toString()
+
                 if (serverPrefix == prefix) {
                     log.debug(ctx) {
                         "Added value for key '$key' to build cache"
                     }
-                    val content = msg.content()
-                    cache.put(digestString(key.toByteArray()), content)
+                    val bodyBytes = msg.content().run {
+                        if (isDirect) {
+                            ByteArray(readableBytes()).also {
+                                readBytes(it)
+                            }
+                        } else {
+                            array()
+                        }
+                    }
+                    cache.put(key, bodyBytes)
                     val response = DefaultFullHttpResponse(
                         msg.protocolVersion(), HttpResponseStatus.CREATED,
                         Unpooled.copiedBuffer(key.toByteArray())
@@ -453,7 +484,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         // Create the multithreaded event loops for the server
         val bossGroup = NioEventLoopGroup()
         val serverSocketChannel = NioServerSocketChannel::class.java
-        val workerGroup = if (cfg.useVirtualThread) {
+        val workerGroup = if (cfg.isUseVirtualThread) {
             NioEventLoopGroup(0, Executors.newVirtualThreadPerTaskExecutor())
         } else {
             NioEventLoopGroup(0, Executors.newWorkStealingPool())
@@ -477,8 +508,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
     companion object {
 
-        private fun String.toUrl() : URL = URL.of(URI(this), null)
-
         private val log by lazy {
             contextLogger()
         }
@@ -486,9 +515,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         private const val PROTOCOL_HANDLER = "java.protocol.handler.pkgs"
         private const val HANDLERS_PACKAGE = "net.woggioni.gbcs.url"
 
-        val CONFIGURATION_SCHEMA_URL by lazy {
-            "classpath:net/woggioni/gbcs/gbcs.xsd".toUrl()
-        }
         val DEFAULT_CONFIGURATION_URL by lazy { "classpath:net/woggioni/gbcs/gbcs-default.xml".toUrl() }
 
         /**
@@ -515,7 +541,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         fun loadConfiguration(args: Array<String>): Configuration {
 //            registerUrlProtocolHandler()
-            URL.setURLStreamHandlerFactory(ClasspathUrlStreamHandlerFactoryProvider())
 //            Thread.currentThread().contextClassLoader = GradleBuildCacheServer::class.java.classLoader
             val app = Application.builder("gbcs")
                 .configurationDirectoryEnvVar("GBCS_CONFIGURATION_DIR")
@@ -524,6 +549,9 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             val confDir = app.computeConfigurationDirectory()
             val configurationFile = confDir.resolve("gbcs.xml")
             if (!Files.exists(configurationFile)) {
+                log.info {
+                    "Creating default configuration file at '$configurationFile'"
+                }
                 Files.createDirectories(confDir)
                 val defaultConfigurationFileResource = DEFAULT_CONFIGURATION_URL
                 Files.newOutputStream(configurationFile).use { outputStream ->
@@ -533,37 +561,28 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                 }
             }
 //            val schemaUrl = javaClass.getResource("/net/woggioni/gbcs/gbcs.xsd")
-            val schemaUrl = CONFIGURATION_SCHEMA_URL
-            val dbf = Xml.newDocumentBuilderFactory(schemaUrl)
+//            val schemaUrl = GBCS.CONFIGURATION_SCHEMA_URL
+            val dbf = Xml.newDocumentBuilderFactory(null)
 //            dbf.schema = Xml.getSchema(this::class.java.module.getResourceAsStream("/net/woggioni/gbcs/gbcs.xsd"))
-            dbf.schema = Xml.getSchema(schemaUrl)
-            val db = dbf.newDocumentBuilder().apply {
-                setErrorHandler(Xml.ErrorHandler(schemaUrl))
-            }
+//            dbf.schema = Xml.getSchema(schemaUrl)
+            val db = dbf.newDocumentBuilder()
             val doc = Files.newInputStream(configurationFile).use(db::parse)
-            return Configuration.parse(doc)
+            return Parser.parse(doc)
         }
 
         @JvmStatic
         fun main(args: Array<String>) {
+            ClasspathUrlStreamHandlerFactoryProvider.install()
             val configuration = loadConfiguration(args)
+            log.debug {
+                ByteArrayOutputStream().also {
+                    Xml.write(Serializer.serialize(configuration), it)
+                }.let {
+                    "Server configuration:\n${String(it.toByteArray())}"
+                }
+            }
             GradleBuildCacheServer(configuration).run().use {
             }
-        }
-
-        fun digest(
-            data: ByteArray,
-            md: MessageDigest = MessageDigest.getInstance("MD5")
-        ): ByteArray {
-            md.update(data)
-            return md.digest()
-        }
-
-        fun digestString(
-            data: ByteArray,
-            md: MessageDigest = MessageDigest.getInstance("MD5")
-        ): String {
-            return JWO.bytesToHex(digest(data, md))
         }
     }
 }

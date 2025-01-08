@@ -1,14 +1,11 @@
 package net.woggioni.gbcs.configuration
 
-import net.woggioni.gbcs.Role
-import net.woggioni.gbcs.Xml.Companion.asIterable
-import org.w3c.dom.Document
-import org.w3c.dom.Element
+import net.woggioni.gbcs.api.Role
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.cert.X509Certificate
 import java.time.Duration
 
+@ConsistentCopyVisibility
 data class Configuration private constructor(
     val host: String,
     val port: Int,
@@ -34,10 +31,6 @@ data class Configuration private constructor(
 
         val roles : Set<Role>
             get() = groups.asSequence().flatMap { it.roles }.toSet()
-    }
-
-    data class HostAndPort(val host: String, val port: Int) {
-        override fun toString() = "$host:$port"
     }
 
     fun interface UserExtractor {
@@ -107,188 +100,210 @@ data class Configuration private constructor(
             useVirtualThread
         )
 
-        fun parse(document: Document): Configuration {
-            val root = document.documentElement
-            var cache: Cache? = null
-            var host = "127.0.0.1"
-            var port = 11080
-            var users = emptyMap<String, User>()
-            var groups = emptyMap<String, Group>()
-            var tls: Tls? = null
-            val serverPath = root.getAttribute("path")
-            val useVirtualThread = root.getAttribute("useVirtualThreads")
-                .takeIf(String::isNotEmpty)
-                ?.let(String::toBoolean) ?: false
-            var authentication : Authentication? = null
-            for (child in root.asIterable()) {
-                when (child.nodeName) {
-                    "authorization" -> {
-                        for (gchild in child.asIterable()) {
-                            when (child.nodeName) {
-                                "users" -> {
-                                    users = parseUsers(child)
-                                }
-
-                                "groups" -> {
-                                    val pair = parseGroups(child, users)
-                                    users = pair.first
-                                    groups = pair.second
-                                }
-                            }
-                        }
-                    }
-
-                    "bind" -> {
-                        host = child.getAttribute("host")
-                        port = Integer.parseInt(child.getAttribute("port"))
-                    }
-
-                    "cache" -> {
-                        for (gchild in child.asIterable()) {
-                            when (gchild.nodeName) {
-                                "file-system-cache" -> {
-                                    val cacheFolder = gchild.getAttribute("path")
-                                        .takeIf(String::isNotEmpty)
-                                        ?.let(Paths::get)
-                                        ?: Paths.get(System.getProperty("user.home")).resolve(".gbcs")
-                                    val maxAge = gchild.getAttribute("max-age")
-                                        .takeIf(String::isNotEmpty)
-                                        ?.let(Duration::parse)
-                                        ?: Duration.ofDays(1)
-                                    cache = FileSystemCache(cacheFolder, maxAge)
-                                }
-                            }
-                        }
-                    }
-
-                    "authentication" -> {
-                        for (gchild in child.asIterable()) {
-                            when (gchild.nodeName) {
-                                "basic" -> {
-                                    authentication = BasicAuthentication()
-                                }
-
-                                "client-certificate" -> {
-                                    var tlsExtractorUser : TlsCertificateExtractor? = null
-                                    var tlsExtractorGroup : TlsCertificateExtractor? = null
-                                    for (gchild in child.asIterable()) {
-                                        when (gchild.nodeName) {
-                                            "group-extractor" -> {
-                                                val attrName = gchild.getAttribute("attribute-name")
-                                                val pattern = gchild.getAttribute("pattern")
-                                                tlsExtractorGroup = TlsCertificateExtractor(attrName, pattern)
-                                            }
-
-                                            "user-extractor" -> {
-                                                val attrName = gchild.getAttribute("attribute-name")
-                                                val pattern = gchild.getAttribute("pattern")
-                                                tlsExtractorUser = TlsCertificateExtractor(attrName, pattern)
-                                            }
-                                        }
-                                    }
-                                    authentication = ClientCertificateAuthentication(tlsExtractorUser, tlsExtractorGroup)
-                                }
-                            }
-                        }
-                    }
-
-                    "tls" -> {
-                        val verifyClients = child.getAttribute("verify-clients")
-                            .takeIf(String::isNotEmpty)
-                            ?.let(String::toBoolean) ?: false
-                        var keyStore: KeyStore? = null
-                        var trustStore: TrustStore? = null
-                        for (granChild in child.asIterable()) {
-                            when (granChild.nodeName) {
-                                "keystore" -> {
-                                    val keyStoreFile = Paths.get(granChild.getAttribute("file"))
-                                    val keyStorePassword = granChild.getAttribute("password")
-                                        .takeIf(String::isNotEmpty)
-                                    val keyAlias = granChild.getAttribute("key-alias")
-                                    val keyPassword = granChild.getAttribute("key-password")
-                                        .takeIf(String::isNotEmpty)
-                                    keyStore = KeyStore(
-                                        keyStoreFile,
-                                        keyStorePassword,
-                                        keyAlias,
-                                        keyPassword
-                                    )
-                                }
-
-                                "truststore" -> {
-                                    val trustStoreFile = Paths.get(granChild.getAttribute("file"))
-                                    val trustStorePassword = granChild.getAttribute("password")
-                                        .takeIf(String::isNotEmpty)
-                                    val checkCertificateStatus = granChild.getAttribute("check-certificate-status")
-                                        .takeIf(String::isNotEmpty)
-                                        ?.let(String::toBoolean)
-                                        ?: false
-                                    trustStore = TrustStore(
-                                        trustStoreFile,
-                                        trustStorePassword,
-                                        checkCertificateStatus
-                                    )
-                                }
-                            }
-                        }
-                        tls = Tls(keyStore, trustStore, verifyClients)
-                    }
-                }
-            }
-            return of(host, port, serverPath, users, groups, cache!!, authentication, tls, useVirtualThread)
-        }
-
-        private fun parseRoles(root: Element) = root.asIterable().asSequence().map {
-            when (it.nodeName) {
-                "reader" -> Role.Reader
-                "writer" -> Role.Writer
-                else -> throw UnsupportedOperationException("Illegal node '${it.nodeName}'")
-            }
-        }.toSet()
-
-        private fun parseUserRefs(root: Element) = root.asIterable().asSequence().filter {
-            it.nodeName == "user"
-        }.map {
-            it.getAttribute("ref")
-        }.toSet()
-
-        private fun parseUsers(root: Element): Map<String, User> {
-            return root.asIterable().asSequence().filter {
-                it.nodeName == "user"
-            }.map { el ->
-                val username = el.getAttribute("name")
-                val password = el.getAttribute("password").takeIf(String::isNotEmpty)
-                username to User(username, password, emptySet())
-            }.toMap()
-        }
-
-        private fun parseGroups(root: Element, knownUsers : Map<String, User>): Pair<Map<String, User>, Map<String, Group>> {
-            val userGroups = mutableMapOf<String, MutableSet<String>>()
-            val groups =  root.asIterable().asSequence().filter {
-                it.nodeName == "group"
-            }.map { el ->
-                val groupName = el.getAttribute("name")
-                var roles = emptySet<Role>()
-                for (child in el.asIterable()) {
-                    when (child.nodeName) {
-                        "users" -> {
-                            parseUserRefs(child).mapNotNull(knownUsers::get).forEach { user ->
-                                userGroups.computeIfAbsent(user.name) {
-                                    mutableSetOf()
-                                }.add(groupName)
-                            }
-                        }
-                        "roles" -> {
-                            roles = parseRoles(child)
-                        }
-                    }
-                }
-                groupName to Group(groupName, roles)
-            }.toMap()
-            val users = knownUsers.map { (name, user) ->
-                name to User(name, user.password, userGroups[name]?.mapNotNull { groups[it] }?.toSet() ?: emptySet())
-            }.toMap()
-            return users to groups
-        }
+//        fun parse(document: Document): Configuration {
+//            val cacheSerializers = ServiceLoader.load(Configuration::class.java.module.layer, CacheSerializer::class.java)
+//                .asSequence()
+//                .map {
+//                    "${it.xmlType}:${it.xmlNamespace}" to it
+//                }.toMap()
+//            val root = document.documentElement
+//            var cache: Cache? = null
+//            var host = "127.0.0.1"
+//            var port = 11080
+//            var users = emptyMap<String, User>()
+//            var groups = emptyMap<String, Group>()
+//            var tls: Tls? = null
+//            val serverPath = root.getAttribute("path")
+//            val useVirtualThread = root.getAttribute("useVirtualThreads")
+//                .takeIf(String::isNotEmpty)
+//                ?.let(String::toBoolean) ?: false
+//            var authentication : Authentication? = null
+//            for (child in root.asIterable()) {
+//                when (child.nodeName) {
+//                    "authorization" -> {
+//                        for (gchild in child.asIterable()) {
+//                            when (child.nodeName) {
+//                                "users" -> {
+//                                    users = parseUsers(child)
+//                                }
+//
+//                                "groups" -> {
+//                                    val pair = parseGroups(child, users)
+//                                    users = pair.first
+//                                    groups = pair.second
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//                    "bind" -> {
+//                        host = child.getAttribute("host")
+//                        port = Integer.parseInt(child.getAttribute("port"))
+//                    }
+//
+//                    "cache" -> {
+//                        val type = child.getAttribute("xs:type")
+//                        val serializer = cacheSerializers.get(type) ?: throw NotImplementedError()
+//                        cache = serializer.deserialize(child)
+//
+//                        when(child.getAttribute("xs:type")) {
+//                            "gbcs:fileSystemCacheType" -> {
+//                                val cacheFolder = child.getAttribute("path")
+//                                    .takeIf(String::isNotEmpty)
+//                                    ?.let(Paths::get)
+//                                    ?: Paths.get(System.getProperty("user.home")).resolve(".gbcs")
+//                                val maxAge = child.getAttribute("max-age")
+//                                    .takeIf(String::isNotEmpty)
+//                                    ?.let(Duration::parse)
+//                                    ?: Duration.ofDays(1)
+//                                cache = FileSystemCache(cacheFolder, maxAge)
+//                            }
+//                        }
+////                        for (gchild in child.asIterable()) {
+////                            when (gchild.nodeName) {
+////                                "file-system-cache" -> {
+////                                    val cacheFolder = gchild.getAttribute("path")
+////                                        .takeIf(String::isNotEmpty)
+////                                        ?.let(Paths::get)
+////                                        ?: Paths.get(System.getProperty("user.home")).resolve(".gbcs")
+////                                    val maxAge = gchild.getAttribute("max-age")
+////                                        .takeIf(String::isNotEmpty)
+////                                        ?.let(Duration::parse)
+////                                        ?: Duration.ofDays(1)
+////                                    cache = FileSystemCache(cacheFolder, maxAge)
+////                                }
+////                            }
+////                        }
+//                    }
+//
+//                    "authentication" -> {
+//                        for (gchild in child.asIterable()) {
+//                            when (gchild.nodeName) {
+//                                "basic" -> {
+//                                    authentication = BasicAuthentication()
+//                                }
+//
+//                                "client-certificate" -> {
+//                                    var tlsExtractorUser : TlsCertificateExtractor? = null
+//                                    var tlsExtractorGroup : TlsCertificateExtractor? = null
+//                                    for (gchild in child.asIterable()) {
+//                                        when (gchild.nodeName) {
+//                                            "group-extractor" -> {
+//                                                val attrName = gchild.getAttribute("attribute-name")
+//                                                val pattern = gchild.getAttribute("pattern")
+//                                                tlsExtractorGroup = TlsCertificateExtractor(attrName, pattern)
+//                                            }
+//
+//                                            "user-extractor" -> {
+//                                                val attrName = gchild.getAttribute("attribute-name")
+//                                                val pattern = gchild.getAttribute("pattern")
+//                                                tlsExtractorUser = TlsCertificateExtractor(attrName, pattern)
+//                                            }
+//                                        }
+//                                    }
+//                                    authentication = ClientCertificateAuthentication(tlsExtractorUser, tlsExtractorGroup)
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//                    "tls" -> {
+//                        val verifyClients = child.getAttribute("verify-clients")
+//                            .takeIf(String::isNotEmpty)
+//                            ?.let(String::toBoolean) ?: false
+//                        var keyStore: KeyStore? = null
+//                        var trustStore: TrustStore? = null
+//                        for (granChild in child.asIterable()) {
+//                            when (granChild.nodeName) {
+//                                "keystore" -> {
+//                                    val keyStoreFile = Paths.get(granChild.getAttribute("file"))
+//                                    val keyStorePassword = granChild.getAttribute("password")
+//                                        .takeIf(String::isNotEmpty)
+//                                    val keyAlias = granChild.getAttribute("key-alias")
+//                                    val keyPassword = granChild.getAttribute("key-password")
+//                                        .takeIf(String::isNotEmpty)
+//                                    keyStore = KeyStore(
+//                                        keyStoreFile,
+//                                        keyStorePassword,
+//                                        keyAlias,
+//                                        keyPassword
+//                                    )
+//                                }
+//
+//                                "truststore" -> {
+//                                    val trustStoreFile = Paths.get(granChild.getAttribute("file"))
+//                                    val trustStorePassword = granChild.getAttribute("password")
+//                                        .takeIf(String::isNotEmpty)
+//                                    val checkCertificateStatus = granChild.getAttribute("check-certificate-status")
+//                                        .takeIf(String::isNotEmpty)
+//                                        ?.let(String::toBoolean)
+//                                        ?: false
+//                                    trustStore = TrustStore(
+//                                        trustStoreFile,
+//                                        trustStorePassword,
+//                                        checkCertificateStatus
+//                                    )
+//                                }
+//                            }
+//                        }
+//                        tls = Tls(keyStore, trustStore, verifyClients)
+//                    }
+//                }
+//            }
+//            return of(host, port, serverPath, users, groups, cache!!, authentication, tls, useVirtualThread)
+//        }
+//
+//        private fun parseRoles(root: Element) = root.asIterable().asSequence().map {
+//            when (it.nodeName) {
+//                "reader" -> Role.Reader
+//                "writer" -> Role.Writer
+//                else -> throw UnsupportedOperationException("Illegal node '${it.nodeName}'")
+//            }
+//        }.toSet()
+//
+//        private fun parseUserRefs(root: Element) = root.asIterable().asSequence().filter {
+//            it.nodeName == "user"
+//        }.map {
+//            it.getAttribute("ref")
+//        }.toSet()
+//
+//        private fun parseUsers(root: Element): Map<String, User> {
+//            return root.asIterable().asSequence().filter {
+//                it.nodeName == "user"
+//            }.map { el ->
+//                val username = el.getAttribute("name")
+//                val password = el.getAttribute("password").takeIf(String::isNotEmpty)
+//                username to User(username, password, emptySet())
+//            }.toMap()
+//        }
+//
+//        private fun parseGroups(root: Element, knownUsers : Map<String, User>): Pair<Map<String, User>, Map<String, Group>> {
+//            val userGroups = mutableMapOf<String, MutableSet<String>>()
+//            val groups =  root.asIterable().asSequence().filter {
+//                it.nodeName == "group"
+//            }.map { el ->
+//                val groupName = el.getAttribute("name")
+//                var roles = emptySet<Role>()
+//                for (child in el.asIterable()) {
+//                    when (child.nodeName) {
+//                        "users" -> {
+//                            parseUserRefs(child).mapNotNull(knownUsers::get).forEach { user ->
+//                                userGroups.computeIfAbsent(user.name) {
+//                                    mutableSetOf()
+//                                }.add(groupName)
+//                            }
+//                        }
+//                        "roles" -> {
+//                            roles = parseRoles(child)
+//                        }
+//                    }
+//                }
+//                groupName to Group(groupName, roles)
+//            }.toMap()
+//            val users = knownUsers.map { (name, user) ->
+//                name to User(name, user.password, userGroups[name]?.mapNotNull { groups[it] }?.toSet() ?: emptySet())
+//            }.toMap()
+//            return users to groups
+//        }
     }
 }

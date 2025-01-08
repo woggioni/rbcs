@@ -20,10 +20,14 @@ dependencyResolutionManagement {
     versionCatalogs {
         catalog {
             from group: 'com.lys', name: 'lys-catalog', version: getProperty('lys.version')
-            version('envelope', '2024.12.15')
         }
     }
 }
 
 rootProject.name = 'gbcs'
+
+include 'gbcs-api'
+include 'gbcs-base'
+include 'gbcs-memcached'
+
 

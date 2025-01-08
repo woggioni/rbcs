@@ -1,12 +1,11 @@
 package net.woggioni.gbcs.test
 
-import io.netty.handler.codec.Headers
 import io.netty.handler.codec.http.HttpResponseStatus
 import net.woggioni.gbcs.AbstractNettyHttpAuthenticator.Companion.hashPassword
-import net.woggioni.gbcs.Authorizer
-import net.woggioni.gbcs.Role
-import net.woggioni.gbcs.Xml
-import net.woggioni.gbcs.configuration.Configuration
+import net.woggioni.gbcs.api.Role
+import net.woggioni.gbcs.base.Xml
+import net.woggioni.gbcs.api.Configuration
+import net.woggioni.gbcs.cache.FileSystemCacheConfiguration
 import net.woggioni.gbcs.configuration.Serializer
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order
@@ -20,10 +19,11 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.time.Duration
 import java.util.Base64
+import java.util.zip.Deflater
 import kotlin.random.Random
 
 
-class BasicAuthServerTest : AbstractServerTest() {
+class BasicAuthServerTestKt : AbstractServerTestKt() {
 
     companion object {
         private const val PASSWORD = "password"
@@ -33,25 +33,31 @@ class BasicAuthServerTest : AbstractServerTest() {
 
     private val random = Random(101325)
     private val keyValuePair = newEntry(random)
+    private val serverPath = "gbcs"
 
     override fun setUp() {
         this.cacheDir = testDir.resolve("cache")
         val readersGroup = Configuration.Group("readers", setOf(Role.Reader))
         val writersGroup = Configuration.Group("writers", setOf(Role.Writer))
-        cfg = Configuration.of(
-            cache = Configuration.FileSystemCache(this.cacheDir, maxAge = Duration.ofSeconds(3600 * 24)),
-            host = "127.0.0.1",
-            port = ServerSocket(0).localPort + 1,
-            users = listOf(
+        cfg = Configuration(
+            "127.0.0.1",
+            ServerSocket(0).localPort + 1,
+            serverPath,
+            listOf(
                 Configuration.User("user1", hashPassword(PASSWORD), setOf(readersGroup)),
                 Configuration.User("user2", hashPassword(PASSWORD), setOf(writersGroup)),
                 Configuration.User("user3", hashPassword(PASSWORD), setOf(readersGroup, writersGroup))
             ).asSequence().map { it.name to it}.toMap(),
-            groups = sequenceOf(writersGroup, readersGroup).map { it.name to it}.toMap(),
-            authentication = Configuration.BasicAuthentication(),
-            useVirtualThread = true,
-            tls = null,
-            serverPath = "/"
+            sequenceOf(writersGroup, readersGroup).map { it.name to it}.toMap(),
+            FileSystemCacheConfiguration(this.cacheDir,
+                maxAge = Duration.ofSeconds(3600 * 24),
+                digestAlgorithm = "MD5",
+                compressionLevel = Deflater.DEFAULT_COMPRESSION,
+                compressionEnabled = false
+            ),
+            Configuration.BasicAuthentication(),
+            null,
+            true,
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }
@@ -67,7 +73,7 @@ class BasicAuthServerTest : AbstractServerTest() {
     }
 
     fun newRequestBuilder(key : String) = HttpRequest.newBuilder()
-        .uri(URI.create("http://${cfg.host}:${cfg.port}/$key"))
+        .uri(URI.create("http://${cfg.host}:${cfg.port}/$serverPath/$key"))
 
 
     fun newEntry(random : Random) : Pair<String, ByteArray> {

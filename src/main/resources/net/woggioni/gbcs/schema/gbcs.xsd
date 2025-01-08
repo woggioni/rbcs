@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xs:schema targetNamespace="urn:net.woggioni.gbcs"
            xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:gbcs="urn:net.woggioni.gbcs">
+           xmlns:gbcs="urn:net.woggioni.gbcs"
+           elementFormDefault="unqualified"
+>
     <xs:element name="server" type="gbcs:serverType"/>
 
     <xs:complexType name="serverType">
@@ -21,7 +23,7 @@
                     <xs:field xpath="@ref"/>
                 </xs:keyref>
             </xs:element>
-            <xs:element name="authentication" type="gbcs:authenticationType" maxOccurs="1"/>
+            <xs:element name="authentication" type="gbcs:authenticationType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="tls-certificate-authorization" type="gbcs:tlsCertificateAuthorizationType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="tls" type="gbcs:tlsType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
@@ -34,15 +36,18 @@
         <xs:attribute name="port" type="xs:unsignedShort" use="required"/>
     </xs:complexType>
 
-    <xs:complexType name="cacheType">
-        <xs:choice>
-            <xs:element name="file-system-cache" type="gbcs:fileSystemCacheType"/>
-        </xs:choice>
-    </xs:complexType>
+    <xs:complexType name="cacheType" abstract="true"/>
 
     <xs:complexType name="fileSystemCacheType">
-        <xs:attribute name="path" type="xs:string" use="required"/>
-        <xs:attribute name="max-age" type="xs:string" default="P1D"/>
+        <xs:complexContent>
+            <xs:extension base="gbcs:cacheType">
+                <xs:attribute name="path" type="xs:string" use="required"/>
+                <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
+                <xs:attribute name="digest" type="xs:token" default="MD5"/>
+                <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
+                <xs:attribute name="compression-level" type="xs:byte" default="-1"/>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
 
     <xs:complexType name="tlsCertificateAuthorizationType">

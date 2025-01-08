@@ -1,9 +1,10 @@
 package net.woggioni.gbcs.test
 
 import io.netty.handler.codec.http.HttpResponseStatus
-import net.woggioni.gbcs.Role
-import net.woggioni.gbcs.Xml
-import net.woggioni.gbcs.configuration.Configuration
+import net.woggioni.gbcs.api.Configuration
+import net.woggioni.gbcs.api.Role
+import net.woggioni.gbcs.base.Xml
+import net.woggioni.gbcs.cache.FileSystemCacheConfiguration
 import net.woggioni.gbcs.configuration.Serializer
 import net.woggioni.gbcs.utils.CertificateUtils
 import net.woggioni.gbcs.utils.CertificateUtils.X509Credentials
@@ -23,19 +24,23 @@ import java.security.KeyStore
 import java.security.KeyStore.PasswordProtection
 import java.time.Duration
 import java.util.Base64
+import java.util.zip.Deflater
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import kotlin.random.Random
 
 
-class TlsServerTest : AbstractServerTest() {
+class TlsServerTestKt : AbstractServerTestKt() {
 
     companion object {
         private const val CA_CERTIFICATE_ENTRY = "gbcs-ca"
         private const val CLIENT_CERTIFICATE_ENTRY = "gbcs-client"
         private const val SERVER_CERTIFICATE_ENTRY = "gbcs-server"
         private const val PASSWORD = "password"
+
+//        private fun stripLeadingSlash(s : String) = Path.of("/").root.relativize(Path.of(s).normalize()).toString()
+
     }
 
     private lateinit var cacheDir: Path
@@ -51,6 +56,7 @@ class TlsServerTest : AbstractServerTest() {
     private val writersGroup = Configuration.Group("writers", setOf(Role.Writer))
     private val random = Random(101325)
     private val keyValuePair = newEntry(random)
+    private val serverPath : String? = null
 
     private val users = listOf(
         Configuration.User("user1", null, setOf(readersGroup)),
@@ -104,7 +110,7 @@ class TlsServerTest : AbstractServerTest() {
         }
     }
 
-    fun getClientKeyStore(ca : X509Credentials, subject: X500Name) = KeyStore.getInstance("PKCS12").apply {
+    fun getClientKeyStore(ca: X509Credentials, subject: X500Name) = KeyStore.getInstance("PKCS12").apply {
         val clientCert = CertificateUtils.createClientCertificate(ca, subject, 30)
 
         load(null, null)
@@ -116,7 +122,7 @@ class TlsServerTest : AbstractServerTest() {
         )
     }
 
-    fun getHttpClient(clientKeyStore : KeyStore?): HttpClient {
+    fun getHttpClient(clientKeyStore: KeyStore?): HttpClient {
         val kmf = clientKeyStore?.let {
             KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply {
                 init(it, PASSWORD.toCharArray())
@@ -141,23 +147,28 @@ class TlsServerTest : AbstractServerTest() {
         this.trustStoreFile = testDir.resolve("truststore.p12")
         this.cacheDir = testDir.resolve("cache")
         createKeyStoreAndTrustStore()
-        cfg = Configuration.of(
-            cache = Configuration.FileSystemCache(this.cacheDir, maxAge = Duration.ofSeconds(3600 * 24)),
-            host = "127.0.0.1",
-            port = ServerSocket(0).localPort + 1,
-            users = users.asSequence().map { it.name to it }.toMap(),
-            groups = sequenceOf(writersGroup, readersGroup).map { it.name to it }.toMap(),
-            authentication = Configuration.ClientCertificateAuthentication(
-                userExtractor = Configuration.TlsCertificateExtractor("CN", "(.*)"),
-                groupExtractor = null
+        cfg = Configuration(
+            "127.0.0.1",
+            ServerSocket(0).localPort + 1,
+            serverPath,
+            users.asSequence().map { it.name to it }.toMap(),
+            sequenceOf(writersGroup, readersGroup).map { it.name to it }.toMap(),
+            FileSystemCacheConfiguration(this.cacheDir,
+                maxAge = Duration.ofSeconds(3600 * 24),
+                compressionEnabled = true,
+                compressionLevel = Deflater.DEFAULT_COMPRESSION,
+                digestAlgorithm = "MD5"
             ),
-            useVirtualThread = true,
-            tls = Configuration.Tls(
+            Configuration.ClientCertificateAuthentication(
+                Configuration.TlsCertificateExtractor("CN", "(.*)"),
+                null
+            ),
+            Configuration.Tls(
                 Configuration.KeyStore(this.serverKeyStoreFile, null, SERVER_CERTIFICATE_ENTRY, PASSWORD),
                 Configuration.TrustStore(this.trustStoreFile, null, false),
                 true
             ),
-            serverPath = "/"
+            false,
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }
@@ -166,7 +177,7 @@ class TlsServerTest : AbstractServerTest() {
     }
 
     fun newRequestBuilder(key: String) = HttpRequest.newBuilder()
-        .uri(URI.create("https://${cfg.host}:${cfg.port}/$key"))
+        .uri(URI.create("https://${cfg.host}:${cfg.port}/${serverPath ?: ""}/$key"))
 
     fun buildAuthorizationHeader(user: Configuration.User, password: String): String {
         val b64 = Base64.getEncoder().encode("${user.name}:${password}".toByteArray(Charsets.UTF_8)).let {

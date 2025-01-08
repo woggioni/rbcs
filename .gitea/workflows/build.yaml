@@ -9,9 +9,53 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: graalvm
+          java-version: 21
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
       - name: Execute Gradle build
         env:
           PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
         run: ./gradlew build publish
+  build-docker:
+    name: "Build Docker images"
+    runs-on: hostinger
+    steps:
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.4.0
+        with:
+          driver: docker-container
+      -
+        name: Login to Gitea container registry
+        uses: docker/login-action@v3
+        with:
+          registry: gitea.woggioni.net
+          username: woggioni
+          password: ${{ secrets.PUBLISHER_TOKEN }}
+      -
+        name: Build and push gbcs images
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          pull: true
+          tags: |
+            "gitea.woggioni.net/woggioni/gbcs:slim"
+          cache-from: type=registry,ref=gitea.woggioni.net/woggioni/gbcs:buildx
+          cache-to: type=registry,mode=max,compression=zstd,image-manifest=true,oci-mediatypes=true,ref=gitea.woggioni.net/woggioni/gbcs:buildx
+          target: release
+      -
+        name: Build and push gbcs memcached image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          pull: true
+          tags: |
+            "gitea.woggioni.net/woggioni/gbcs:latest"
+            "gitea.woggioni.net/woggioni/gbcs:memcached"
+          cache-from: type=registry,ref=gitea.woggioni.net/woggioni/gbcs:buildx
+          cache-to: type=registry,mode=max,compression=zstd,image-manifest=true,oci-mediatypes=true,ref=gitea.woggioni.net/woggioni/gbcs:buildx
+          target: release-memcached

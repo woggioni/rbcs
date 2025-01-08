@@ -2,6 +2,7 @@ package net.woggioni.gbcs
 
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpRequest
+import net.woggioni.gbcs.api.Role
 
 class RoleAuthorizer : Authorizer {
 

@@ -1,0 +1,64 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    alias catalog.plugins.kotlin.jvm
+}
+
+configurations {
+    bundle {
+        extendsFrom runtimeClasspath
+        canBeResolved = true
+        canBeConsumed = false
+        visible = false
+
+        resolutionStrategy {
+            dependencies {
+                exclude group: 'org.slf4j', module: 'slf4j-api'
+                exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib'
+                exclude group: 'org.jetbrains', module: 'annotations'
+            }
+        }
+    }
+}
+dependencies {
+    compileOnly project(':gbcs-base')
+    compileOnly project(':gbcs-api')
+    compileOnly catalog.jwo
+    implementation catalog.xmemcached
+}
+
+tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
+    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs.memcached=' + project.sourceSets.main.output.asPath
+    options.javaModuleVersion = version
+}
+
+tasks.named("compileKotlin", KotlinCompile.class) {
+    compilerOptions.jvmTarget = JvmTarget.JVM_21
+}
+
+Provider<Tar> bundleTask = tasks.register("bundle", Tar) {
+    from(tasks.named(JavaPlugin.JAR_TASK_NAME))
+    from(configurations.bundle)
+    group = BasePlugin.BUILD_GROUP
+}
+
+tasks.named(BasePlugin.ASSEMBLE_TASK_NAME) {
+    dependsOn(bundleTask)
+}
+
+def bundleArtifact = artifacts.add('archives', bundleTask.get().archiveFile.get().asFile) {
+    type = 'tar'
+    builtBy bundleTask
+}
+
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifact bundleArtifact
+        }
+    }
+}

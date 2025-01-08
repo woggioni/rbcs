@@ -1,0 +1,11 @@
+plugins {
+    id 'java-library'
+    alias catalog.plugins.lombok
+}
+
+dependencies {
+}
+
+tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
+    options.javaModuleVersion = version
+}
