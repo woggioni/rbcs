@@ -61,14 +61,6 @@ abstract class AbstractNettyHttpAuthenticator(private val authorizer : Authorize
             return String(Base64.getEncoder().encode(concat(hash, actualSalt)))
         }
 
-//        fun decodePasswordHash(passwordHash : String) : Pair<String, String> {
-//            return passwordHash.indexOf(':')
-//                .takeIf { it > 0 }
-//                ?.let { sep ->
-//                    passwordHash.substring(0, sep) to passwordHash.substring(sep)
-//                } ?: throw IllegalArgumentException("Failed to decode password hash")
-//        }
-
         fun decodePasswordHash(passwordHash : String) : Pair<ByteArray, ByteArray> {
             val decoded = Base64.getDecoder().decode(passwordHash)
             val hash = ByteArray(KEY_LENGTH / 8)

@@ -2,8 +2,6 @@ package net.woggioni.gbcs.api;
 
 
 import lombok.Value;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 import java.nio.file.Path;
 import java.security.cert.X509Certificate;
@@ -105,12 +103,6 @@ public class Configuration {
         String getNamespaceURI();
         String getTypeName();
     }
-
-//    @Value
-//    public static class FileSystemCache implements Cache {
-//        Path root;
-//        Duration maxAge;
-//    }
 
     public static Configuration of(
             String host,

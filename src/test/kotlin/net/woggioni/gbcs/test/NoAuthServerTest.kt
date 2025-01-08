@@ -20,7 +20,7 @@ import java.util.zip.Deflater
 import kotlin.random.Random
 
 
-class NoAuthServerTestKt : AbstractServerTestKt() {
+class NoAuthServerTest : AbstractServerTest() {
 
     private lateinit var cacheDir : Path
 

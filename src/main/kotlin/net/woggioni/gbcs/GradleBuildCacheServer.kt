@@ -46,9 +46,8 @@ import net.woggioni.gbcs.api.Cache
 import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.api.Role
 import net.woggioni.gbcs.api.exception.ContentTooLargeException
-import net.woggioni.gbcs.base.GBCS
-import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.base.GBCS.toUrl
+import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.base.contextLogger
 import net.woggioni.gbcs.base.debug
 import net.woggioni.gbcs.base.info
@@ -76,7 +75,6 @@ import java.util.regex.Pattern
 import javax.naming.ldap.LdapName
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLPeerUnverifiedException
-import kotlin.io.path.absolute
 
 
 class GradleBuildCacheServer(private val cfg: Configuration) {
@@ -540,7 +538,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         }
 
         fun loadConfiguration(args: Array<String>): Configuration {
-//            registerUrlProtocolHandler()
 //            Thread.currentThread().contextClassLoader = GradleBuildCacheServer::class.java.classLoader
             val app = Application.builder("gbcs")
                 .configurationDirectoryEnvVar("GBCS_CONFIGURATION_DIR")

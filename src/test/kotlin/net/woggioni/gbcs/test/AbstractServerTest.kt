@@ -4,7 +4,6 @@ import net.woggioni.gbcs.GradleBuildCacheServer
 import net.woggioni.gbcs.api.Configuration
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.ClassOrderer
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestMethodOrder
@@ -14,7 +13,7 @@ import java.nio.file.Path
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-abstract class AbstractServerTestKt {
+abstract class AbstractServerTest {
 
     protected lateinit var cfg : Configuration
 

@@ -16,6 +16,7 @@ import net.woggioni.gbcs.base.Xml.Companion.asIterable
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.TypeInfo
+import java.lang.IllegalArgumentException
 import java.nio.file.Paths
 
 object Parser {
@@ -57,45 +58,12 @@ object Parser {
                 }
 
                 "cache" -> {
-//                    val type = child.getAttribute("xs:type").split(":")
-//                    val namespaceURI = child.lookupNamespaceURI(type[0])
-//                    val typeName = type[1]
-                    cache = (child as? TypeInfo)?.let { tf ->
+                    cache = (child as TypeInfo).let { tf ->
                         val typeNamespace = tf.typeNamespace
                         val typeName = tf.typeName
                         CacheSerializers.index[typeNamespace to typeName]
-                    }?.deserialize(child) ?: throw NotImplementedError()
-
-//                    cache = serializer.deserialize(child)
-
-//                    when(child.getAttribute("xs:type")) {
-//                        "gbcs:fileSystemCacheType" -> {
-//                            val cacheFolder = child.getAttribute("path")
-//                                .takeIf(String::isNotEmpty)
-//                                ?.let(Paths::get)
-//                                ?: Paths.get(System.getProperty("user.home")).resolve(".gbcs")
-//                            val maxAge = child.getAttribute("max-age")
-//                                .takeIf(String::isNotEmpty)
-//                                ?.let(Duration::parse)
-//                                ?: Duration.ofDays(1)
-//                            cache = FileSystemCache(cacheFolder, maxAge)
-//                        }
-//                    }
-//                        for (gchild in child.asIterable()) {
-//                            when (gchild.localName) {
-//                                "file-system-cache" -> {
-//                                    val cacheFolder = gchild.getAttribute("path")
-//                                        .takeIf(String::isNotEmpty)
-//                                        ?.let(Paths::get)
-//                                        ?: Paths.get(System.getProperty("user.home")).resolve(".gbcs")
-//                                    val maxAge = gchild.getAttribute("max-age")
-//                                        .takeIf(String::isNotEmpty)
-//                                        ?.let(Duration::parse)
-//                                        ?: Duration.ofDays(1)
-//                                    cache = FileSystemCache(cacheFolder, maxAge)
-//                                }
-//                            }
-//                        }
+                            ?: throw IllegalArgumentException("Cache provider for namespace '$typeNamespace' not found")
+                    }.deserialize(child)
                 }
 
                 "authentication" -> {

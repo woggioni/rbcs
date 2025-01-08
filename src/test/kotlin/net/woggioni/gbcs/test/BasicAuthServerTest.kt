@@ -23,7 +23,7 @@ import java.util.zip.Deflater
 import kotlin.random.Random
 
 
-class BasicAuthServerTestKt : AbstractServerTestKt() {
+class BasicAuthServerTest : AbstractServerTest() {
 
     companion object {
         private const val PASSWORD = "password"

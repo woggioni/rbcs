@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import javax.naming.ldap.LdapName
 
-class X500NameTestKt {
+class X500NameTest {
 
     @Test
     fun test() {

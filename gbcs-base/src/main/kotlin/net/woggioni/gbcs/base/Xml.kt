@@ -128,8 +128,6 @@ class Xml(val doc: Document, val element: Element) {
         fun getSchema(schema: URL): Schema {
             val sf = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
             sf.setFeature(FEATURE_SECURE_PROCESSING, false)
-//        disableProperty(sf, ACCESS_EXTERNAL_SCHEMA)
-//        disableProperty(sf, ACCESS_EXTERNAL_DTD)
             sf.errorHandler = ErrorHandler(schema)
             return sf.newSchema(schema)
         }
@@ -137,15 +135,12 @@ class Xml(val doc: Document, val element: Element) {
         fun getSchema(inputStream: InputStream): Schema {
             val sf = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
             sf.setFeature(FEATURE_SECURE_PROCESSING, true)
-//        disableProperty(sf, ACCESS_EXTERNAL_SCHEMA)
-//        disableProperty(sf, ACCESS_EXTERNAL_DTD)
             return sf.newSchema(StreamSource(inputStream))
         }
 
         fun newDocumentBuilderFactory(schemaResourceURL: URL?): DocumentBuilderFactory {
             val dbf = DocumentBuilderFactory.newInstance()
             dbf.setFeature(FEATURE_SECURE_PROCESSING, false)
-//            disableProperty(dbf, ACCESS_EXTERNAL_SCHEMA)
             dbf.setAttribute(ACCESS_EXTERNAL_SCHEMA, "all")
             disableProperty(dbf, ACCESS_EXTERNAL_DTD)
             dbf.isExpandEntityReferences = true
@@ -175,32 +170,10 @@ class Xml(val doc: Document, val element: Element) {
         return sourceStream?.let(db::parse) ?: sourceURL.openStream().use(db::parse)
     }
 
-//
-//    fun newDocumentBuilder(resource: URL): DocumentBuilder {
-//        val db = newDocumentBuilderFactory(null).newDocumentBuilder()
-//        db.setErrorHandler(XmlErrorHandler(resource))
-//        return db
-//    }
-
-//    fun parseXmlResource(resource: URL): Document {
-//        val db = newDocumentBuilder(resource, null)
-//        return resource.openStream().use(db::parse)
-//    }
-
         fun write(doc: Document, output: OutputStream) {
             val transformerFactory = TransformerFactory.newInstance()
             val transformer = transformerFactory.newTransformer()
             transformer.setOutputProperty(OutputKeys.INDENT, "yes")
-//            val domImpl = doc.getImplementation()
-//            val docType = domImpl.createDocumentType(
-//                "plist",
-//                "-//Apple//DTD PLIST 1.0//EN",
-//                "http://www.apple.com/DTDs/PropertyList-1.0.dtd"
-//            )
-//            transformer.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, docType.getPublicId())
-//            transformer.setOutputProperty(OutputKeys.DOCTYPE_SYSTEM, docType.getSystemId())
-//            val transformerFactory = TransformerFactory.newInstance()
-//            val transformer: Transformer = transformerFactory.newTransformer()
             transformer.setOutputProperty(OutputKeys.INDENT, "yes")
             transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4")
             transformer.setOutputProperty(OutputKeys.STANDALONE, "yes")
@@ -230,7 +203,6 @@ class Xml(val doc: Document, val element: Element) {
                 removeChild(firstChild ?: break)
             }
         }
-
     }
 
     fun node(
@@ -249,15 +221,6 @@ class Xml(val doc: Document, val element: Element) {
                 Xml(doc, it).cb(it)
             }
     }
-
-
-//    fun attrs(vararg attributes: Pair<String, String>) {
-//        for (attr in attributes) element.setAttribute(attr.first, attr.second)
-//    }
-//
-//    fun attrs(vararg attributes: Pair<Pair<String?, String>, String>) {
-//        for (attr in attributes) element.setAttributeNS(attr.first.first, attr.first.second, attr.second)
-//    }
 
     fun attr(key: String, value: String, namespaceURI : String? = null) {
         element.setAttributeNS(namespaceURI, key, value)

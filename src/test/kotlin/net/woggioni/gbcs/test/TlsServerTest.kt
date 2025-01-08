@@ -31,16 +31,13 @@ import javax.net.ssl.TrustManagerFactory
 import kotlin.random.Random
 
 
-class TlsServerTestKt : AbstractServerTestKt() {
+class TlsServerTest : AbstractServerTest() {
 
     companion object {
         private const val CA_CERTIFICATE_ENTRY = "gbcs-ca"
         private const val CLIENT_CERTIFICATE_ENTRY = "gbcs-client"
         private const val SERVER_CERTIFICATE_ENTRY = "gbcs-server"
         private const val PASSWORD = "password"
-
-//        private fun stripLeadingSlash(s : String) = Path.of("/").root.relativize(Path.of(s).normalize()).toString()
-
     }
 
     private lateinit var cacheDir: Path
