@@ -1,7 +1,7 @@
 package net.woggioni.gbcs.test
 
 import io.netty.handler.codec.http.HttpResponseStatus
-import net.woggioni.gbcs.AbstractNettyHttpAuthenticator.Companion.hashPassword
+import net.woggioni.gbcs.auth.AbstractNettyHttpAuthenticator.Companion.hashPassword
 import net.woggioni.gbcs.api.Role
 import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.api.Configuration

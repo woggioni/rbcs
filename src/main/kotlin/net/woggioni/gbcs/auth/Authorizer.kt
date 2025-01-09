@@ -1,4 +1,4 @@
-package net.woggioni.gbcs
+package net.woggioni.gbcs.auth
 
 import io.netty.handler.codec.http.HttpRequest
 import net.woggioni.gbcs.api.Role

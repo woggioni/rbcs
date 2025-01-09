@@ -1,18 +1,11 @@
 plugins {
     id 'java-library'
-    id 'jvm-test-suite'
     alias catalog.plugins.kotlin.jvm
-    alias catalog.plugins.envelope
     alias catalog.plugins.sambal
     alias catalog.plugins.lombok
-    alias catalog.plugins.graalvm.native.image
     id 'maven-publish'
 }
 
-import net.woggioni.gradle.envelope.EnvelopeJarTask
-import net.woggioni.gradle.graalvm.NativeImagePlugin
-import net.woggioni.gradle.graalvm.NativeImageTask
-import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -41,6 +34,11 @@ allprojects {
     }
 
     pluginManager.withPlugin('java-library') {
+
+        ext {
+            jpmsModuleName = project.group + '.' + project.name.replace('-', '.')
+        }
+
         java {
             withSourcesJar()
             modularity.inferModulePath = true
@@ -58,7 +56,18 @@ allprojects {
             modularity.inferModulePath = true
             options.release = 21
         }
+
+        tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
+            options.compilerArgumentProviders << new CommandLineArgumentProvider() {
+                @Override
+                Iterable<String> asArguments() {
+                    return ['--patch-module', project.jpmsModuleName + '=' + project.sourceSets.main.output.asPath]
+                }
+            }
+            options.javaModuleVersion = version
+        }
     }
+
 
     pluginManager.withPlugin(catalog.plugins.kotlin.jvm.get().pluginId) {
         tasks.withType(KotlinCompile.class) {
@@ -92,34 +101,23 @@ allprojects {
             }
         }
     }
-}
 
-Property<String> mainClassName = objects.property(String.class)
-mainClassName.set('net.woggioni.gbcs.GradleBuildCacheServer')
-
-tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
-    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs=' + project.sourceSets.main.output.asPath
-    options.javaModuleVersion = version
-    options.javaModuleMainClass = mainClassName
-}
-
-envelopeJar {
-    mainModule = 'net.woggioni.gbcs'
-    mainClass = mainClassName
-
-    extraClasspath = ["plugins"]
+    tasks.withType(AbstractArchiveTask.class) {
+        archiveVersion = project.version
+    }
 }
 
 dependencies {
     implementation catalog.jwo
     implementation catalog.slf4j.api
     implementation catalog.netty.codec.http
+    implementation catalog.netty.codec.http2
 
-    implementation project('gbcs-base')
-    implementation project('gbcs-api')
+    api project('gbcs-base')
+    api project('gbcs-api')
 
 //    runtimeOnly catalog.slf4j.jdk14
-    runtimeOnly catalog.logback.classic
+    testRuntimeOnly catalog.logback.classic
 
     testImplementation catalog.bcprov.jdk18on
     testImplementation catalog.bcpkix.jdk18on
@@ -130,32 +128,10 @@ dependencies {
     testRuntimeOnly project("gbcs-memcached")
 }
 
-Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', EnvelopeJarTask.class) {
-//    systemProperties['java.util.logging.config.class'] = 'net.woggioni.gbcs.LoggingConfig'
-//    systemProperties['log.config.source'] = 'logging.properties'
-    systemProperties['logback.configurationFile'] = 'classpath:net/woggioni/gbcs/logback.xml'
-}
-
-
-def envelopeJarArtifact = artifacts.add('archives', envelopeJarTaskProvider.get().archiveFile.get().asFile) {
-    type = 'jar'
-    builtBy envelopeJarTaskProvider
-}
-
-tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
-    mainClass = 'net.woggioni.gbcs.GraalNativeImageConfiguration'
-}
-
-tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
-    mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
-    useMusl = true
-    buildStaticImage = true
-}
-
 publishing {
     publications {
         maven(MavenPublication) {
-            artifact envelopeJarArtifact
+            from(components["java"])
         }
     }
 }

@@ -1,0 +1,75 @@
+plugins {
+    id 'java-library'
+    alias catalog.plugins.kotlin.jvm
+    alias catalog.plugins.envelope
+    alias catalog.plugins.sambal
+    alias catalog.plugins.graalvm.native.image
+    id 'maven-publish'
+}
+
+import net.woggioni.gradle.envelope.EnvelopeJarTask
+import net.woggioni.gradle.graalvm.NativeImagePlugin
+import net.woggioni.gradle.graalvm.NativeImageTask
+import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+Property<String> mainClassName = objects.property(String.class)
+mainClassName.set('net.woggioni.gbcs.cli.GradleBuildCacheServerCli')
+
+tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
+    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs.cli=' + project.sourceSets.main.output.asPath
+    options.javaModuleVersion = version
+    options.javaModuleMainClass = mainClassName
+}
+
+envelopeJar {
+    mainModule = 'net.woggioni.gbcs.cli'
+    mainClass = mainClassName
+
+    extraClasspath = ["plugins"]
+}
+
+dependencies {
+    implementation catalog.jwo
+    implementation catalog.slf4j.api
+    implementation catalog.netty.codec.http
+    implementation catalog.picocli
+
+//    implementation project(':gbcs-base')
+//    implementation project(':gbcs-api')
+    implementation rootProject
+
+//    runtimeOnly catalog.slf4j.jdk14
+    runtimeOnly catalog.logback.classic
+}
+
+Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', EnvelopeJarTask.class) {
+//    systemProperties['java.util.logging.config.class'] = 'net.woggioni.gbcs.LoggingConfig'
+//    systemProperties['log.config.source'] = 'logging.properties'
+    systemProperties['logback.configurationFile'] = 'classpath:net/woggioni/gbcs/cli/logback.xml'
+}
+
+def envelopeJarArtifact = artifacts.add('archives', envelopeJarTaskProvider.get().archiveFile.get().asFile) {
+    type = 'jar'
+    builtBy envelopeJarTaskProvider
+}
+
+tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
+    mainClass = 'net.woggioni.gbcs.GraalNativeImageConfiguration'
+}
+
+tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
+    mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
+    useMusl = true
+    buildStaticImage = true
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifact envelopeJarArtifact
+        }
+    }
+}
+

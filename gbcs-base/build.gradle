@@ -3,12 +3,14 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id 'java-library'
+    id 'maven-publish'
     alias catalog.plugins.kotlin.jvm
 }
 
 dependencies {
     compileOnly project(':gbcs-api')
     compileOnly catalog.slf4j.api
+    api catalog.jwo
 }
 
 tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
@@ -18,4 +20,12 @@ tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
 
 tasks.named("compileKotlin", KotlinCompile.class) {
     compilerOptions.jvmTarget = JvmTarget.JVM_21
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components["java"])
+        }
+    }
 }

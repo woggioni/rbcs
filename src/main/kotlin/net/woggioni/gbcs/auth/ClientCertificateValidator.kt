@@ -1,4 +1,4 @@
-package net.woggioni.gbcs
+package net.woggioni.gbcs.auth
 
 import java.security.KeyStore
 import java.security.cert.CertPathValidator

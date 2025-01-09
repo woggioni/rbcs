@@ -34,6 +34,9 @@ import io.netty.handler.codec.http.HttpServerCodec
 import io.netty.handler.codec.http.HttpUtil
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.handler.codec.http.LastHttpContent
+import io.netty.handler.codec.http2.Http2FrameCodecBuilder
+import io.netty.handler.ssl.ApplicationProtocolNames
+import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler
 import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContext
 import io.netty.handler.ssl.SslContextBuilder
@@ -46,7 +49,13 @@ import net.woggioni.gbcs.api.Cache
 import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.api.Role
 import net.woggioni.gbcs.api.exception.ContentTooLargeException
+import net.woggioni.gbcs.auth.AbstractNettyHttpAuthenticator
+import net.woggioni.gbcs.auth.Authorizer
+import net.woggioni.gbcs.auth.ClientCertificateValidator
+import net.woggioni.gbcs.auth.RoleAuthorizer
 import net.woggioni.gbcs.base.GBCS.toUrl
+import net.woggioni.gbcs.base.PasswordSecurity.decodePasswordHash
+import net.woggioni.gbcs.base.PasswordSecurity.hashPassword
 import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.base.contextLogger
 import net.woggioni.gbcs.base.debug
@@ -58,6 +67,7 @@ import net.woggioni.jwo.Application
 import net.woggioni.jwo.JWO
 import net.woggioni.jwo.Tuple2
 import java.io.ByteArrayOutputStream
+import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.URL
 import java.net.URLStreamHandlerFactory
@@ -213,6 +223,22 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         companion object {
 
+            private fun getServerAPNHandler(): ApplicationProtocolNegotiationHandler {
+                val serverAPNHandler: ApplicationProtocolNegotiationHandler =
+                    object : ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_2) {
+                        override fun configurePipeline(ctx: ChannelHandlerContext, protocol: String) {
+                            if (ApplicationProtocolNames.HTTP_2 == protocol) {
+                                ctx.pipeline().addLast(
+                                    Http2FrameCodecBuilder.forServer().build()
+                                )
+                                return
+                            }
+                            throw IllegalStateException("Protocol: $protocol not supported")
+                        }
+                    }
+                return serverAPNHandler
+            }
+
             fun loadKeystore(file: Path, password: String?): KeyStore {
                 val ext = JWO.splitExtension(file)
                     .map(Tuple2<String, String>::get_2)
@@ -273,7 +299,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             }
             if (sslContext != null) {
                 val sslHandler = sslContext.newHandler(ch.alloc())
-                pipeline.addLast(sslHandler)
 
                 if (auth is Configuration.ClientCertificateAuthentication) {
                     val roleAuthorizer = RoleAuthorizer()
@@ -285,6 +310,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                     )
                 }
             }
+//            pipeline.addLast(getServerAPNHandler())
             pipeline.addLast(HttpServerCodec())
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
@@ -535,6 +561,17 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                 if (handlers == null || handlers.isEmpty()) HANDLERS_PACKAGE else "$handlers|$HANDLERS_PACKAGE"
             )
             resetCachedUrlHandlers()
+        }
+
+        fun loadConfiguration(configurationFile: Path): Configuration {
+            val dbf = Xml.newDocumentBuilderFactory(null)
+            val db = dbf.newDocumentBuilder()
+            val doc = Files.newInputStream(configurationFile).use(db::parse)
+            return Parser.parse(doc)
+        }
+
+        fun dumpConfiguration(conf : Configuration, outputStream: OutputStream) {
+            Xml.write(Serializer.serialize(conf), outputStream)
         }
 
         fun loadConfiguration(args: Array<String>): Configuration {
