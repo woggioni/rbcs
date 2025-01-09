@@ -18,8 +18,6 @@ Property<String> mainClassName = objects.property(String.class)
 mainClassName.set('net.woggioni.gbcs.cli.GradleBuildCacheServerCli')
 
 tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
-    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs.cli=' + project.sourceSets.main.output.asPath
-    options.javaModuleVersion = version
     options.javaModuleMainClass = mainClassName
 }
 
@@ -36,8 +34,6 @@ dependencies {
     implementation catalog.netty.codec.http
     implementation catalog.picocli
 
-//    implementation project(':gbcs-base')
-//    implementation project(':gbcs-api')
     implementation rootProject
 
 //    runtimeOnly catalog.slf4j.jdk14
@@ -48,11 +44,6 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', E
 //    systemProperties['java.util.logging.config.class'] = 'net.woggioni.gbcs.LoggingConfig'
 //    systemProperties['log.config.source'] = 'logging.properties'
     systemProperties['logback.configurationFile'] = 'classpath:net/woggioni/gbcs/cli/logback.xml'
-}
-
-def envelopeJarArtifact = artifacts.add('archives', envelopeJarTaskProvider.get().archiveFile.get().asFile) {
-    type = 'jar'
-    builtBy envelopeJarTaskProvider
 }
 
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
@@ -68,7 +59,7 @@ tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifact envelopeJarArtifact
+            artifact envelopeJar
         }
     }
 }

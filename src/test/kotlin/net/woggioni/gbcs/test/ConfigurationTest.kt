@@ -1,10 +1,10 @@
 package net.woggioni.gbcs.test
 
+import net.woggioni.gbcs.base.GbcsUrlStreamHandlerFactory
 import net.woggioni.gbcs.base.GBCS.toUrl
 import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.configuration.Parser
 import net.woggioni.gbcs.configuration.Serializer
-import net.woggioni.gbcs.url.ClasspathUrlStreamHandlerFactoryProvider
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -22,7 +22,7 @@ class ConfigurationTest {
     )
     @ParameterizedTest
     fun test(configurationUrl: String, @TempDir testDir: Path) {
-        ClasspathUrlStreamHandlerFactoryProvider.install()
+        GbcsUrlStreamHandlerFactory.install()
         val doc = Xml.parseXml(configurationUrl.toUrl())
         val cfg = Parser.parse(doc)
         val configFile = testDir.resolve("gbcs.xml")

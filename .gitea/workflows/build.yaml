@@ -5,6 +5,8 @@ on:
       - '*'
 jobs:
   build:
+    env:
+      RUNNER_TOOL_CACHE: /toolcache
     runs-on: hostinger
     steps:
       - name: Checkout sources
@@ -19,7 +21,11 @@ jobs:
       - name: Execute Gradle build
         env:
           PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-        run: ./gradlew build publish
+        run: ./gradlew build
+      - name: Publish artifacts
+        env:
+          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: ./gradlew publish
   build-docker:
     name: "Build Docker images"
     runs-on: hostinger

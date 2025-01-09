@@ -30,15 +30,6 @@ dependencies {
     implementation catalog.xmemcached
 }
 
-tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
-    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs.memcached=' + project.sourceSets.main.output.asPath
-    options.javaModuleVersion = version
-}
-
-tasks.named("compileKotlin", KotlinCompile.class) {
-    compilerOptions.jvmTarget = JvmTarget.JVM_21
-}
-
 Provider<Tar> bundleTask = tasks.register("bundle", Tar) {
     from(tasks.named(JavaPlugin.JAR_TASK_NAME))
     from(configurations.bundle)
@@ -49,16 +40,10 @@ tasks.named(BasePlugin.ASSEMBLE_TASK_NAME) {
     dependsOn(bundleTask)
 }
 
-def bundleArtifact = artifacts.add('archives', bundleTask.get().archiveFile.get().asFile) {
-    type = 'tar'
-    builtBy bundleTask
-}
-
-
 publishing {
     publications {
         maven(MavenPublication) {
-            artifact bundleArtifact
+            artifact bundleTask
         }
     }
 }

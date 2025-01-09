@@ -1,15 +1,17 @@
 package net.woggioni.gbcs.test
 
 import io.netty.handler.codec.http.HttpResponseStatus
-import net.woggioni.gbcs.auth.AbstractNettyHttpAuthenticator.Companion.hashPassword
-import net.woggioni.gbcs.api.Role
-import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.api.Configuration
+import net.woggioni.gbcs.api.Role
+import net.woggioni.gbcs.base.PasswordSecurity.hashPassword
+import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.cache.FileSystemCacheConfiguration
 import net.woggioni.gbcs.configuration.Serializer
+import net.woggioni.gbcs.utils.NetworkUtils
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import java.io.IOException
 import java.net.ServerSocket
 import java.net.URI
 import java.net.http.HttpClient
@@ -41,7 +43,7 @@ class BasicAuthServerTest : AbstractServerTest() {
         val writersGroup = Configuration.Group("writers", setOf(Role.Writer))
         cfg = Configuration(
             "127.0.0.1",
-            ServerSocket(0).localPort + 1,
+            NetworkUtils.getFreePort(),
             serverPath,
             listOf(
                 Configuration.User("user1", hashPassword(PASSWORD), setOf(readersGroup)),

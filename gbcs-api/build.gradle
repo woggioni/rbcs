@@ -7,10 +7,6 @@ plugins {
 dependencies {
 }
 
-tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
-    options.javaModuleVersion = version
-}
-
 publishing {
     publications {
         maven(MavenPublication) {

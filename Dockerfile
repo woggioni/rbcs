@@ -31,11 +31,11 @@ USER luser
 WORKDIR /home/luser
 
 FROM base-release AS release
-RUN --mount=type=bind,from=build,source=/home/ubuntu/gbcs/gbcs-cli/build,target=/home/luser/build cp build/libs/gbcs-cli-envelope*.jar gbcs.jar
+RUN --mount=type=bind,from=build,source=/home/ubuntu/gbcs/gbcs-cli/build,target=/home/luser/build cp build/libs/gbcs-cli-envelope-*.jar gbcs.jar
 ENTRYPOINT ["java", "-jar", "/home/luser/gbcs.jar"]
 
 FROM base-release AS release-memcached
-RUN --mount=type=bind,from=build,source=/home/ubuntu/gbcs/gbcs-cli/build,target=/home/luser/build cp build/libs/gbcs-cli-envelope*.jar gbcs.jar
+RUN --mount=type=bind,from=build,source=/home/ubuntu/gbcs/gbcs-cli/build,target=/home/luser/build cp build/libs/gbcs-cli-envelope-*.jar gbcs.jar
 RUN mkdir plugins
 WORKDIR /home/luser/plugins
 RUN --mount=type=bind,from=build,source=/home/ubuntu/gbcs/gbcs-memcached/build/distributions,target=/build/distributions tar -xf /build/distributions/gbcs-memcached*.tar

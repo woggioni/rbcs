@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id 'java-library'
@@ -10,16 +8,6 @@ plugins {
 dependencies {
     compileOnly project(':gbcs-api')
     compileOnly catalog.slf4j.api
-    api catalog.jwo
-}
-
-tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
-    options.compilerArgs << '--patch-module' << 'net.woggioni.gbcs.base=' + project.sourceSets.main.output.asPath
-    options.javaModuleVersion = version
-}
-
-tasks.named("compileKotlin", KotlinCompile.class) {
-    compilerOptions.jvmTarget = JvmTarget.JVM_21
 }
 
 publishing {

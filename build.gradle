@@ -10,16 +10,16 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 
-allprojects {
+allprojects { subproject ->
     group = 'net.woggioni'
 
-    if(project.currentTag.isPresent()) {
-        version = project.currentTag
-    } else {
-        version = project.gitRevision.map { gitRevision ->
-            "${getProperty('gbcs.version')}.${gitRevision[0..10]}"
+        if(project.currentTag.isPresent()) {
+            version = project.currentTag.map { it[0] }.get()
+        } else {
+            version = project.gitRevision.map { gitRevision ->
+                "${getProperty('gbcs.version')}.${gitRevision[0..10]}"
+            }.get()
         }
-    }
 
     repositories {
         maven {
@@ -36,7 +36,7 @@ allprojects {
     pluginManager.withPlugin('java-library') {
 
         ext {
-            jpmsModuleName = project.group + '.' + project.name.replace('-', '.')
+            jpmsModuleName = subproject.group + '.' + subproject.name.replace('-', '.')
         }
 
         java {
@@ -61,13 +61,12 @@ allprojects {
             options.compilerArgumentProviders << new CommandLineArgumentProvider() {
                 @Override
                 Iterable<String> asArguments() {
-                    return ['--patch-module', project.jpmsModuleName + '=' + project.sourceSets.main.output.asPath]
+                    return ['--patch-module', subproject.jpmsModuleName + '=' + subproject.sourceSets.main.output.asPath]
                 }
             }
             options.javaModuleVersion = version
         }
     }
-
 
     pluginManager.withPlugin(catalog.plugins.kotlin.jvm.get().pluginId) {
         tasks.withType(KotlinCompile.class) {
@@ -101,17 +100,12 @@ allprojects {
             }
         }
     }
-
-    tasks.withType(AbstractArchiveTask.class) {
-        archiveVersion = project.version
-    }
 }
 
 dependencies {
     implementation catalog.jwo
     implementation catalog.slf4j.api
     implementation catalog.netty.codec.http
-    implementation catalog.netty.codec.http2
 
     api project('gbcs-base')
     api project('gbcs-api')

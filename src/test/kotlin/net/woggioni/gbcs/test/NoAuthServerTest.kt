@@ -5,6 +5,7 @@ import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.cache.FileSystemCacheConfiguration
 import net.woggioni.gbcs.configuration.Serializer
+import net.woggioni.gbcs.utils.NetworkUtils
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -32,7 +33,7 @@ class NoAuthServerTest : AbstractServerTest() {
         this.cacheDir = testDir.resolve("cache")
         cfg = Configuration(
             "127.0.0.1",
-            ServerSocket(0).localPort + 1,
+            NetworkUtils.getFreePort(),
             serverPath,
             emptyMap(),
             emptyMap(),

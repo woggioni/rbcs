@@ -1,6 +1,7 @@
 package net.woggioni.gbcs.api;
 
 
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 
 import java.nio.file.Path;
@@ -23,25 +24,18 @@ public class Configuration {
 
     @Value
     public static class Group {
+        @EqualsAndHashCode.Include
         String name;
         Set<Role> roles;
-
-        @Override
-        public int hashCode() {
-            return name.hashCode();
-        }
     }
 
     @Value
     public static class User {
+        @EqualsAndHashCode.Include
         String name;
         String password;
         Set<Group> groups;
 
-        @Override
-        public int hashCode() {
-            return name.hashCode();
-        }
 
         public Set<Role> getRoles() {
             return groups.stream()

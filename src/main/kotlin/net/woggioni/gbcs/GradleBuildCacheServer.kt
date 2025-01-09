@@ -34,9 +34,6 @@ import io.netty.handler.codec.http.HttpServerCodec
 import io.netty.handler.codec.http.HttpUtil
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.handler.codec.http.LastHttpContent
-import io.netty.handler.codec.http2.Http2FrameCodecBuilder
-import io.netty.handler.ssl.ApplicationProtocolNames
-import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler
 import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContext
 import io.netty.handler.ssl.SslContextBuilder
@@ -58,19 +55,12 @@ import net.woggioni.gbcs.base.PasswordSecurity.decodePasswordHash
 import net.woggioni.gbcs.base.PasswordSecurity.hashPassword
 import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.base.contextLogger
-import net.woggioni.gbcs.base.debug
-import net.woggioni.gbcs.base.info
 import net.woggioni.gbcs.configuration.Parser
 import net.woggioni.gbcs.configuration.Serializer
-import net.woggioni.gbcs.url.ClasspathUrlStreamHandlerFactoryProvider
-import net.woggioni.jwo.Application
 import net.woggioni.jwo.JWO
 import net.woggioni.jwo.Tuple2
-import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
-import java.net.URL
-import java.net.URLStreamHandlerFactory
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
@@ -223,22 +213,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         companion object {
 
-            private fun getServerAPNHandler(): ApplicationProtocolNegotiationHandler {
-                val serverAPNHandler: ApplicationProtocolNegotiationHandler =
-                    object : ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_2) {
-                        override fun configurePipeline(ctx: ChannelHandlerContext, protocol: String) {
-                            if (ApplicationProtocolNames.HTTP_2 == protocol) {
-                                ctx.pipeline().addLast(
-                                    Http2FrameCodecBuilder.forServer().build()
-                                )
-                                return
-                            }
-                            throw IllegalStateException("Protocol: $protocol not supported")
-                        }
-                    }
-                return serverAPNHandler
-            }
-
             fun loadKeystore(file: Path, password: String?): KeyStore {
                 val ext = JWO.splitExtension(file)
                     .map(Tuple2<String, String>::get_2)
@@ -299,6 +273,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             }
             if (sslContext != null) {
                 val sslHandler = sslContext.newHandler(ch.alloc())
+                pipeline.addLast(sslHandler)
 
                 if (auth is Configuration.ClientCertificateAuthentication) {
                     val roleAuthorizer = RoleAuthorizer()
@@ -310,7 +285,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                     )
                 }
             }
-//            pipeline.addLast(getServerAPNHandler())
             pipeline.addLast(HttpServerCodec())
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
@@ -370,20 +344,12 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         companion object {
             private val log = contextLogger()
-
-            private fun splitPath(req: HttpRequest): Pair<String?, String> {
-                val uri = req.uri()
-                val i = uri.lastIndexOf('/')
-                if (i < 0) throw RuntimeException(String.format("Malformed request URI: '%s'", uri))
-                return uri.substring(0, i) to uri.substring(i + 1)
-            }
         }
 
         override fun channelRead0(ctx: ChannelHandlerContext, msg: FullHttpRequest) {
             val keepAlive: Boolean = HttpUtil.isKeepAlive(msg)
             val method = msg.method()
             if (method === HttpMethod.GET) {
-//                val (prefix, key) = splitPath(msg)
                 val path = Path.of(msg.uri())
                 val prefix = path.parent
                 val key = path.fileName.toString()
@@ -479,15 +445,16 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
     }
 
     class ServerHandle(
-        private val httpChannel: ChannelFuture,
+        httpChannelFuture: ChannelFuture,
         private val bossGroup: EventLoopGroup,
         private val workerGroup: EventLoopGroup
     ) : AutoCloseable {
+        private val httpChannel: Channel = httpChannelFuture.channel()
 
-        private val closeFuture: ChannelFuture = httpChannel.channel().closeFuture()
+        private val closeFuture: ChannelFuture = httpChannel.closeFuture()
 
         fun shutdown(): ChannelFuture {
-            return httpChannel.channel().close()
+            return httpChannel.close()
         }
 
         override fun close() {
@@ -506,12 +473,12 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
     fun run(): ServerHandle {
         // Create the multithreaded event loops for the server
-        val bossGroup = NioEventLoopGroup()
+        val bossGroup = NioEventLoopGroup(0, Executors.defaultThreadFactory())
         val serverSocketChannel = NioServerSocketChannel::class.java
         val workerGroup = if (cfg.isUseVirtualThread) {
             NioEventLoopGroup(0, Executors.newVirtualThreadPerTaskExecutor())
         } else {
-            NioEventLoopGroup(0, Executors.newWorkStealingPool())
+            bossGroup
         }
         // A helper class that simplifies server configuration
         val bootstrap = ServerBootstrap().apply {
@@ -532,36 +499,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
     companion object {
 
-        private val log by lazy {
-            contextLogger()
-        }
-
-        private const val PROTOCOL_HANDLER = "java.protocol.handler.pkgs"
-        private const val HANDLERS_PACKAGE = "net.woggioni.gbcs.url"
-
         val DEFAULT_CONFIGURATION_URL by lazy { "classpath:net/woggioni/gbcs/gbcs-default.xml".toUrl() }
-
-        /**
-         * Reset any cached handlers just in case a jar protocol has already been used. We
-         * reset the handler by trying to set a null [URLStreamHandlerFactory] which
-         * should have no effect other than clearing the handlers cache.
-         */
-        private fun resetCachedUrlHandlers() {
-            try {
-                URL.setURLStreamHandlerFactory(null)
-            } catch (ex: Error) {
-                // Ignore
-            }
-        }
-
-        fun registerUrlProtocolHandler() {
-            val handlers = System.getProperty(PROTOCOL_HANDLER, "")
-            System.setProperty(
-                PROTOCOL_HANDLER,
-                if (handlers == null || handlers.isEmpty()) HANDLERS_PACKAGE else "$handlers|$HANDLERS_PACKAGE"
-            )
-            resetCachedUrlHandlers()
-        }
 
         fun loadConfiguration(configurationFile: Path): Configuration {
             val dbf = Xml.newDocumentBuilderFactory(null)
@@ -572,62 +510,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         fun dumpConfiguration(conf : Configuration, outputStream: OutputStream) {
             Xml.write(Serializer.serialize(conf), outputStream)
-        }
-
-        fun loadConfiguration(args: Array<String>): Configuration {
-//            Thread.currentThread().contextClassLoader = GradleBuildCacheServer::class.java.classLoader
-            val app = Application.builder("gbcs")
-                .configurationDirectoryEnvVar("GBCS_CONFIGURATION_DIR")
-                .configurationDirectoryPropertyKey("net.woggioni.gbcs.conf.dir")
-                .build()
-            val confDir = app.computeConfigurationDirectory()
-            val configurationFile = confDir.resolve("gbcs.xml")
-            if (!Files.exists(configurationFile)) {
-                log.info {
-                    "Creating default configuration file at '$configurationFile'"
-                }
-                Files.createDirectories(confDir)
-                val defaultConfigurationFileResource = DEFAULT_CONFIGURATION_URL
-                Files.newOutputStream(configurationFile).use { outputStream ->
-                    defaultConfigurationFileResource.openStream().use { inputStream ->
-                        JWO.copy(inputStream, outputStream)
-                    }
-                }
-            }
-//            val schemaUrl = javaClass.getResource("/net/woggioni/gbcs/gbcs.xsd")
-//            val schemaUrl = GBCS.CONFIGURATION_SCHEMA_URL
-            val dbf = Xml.newDocumentBuilderFactory(null)
-//            dbf.schema = Xml.getSchema(this::class.java.module.getResourceAsStream("/net/woggioni/gbcs/gbcs.xsd"))
-//            dbf.schema = Xml.getSchema(schemaUrl)
-            val db = dbf.newDocumentBuilder()
-            val doc = Files.newInputStream(configurationFile).use(db::parse)
-            return Parser.parse(doc)
-        }
-
-        @JvmStatic
-        fun main(args: Array<String>) {
-            ClasspathUrlStreamHandlerFactoryProvider.install()
-            val configuration = loadConfiguration(args)
-            log.debug {
-                ByteArrayOutputStream().also {
-                    Xml.write(Serializer.serialize(configuration), it)
-                }.let {
-                    "Server configuration:\n${String(it.toByteArray())}"
-                }
-            }
-            GradleBuildCacheServer(configuration).run().use {
-            }
-        }
-    }
-}
-
-object GraalNativeImageConfiguration {
-    @JvmStatic
-    fun main(args: Array<String>) {
-        val conf = GradleBuildCacheServer.loadConfiguration(args)
-        GradleBuildCacheServer(conf).run().use {
-            Thread.sleep(3000)
-            it.shutdown()
         }
     }
 }

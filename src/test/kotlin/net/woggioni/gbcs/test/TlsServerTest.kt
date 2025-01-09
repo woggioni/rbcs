@@ -8,6 +8,7 @@ import net.woggioni.gbcs.cache.FileSystemCacheConfiguration
 import net.woggioni.gbcs.configuration.Serializer
 import net.woggioni.gbcs.utils.CertificateUtils
 import net.woggioni.gbcs.utils.CertificateUtils.X509Credentials
+import net.woggioni.gbcs.utils.NetworkUtils
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order
@@ -146,7 +147,7 @@ class TlsServerTest : AbstractServerTest() {
         createKeyStoreAndTrustStore()
         cfg = Configuration(
             "127.0.0.1",
-            ServerSocket(0).localPort + 1,
+            NetworkUtils.getFreePort(),
             serverPath,
             users.asSequence().map { it.name to it }.toMap(),
             sequenceOf(writersGroup, readersGroup).map { it.name to it }.toMap(),
@@ -227,7 +228,6 @@ class TlsServerTest : AbstractServerTest() {
     @Test
     @Order(3)
     fun getAsAWriterUser() {
-
         val (key, _) = keyValuePair
         val user = cfg.users.values.find {
             Role.Writer in it.roles
@@ -245,7 +245,6 @@ class TlsServerTest : AbstractServerTest() {
     @Test
     @Order(4)
     fun putAsAWriterUser() {
-
         val (key, value) = keyValuePair
         val user = cfg.users.values.find {
             Role.Writer in it.roles

@@ -2,7 +2,7 @@ package net.woggioni.gbcs.cli
 
 import net.woggioni.gbcs.GradleBuildCacheServer
 import net.woggioni.gbcs.GradleBuildCacheServer.Companion.DEFAULT_CONFIGURATION_URL
-import net.woggioni.gbcs.base.ClasspathUrlStreamHandlerFactoryProvider
+import net.woggioni.gbcs.base.GbcsUrlStreamHandlerFactory
 import net.woggioni.gbcs.base.contextLogger
 import net.woggioni.gbcs.base.debug
 import net.woggioni.gbcs.base.info
@@ -29,7 +29,7 @@ class GradleBuildCacheServerCli(application : Application, private val log : Log
         @JvmStatic
         fun main(vararg args: String) {
             Thread.currentThread().contextClassLoader = GradleBuildCacheServerCli::class.java.classLoader
-            ClasspathUrlStreamHandlerFactoryProvider.install()
+            GbcsUrlStreamHandlerFactory.install()
             val log = contextLogger()
             val app = Application.builder("gbcs")
                 .configurationDirectoryEnvVar("GBCS_CONFIGURATION_DIR")

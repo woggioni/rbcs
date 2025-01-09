@@ -2,7 +2,7 @@
 <gbcs:server useVirtualThreads="false" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:gbcs="urn:net.woggioni.gbcs"
              xmlns:gbcs-memcached="urn:net.woggioni.gbcs-memcached"
-             xs:schemaLocation="urn:net.woggioni.gbcs-memcached classpath:net/woggioni/gbcs/memcached/schema/gbcs-memcached.xsd urn:net.woggioni.gbcs classpath:net/woggioni/gbcs/schema/gbcs.xsd">
+             xs:schemaLocation="urn:net.woggioni.gbcs-memcached jpms://net.woggioni.gbcs.memcached/net/woggioni/gbcs/memcached/schema/gbcs-memcached.xsd urn:net.woggioni.gbcs jpms://net.woggioni.gbcs/net/woggioni/gbcs/schema/gbcs.xsd">
     <bind host="0.0.0.0" port="13080" />
     <cache xs:type="gbcs-memcached:memcachedCacheType" max-age="P7D" max-size="16777216" compression-mode="zip">
         <server host="memcached" port="11211"/>
