@@ -9,7 +9,7 @@ WORKDIR /home/ubuntu
 RUN mkdir gbcs
 WORKDIR /home/ubuntu/gbcs
 
-COPY --chown=ubuntu:users .git .git
+COPY --chown=ubuntu:users ./.git ./.git
 COPY --chown=ubuntu:users gbcs-base gbcs-base
 COPY --chown=ubuntu:users gbcs-api gbcs-api
 COPY --chown=ubuntu:users gbcs-memcached gbcs-memcached
@@ -21,7 +21,7 @@ COPY --chown=ubuntu:users gradle.properties gradle.properties
 COPY --chown=ubuntu:users gradle gradle
 COPY --chown=ubuntu:users gradlew gradlew
 
-RUN --mount=type=cache,target=/home/ubuntu/.gradle,uid=1000,gid=1000 ./gradlew --no-daemon assemble
+RUN --mount=type=cache,target=/home/ubuntu/.gradle,uid=1000,gid=1000 ./gradlew --no-daemon clean assemble
 
 FROM alpine:latest AS base-release
 RUN --mount=type=cache,target=/var/cache/apk apk update

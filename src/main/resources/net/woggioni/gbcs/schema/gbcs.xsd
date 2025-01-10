@@ -10,9 +10,6 @@
         <xs:sequence minOccurs="0">
             <xs:element name="bind" type="gbcs:bindType" maxOccurs="1"/>
             <xs:element name="cache" type="gbcs:cacheType" maxOccurs="1"/>
-<!--            <xs:choice>-->
-<!--                <xs:element name="fileSystemCache" type="fileSystemCacheType"/>-->
-<!--            </xs:choice>-->
             <xs:element name="authorization" type="gbcs:authorizationType" minOccurs="0">
                 <xs:key name="userId">
                     <xs:selector xpath="users/user"/>
@@ -28,7 +25,7 @@
             <xs:element name="tls" type="gbcs:tlsType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
         <xs:attribute name="path" type="xs:string" use="optional"/>
-        <xs:attribute name="useVirtualThreads" type="xs:boolean" use="optional"/>
+        <xs:attribute name="useVirtualThreads" type="xs:boolean" use="optional" default="true"/>
     </xs:complexType>
 
     <xs:complexType name="bindType">

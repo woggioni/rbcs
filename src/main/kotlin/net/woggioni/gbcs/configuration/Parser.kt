@@ -32,7 +32,7 @@ object Parser {
         val serverPath = root.getAttribute("path")
         val useVirtualThread = root.getAttribute("useVirtualThreads")
             .takeIf(String::isNotEmpty)
-            ?.let(String::toBoolean) ?: false
+            ?.let(String::toBoolean) ?: true
         var authentication: Authentication? = null
         for (child in root.asIterable()) {
             when (child.localName) {

@@ -105,4 +105,28 @@ class NoAuthServerTest : AbstractServerTest() {
         val response: HttpResponse<ByteArray> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
         Assertions.assertEquals(HttpResponseStatus.NOT_FOUND.code(), response.statusCode())
     }
+
+//    @Test
+//    @Order(4)
+//    fun manyRequestsTest() {
+//        val client: HttpClient = HttpClient.newHttpClient()
+//
+//        for(i in 0 until 100000) {
+//
+//            val newEntry = random.nextBoolean()
+//            val (key, _) = if(newEntry) {
+//                newEntry(random)
+//            } else {
+//                keyValuePair
+//            }
+//            val requestBuilder = newRequestBuilder(key).GET()
+//
+//            val response: HttpResponse<ByteArray> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+//            if(newEntry) {
+//                Assertions.assertEquals(HttpResponseStatus.NOT_FOUND.code(), response.statusCode())
+//            } else {
+//                Assertions.assertEquals(HttpResponseStatus.OK.code(), response.statusCode())
+//            }
+//        }
+//    }
 }
