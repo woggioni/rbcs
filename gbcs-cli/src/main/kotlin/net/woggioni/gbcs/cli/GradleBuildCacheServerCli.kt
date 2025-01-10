@@ -94,12 +94,6 @@ class GradleBuildCacheServerCli(application : Application, private val log : Log
         }
         val server = GradleBuildCacheServer(configuration)
         server.run().use {
-            log.info {
-                "GradleBuildCacheServer is listening on ${configuration.host}:${configuration.port}"
-            }
-        }
-        log.info {
-            "GradleBuildCacheServer has been gracefully shut down"
         }
     }
 }

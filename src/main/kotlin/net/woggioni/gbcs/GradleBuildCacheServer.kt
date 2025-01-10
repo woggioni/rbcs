@@ -54,6 +54,7 @@ import net.woggioni.gbcs.base.PasswordSecurity.decodePasswordHash
 import net.woggioni.gbcs.base.PasswordSecurity.hashPassword
 import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.base.contextLogger
+import net.woggioni.gbcs.base.info
 import net.woggioni.gbcs.configuration.Parser
 import net.woggioni.gbcs.configuration.Serializer
 import net.woggioni.jwo.JWO
@@ -463,6 +464,9 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                     it.shutdownGracefully().sync()
                 }
             }
+            log.info {
+                "GradleBuildCacheServer has been gracefully shut down"
+            }
         }
     }
 
@@ -493,6 +497,9 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         // Bind and start to accept incoming connections.
         val bindAddress = InetSocketAddress(cfg.host, cfg.port)
         val httpChannel = bootstrap.bind(bindAddress).sync()
+        log.info {
+            "GradleBuildCacheServer is listening on ${cfg.host}:${cfg.port}"
+        }
         return ServerHandle(httpChannel, setOf(bossGroup, workerGroup, eventExecutorGroup))
     }
 
@@ -510,5 +517,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         fun dumpConfiguration(conf: Configuration, outputStream: OutputStream) {
             Xml.write(Serializer.serialize(conf), outputStream)
         }
+
+        private val log = contextLogger()
     }
 }
