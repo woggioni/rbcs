@@ -11,7 +11,6 @@ services:
   gbcs:
     build:
       context: .
-      target: compose
     container_name: gbcs
     restart: unless-stopped
     ports:

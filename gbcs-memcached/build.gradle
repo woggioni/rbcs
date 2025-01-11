@@ -22,7 +22,15 @@ configurations {
             }
         }
     }
+
+    release {
+        transitive = false
+        canBeConsumed = true
+        canBeResolved = true
+        visible = true
+    }
 }
+
 dependencies {
     compileOnly project(':gbcs-base')
     compileOnly project(':gbcs-api')
@@ -38,6 +46,10 @@ Provider<Tar> bundleTask = tasks.register("bundle", Tar) {
 
 tasks.named(BasePlugin.ASSEMBLE_TASK_NAME) {
     dependsOn(bundleTask)
+}
+
+artifacts {
+    release(bundleTask)
 }
 
 publishing {

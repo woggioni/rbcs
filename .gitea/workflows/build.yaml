@@ -5,8 +5,6 @@ on:
       - '*'
 jobs:
   build:
-    env:
-      RUNNER_TOOL_CACHE: /toolcache
     runs-on: hostinger
     steps:
       - name: Checkout sources
@@ -19,49 +17,53 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
       - name: Execute Gradle build
-        env:
-          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
         run: ./gradlew build
-      - name: Publish artifacts
-        env:
-          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-        run: ./gradlew publish
-  build-docker:
-    name: "Build Docker images"
-    runs-on: hostinger
-    steps:
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.4.0
+      - name: Prepare Docker image build
+        run: ./gradlew prepareDockerBuild
+      - name: Get project version
+        id: retrieve-version
+        run: ./gradlew -q version >> "$GITHUB_OUTPUT"
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
         with:
           driver: docker-container
-      -
-        name: Login to Gitea container registry
+      - name: Login to Gitea container registry
         uses: docker/login-action@v3
         with:
           registry: gitea.woggioni.net
           username: woggioni
           password: ${{ secrets.PUBLISHER_TOKEN }}
       -
-        name: Build and push gbcs images
-        uses: docker/build-push-action@v6
+        name: Build gbcs Docker image
+        uses: docker/build-push-action@v5.3.0
         with:
+          context: "docker/build/docker"
+          platforms: linux/amd64,linux/arm64
           push: true
           pull: true
           tags: |
-            "gitea.woggioni.net/woggioni/gbcs:slim"
-          cache-from: type=registry,ref=gitea.woggioni.net/woggioni/gbcs:buildx
-          cache-to: type=registry,mode=max,compression=zstd,image-manifest=true,oci-mediatypes=true,ref=gitea.woggioni.net/woggioni/gbcs:buildx
+            gitea.woggioni.net/woggioni/gbcs:latest
+            gitea.woggioni.net/woggioni/gbcs:${{ steps.retrieve-version.outputs.VERSION }}
           target: release
+          cache-from: type=registry,ref=gitea.woggioni.net/woggioni/gbcs:buildx
       -
-        name: Build and push gbcs memcached image
-        uses: docker/build-push-action@v6
+        name: Build gbcs memcached Docker image
+        uses: docker/build-push-action@v5.3.0
         with:
+          context: "docker/build/docker"
+          platforms: linux/amd64,linux/arm64
           push: true
           pull: true
           tags: |
-            "gitea.woggioni.net/woggioni/gbcs:latest"
-            "gitea.woggioni.net/woggioni/gbcs:memcached"
+            gitea.woggioni.net/woggioni/gbcs:memcached
+            gitea.woggioni.net/woggioni/gbcs:memcached-${{ steps.retrieve-version.outputs.VERSION }}
+          target: release-memcached
           cache-from: type=registry,ref=gitea.woggioni.net/woggioni/gbcs:buildx
           cache-to: type=registry,mode=max,compression=zstd,image-manifest=true,oci-mediatypes=true,ref=gitea.woggioni.net/woggioni/gbcs:buildx
-          target: release-memcached
+      - name: Publish artifacts
+        env:
+          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: ./gradlew publish
+

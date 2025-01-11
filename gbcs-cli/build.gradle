@@ -21,6 +21,15 @@ tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
     options.javaModuleMainClass = mainClassName
 }
 
+configurations {
+    release {
+        transitive = false
+        canBeConsumed = true
+        canBeResolved = true
+        visible = true
+    }
+}
+
 envelopeJar {
     mainModule = 'net.woggioni.gbcs.cli'
     mainClass = mainClassName
@@ -56,6 +65,10 @@ tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
     buildStaticImage = true
 }
 
+artifacts {
+    release(envelopeJarTaskProvider)
+}
+
 publishing {
     publications {
         maven(MavenPublication) {
@@ -63,4 +76,5 @@ publishing {
         }
     }
 }
+
 
