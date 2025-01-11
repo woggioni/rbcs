@@ -30,5 +30,6 @@ include 'gbcs-api'
 include 'gbcs-base'
 include 'gbcs-memcached'
 include 'gbcs-cli'
+include 'docker'
 
 

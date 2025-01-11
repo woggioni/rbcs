@@ -1,0 +1,67 @@
+plugins {
+    id 'base'
+    alias(catalog.plugins.gradle.docker)
+}
+
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
+
+
+configurations {
+    docker {
+        canBeResolved = true
+        transitive = false
+        visible = false
+        canBeConsumed = false
+    }
+}
+
+dependencies {
+    docker project(path: ':gbcs-cli', configuration: 'release')
+    docker project(path: ':gbcs-memcached', configuration: 'release')
+}
+
+Provider<Task> cleanTaskProvider = tasks.named(BasePlugin.CLEAN_TASK_NAME) {}
+
+Provider<Copy> prepareDockerBuild = tasks.register('prepareDockerBuild', Copy) {
+    dependsOn cleanTaskProvider
+    group = 'docker'
+    into project.layout.buildDirectory.file('docker')
+    from(configurations.docker)
+    from(file('Dockerfile'))
+}
+
+Provider<DockerBuildImage> dockerBuild = tasks.register('dockerBuildImage', DockerBuildImage) {
+    group = 'docker'
+    dependsOn prepareDockerBuild
+    images.add('gitea.woggioni.net/woggioni/gbcs:latest')
+    images.add("gitea.woggioni.net/woggioni/gbcs:${version}")
+}
+
+Provider<DockerTagImage> dockerTag = tasks.register('dockerTagImage', DockerTagImage) {
+    group = 'docker'
+    repository = 'gitea.woggioni.net/woggioni/gbcs'
+    imageId = 'gitea.woggioni.net/woggioni/gbcs:latest'
+    tag = version
+}
+
+Provider<DockerTagImage> dockerTagMemcached = tasks.register('dockerTagMemcachedImage', DockerTagImage) {
+    group = 'docker'
+    repository = 'gitea.woggioni.net/woggioni/gbcs'
+    imageId = 'gitea.woggioni.net/woggioni/gbcs:memcached'
+    tag = "${version}-memcached"
+}
+
+Provider<DockerPushImage> dockerPush = tasks.register('dockerPushImage', DockerPushImage) {
+    group = 'docker'
+    dependsOn dockerTag, dockerTagMemcached
+    registryCredentials {
+        url = getProperty('docker.registry.url')
+        username = 'woggioni'
+        password = System.getenv().get("PUBLISHER_TOKEN")
+    }
+    images = [dockerTag.flatMap{ it.tag }, dockerTagMemcached.flatMap{ it.tag }]
+}
+
+

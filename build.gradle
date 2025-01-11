@@ -130,3 +130,9 @@ publishing {
     }
 }
 
+tasks.register('version') {
+    doLast {
+        println("VERSION=$version")
+    }
+}
+
