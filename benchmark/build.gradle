@@ -1,0 +1,26 @@
+plugins {
+    alias catalog.plugins.gradle.jmh
+    alias catalog.plugins.lombok
+}
+
+import me.champeau.jmh.JMHTask
+
+dependencies {
+    implementation rootProject
+
+    implementation catalog.jwo
+    implementation catalog.xz
+    implementation catalog.jackson.databind
+
+    jmhAnnotationProcessor catalog.lombok
+}
+
+jmh {
+    threads = 4
+    iterations = 2
+    fork = 1
+    warmupIterations = 1
+    warmupForks = 0
+    resultFormat = 'JSON'
+}
+

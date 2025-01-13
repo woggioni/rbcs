@@ -190,7 +190,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                 } else {
                     val javaKeyStore = loadKeystore(keyStore.file, keyStore.password)
                     val serverKey = javaKeyStore.getKey(
-                        keyStore.keyAlias, keyStore.keyPassword?.let(String::toCharArray)
+                        keyStore.keyAlias, (keyStore.keyPassword ?: "").let(String::toCharArray)
                     ) as PrivateKey
                     val serverCert: Array<X509Certificate> =
                         Arrays.stream(javaKeyStore.getCertificateChain(keyStore.keyAlias))
