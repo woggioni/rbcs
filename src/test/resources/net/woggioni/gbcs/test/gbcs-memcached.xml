@@ -4,7 +4,7 @@
              xmlns:gbcs-memcached="urn:net.woggioni.gbcs-memcached"
              xs:schemaLocation="urn:net.woggioni.gbcs-memcached jpms://net.woggioni.gbcs.memcached/net/woggioni/gbcs/memcached/schema/gbcs-memcached.xsd urn:net.woggioni.gbcs jpms://net.woggioni.gbcs/net/woggioni/gbcs/schema/gbcs.xsd">
     <bind host="127.0.0.1" port="11443" />
-    <cache xs:type="gbcs-memcached:memcachedCacheType" max-age="P7D" max-size="101325" compression-mode="gzip" digest="SHA-256">
+    <cache xs:type="gbcs-memcached:memcachedCacheType" max-age="P7D" max-size="101325" digest="SHA-256">
         <server host="127.0.0.1" port="11211"/>
     </cache>
     <authentication>

@@ -20,14 +20,14 @@
                 <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
                 <xs:attribute name="max-size" type="xs:unsignedInt" default="1048576"/>
                 <xs:attribute name="digest" type="xs:token" />
-                <xs:attribute name="compression-type" type="gbcs-memcached:compressionType" default="deflate"/>
+                <xs:attribute name="compression-mode" type="gbcs-memcached:compressionType" default="zip"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
 
     <xs:simpleType name="compressionType">
         <xs:restriction base="xs:token">
-            <xs:enumeration value="deflate"/>
+            <xs:enumeration value="zip"/>
             <xs:enumeration value="gzip"/>
         </xs:restriction>
     </xs:simpleType>

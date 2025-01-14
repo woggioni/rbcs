@@ -23,10 +23,11 @@ object Parser {
 
     fun parse(document: Document): Configuration {
         val root = document.documentElement
+        val anonymousUser = User("", null, emptySet())
         var cache: Cache? = null
         var host = "127.0.0.1"
         var port = 11080
-        var users = emptyMap<String, User>()
+        var users : Map<String, User> = mapOf(anonymousUser.name to anonymousUser)
         var groups = emptyMap<String, Group>()
         var tls: Tls? = null
         val serverPath = root.getAttribute("path")
@@ -35,16 +36,17 @@ object Parser {
             ?.let(String::toBoolean) ?: true
         var authentication: Authentication? = null
         for (child in root.asIterable()) {
-            when (child.localName) {
+            val tagName = child.localName
+            when (tagName) {
                 "authorization" -> {
+                    var knownUsers = sequenceOf(anonymousUser)
                     for (gchild in child.asIterable()) {
-                        when (child.localName) {
+                        when (gchild.localName) {
                             "users" -> {
-                                users = parseUsers(child)
+                                knownUsers += parseUsers(gchild)
                             }
-
                             "groups" -> {
-                                val pair = parseGroups(child, users)
+                                val pair = parseGroups(gchild, knownUsers)
                                 users = pair.first
                                 groups = pair.second
                             }
@@ -76,17 +78,17 @@ object Parser {
                             "client-certificate" -> {
                                 var tlsExtractorUser: TlsCertificateExtractor? = null
                                 var tlsExtractorGroup: TlsCertificateExtractor? = null
-                                for (gchild in child.asIterable()) {
-                                    when (gchild.localName) {
+                                for (ggchild in gchild.asIterable()) {
+                                    when (ggchild.localName) {
                                         "group-extractor" -> {
-                                            val attrName = gchild.getAttribute("attribute-name")
-                                            val pattern = gchild.getAttribute("pattern")
+                                            val attrName = ggchild.getAttribute("attribute-name")
+                                            val pattern = ggchild.getAttribute("pattern")
                                             tlsExtractorGroup = TlsCertificateExtractor(attrName, pattern)
                                         }
 
                                         "user-extractor" -> {
-                                            val attrName = gchild.getAttribute("attribute-name")
-                                            val pattern = gchild.getAttribute("pattern")
+                                            val attrName = ggchild.getAttribute("attribute-name")
+                                            val pattern = ggchild.getAttribute("pattern")
                                             tlsExtractorUser = TlsCertificateExtractor(attrName, pattern)
                                         }
                                     }
@@ -151,23 +153,22 @@ object Parser {
         }
     }.toSet()
 
-    private fun parseUserRefs(root: Element) = root.asIterable().asSequence().filter {
-        it.localName == "user"
-    }.map {
+    private fun parseUserRefs(root: Element) = root.asIterable().asSequence().map {
         it.getAttribute("ref")
     }.toSet()
 
-    private fun parseUsers(root: Element): Map<String, User> {
+    private fun parseUsers(root: Element): Sequence<User> {
         return root.asIterable().asSequence().filter {
             it.localName == "user"
         }.map { el ->
             val username = el.getAttribute("name")
             val password = el.getAttribute("password").takeIf(String::isNotEmpty)
-            username to User(username, password, emptySet())
-        }.toMap()
+            User(username, password, emptySet())
+        }
     }
 
-    private fun parseGroups(root: Element, knownUsers: Map<String, User>): Pair<Map<String, User>, Map<String, Group>> {
+    private fun parseGroups(root: Element, knownUsers: Sequence<User>): Pair<Map<String, User>, Map<String, Group>> {
+        val knownUsersMap = knownUsers.associateBy(User::getName)
         val userGroups = mutableMapOf<String, MutableSet<String>>()
         val groups = root.asIterable().asSequence().filter {
             it.localName == "group"
@@ -177,7 +178,7 @@ object Parser {
             for (child in el.asIterable()) {
                 when (child.localName) {
                     "users" -> {
-                        parseUserRefs(child).mapNotNull(knownUsers::get).forEach { user ->
+                        parseUserRefs(child).mapNotNull(knownUsersMap::get).forEach { user ->
                             userGroups.computeIfAbsent(user.name) {
                                 mutableSetOf()
                             }.add(groupName)
@@ -191,7 +192,7 @@ object Parser {
             }
             groupName to Group(groupName, roles)
         }.toMap()
-        val users = knownUsers.map { (name, user) ->
+        val users = knownUsersMap.map { (name, user) ->
             name to User(name, user.password, userGroups[name]?.mapNotNull { groups[it] }?.toSet() ?: emptySet())
         }.toMap()
         return users to groups

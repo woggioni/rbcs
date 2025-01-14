@@ -9,14 +9,16 @@ import net.woggioni.gbcs.base.Xml.Companion.asIterable
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.time.Duration
-import java.util.zip.Deflater
 
 class MemcachedCacheProvider : CacheProvider<MemcachedCacheConfiguration> {
     override fun getXmlSchemaLocation() = "classpath:net/woggioni/gbcs/memcached/schema/gbcs-memcached.xsd"
 
     override fun getXmlType() = "memcachedCacheType"
 
-    override fun getXmlNamespace()= "urn:net.woggioni.gbcs-memcached"
+    override fun getXmlNamespace() = "urn:net.woggioni.gbcs-memcached"
+
+    val xmlNamespacePrefix : String
+        get() = "gbcs-memcached"
 
     override fun deserialize(el: Element): MemcachedCacheConfiguration {
         val servers = mutableListOf<HostAndPort>()
@@ -35,7 +37,7 @@ class MemcachedCacheProvider : CacheProvider<MemcachedCacheConfiguration> {
         val compressionMode = el.getAttribute("compression-mode")
             .takeIf(String::isNotEmpty)
             ?.let {
-                when(it) {
+                when (it) {
                     "gzip" -> CompressionMode.GZIP
                     "zip" -> CompressionMode.ZIP
                     else -> CompressionMode.ZIP
@@ -60,12 +62,14 @@ class MemcachedCacheProvider : CacheProvider<MemcachedCacheConfiguration> {
         )
     }
 
-    override fun serialize(doc: Document, cache : MemcachedCacheConfiguration) = cache.run {
-        val result = doc.createElementNS(xmlNamespace,"cache")
+    override fun serialize(doc: Document, cache: MemcachedCacheConfiguration) = cache.run {
+        val result = doc.createElement("cache")
         Xml.of(doc, result) {
-            attr("xs:type", xmlType, GBCS.XML_SCHEMA_NAMESPACE_URI)
+            attr("xmlns:${xmlNamespacePrefix}", xmlNamespace, namespaceURI = "http://www.w3.org/2000/xmlns/")
+
+            attr("xs:type", "${xmlNamespacePrefix}:$xmlType", GBCS.XML_SCHEMA_NAMESPACE_URI)
             for (server in servers) {
-                node("server", xmlNamespace) {
+                node("server") {
                     attr("host", server.host)
                     attr("port", server.port.toString())
                 }
@@ -75,10 +79,12 @@ class MemcachedCacheProvider : CacheProvider<MemcachedCacheConfiguration> {
             digestAlgorithm?.let { digestAlgorithm ->
                 attr("digest", digestAlgorithm)
             }
-            attr("compression-mode", when(compressionMode) {
-                CompressionMode.GZIP -> "gzip"
-                CompressionMode.ZIP -> "zip"
-            })
+            attr(
+                "compression-mode", when (compressionMode) {
+                    CompressionMode.GZIP -> "gzip"
+                    CompressionMode.ZIP -> "zip"
+                }
+            )
         }
         result
     }

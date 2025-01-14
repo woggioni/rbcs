@@ -5,9 +5,9 @@ import net.woggioni.gbcs.cli.impl.GbcsCommand
 import net.woggioni.gbcs.cli.impl.converters.OutputStreamConverter
 import net.woggioni.jwo.UncloseableOutputStream
 import picocli.CommandLine
-import java.io.BufferedWriter
 import java.io.OutputStream
 import java.io.OutputStreamWriter
+import java.io.PrintWriter
 
 
 @CommandLine.Command(
@@ -20,7 +20,7 @@ class PasswordHashCommand : GbcsCommand() {
         names = ["-o", "--output-file"],
         description = ["Write the output to a file instead of stdout"],
         converter = [OutputStreamConverter::class],
-        defaultValue = "stdout",
+        showDefaultValue = CommandLine.Help.Visibility.NEVER,
         paramLabel = "OUTPUT_FILE"
     )
     private var outputStream: OutputStream = UncloseableOutputStream(System.out)
@@ -30,9 +30,8 @@ class PasswordHashCommand : GbcsCommand() {
         val password2 = String(System.console().readPassword("Type your password again for confirmation:"))
         if(password1 != password2) throw IllegalArgumentException("Passwords do not match")
 
-        BufferedWriter(OutputStreamWriter(outputStream, Charsets.UTF_8)).use {
-            it.write(hashPassword(password1))
-            it.newLine()
+        PrintWriter(OutputStreamWriter(outputStream, Charsets.UTF_8)).use {
+            it.println(hashPassword(password1))
         }
     }
 }

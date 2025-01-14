@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gbcs:server useVirtualThreads="false" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:gbcs="urn:net.woggioni.gbcs"
+             xs:schemaLocation="urn:net.woggioni.gbcs jpms://net.woggioni.gbcs/net/woggioni/gbcs/schema/gbcs.xsd">
+    <bind host="127.0.0.1" port="11443"/>
+    <cache xs:type="gbcs:fileSystemCacheType" path="/tmp/gbcs" max-age="P7D"/>
+    <authorization>
+        <users>
+            <user name="user1" password="password1"/>
+            <user name="user2" password="password2"/>
+            <user name="user3" password="password3"/>
+        </users>
+        <groups>
+            <group name="readers">
+                <users>
+                    <user ref="user1"/>
+<!--                    <user ref="user5"/>-->
+                    <anonymous/>
+                </users>
+                <roles>
+                    <reader/>
+                </roles>
+            </group>
+            <group name="writers">
+                <users>
+                    <user ref="user2"/>
+                </users>
+                <roles>
+                    <writer/>
+                </roles>
+            </group>
+            <group name="readers-writers">
+                <users>
+                    <user ref="user3"/>
+                </users>
+                <roles>
+                    <reader/>
+                    <writer/>
+                </roles>
+            </group>
+        </groups>
+    </authorization>
+    <authentication>
+        <client-certificate>
+            <group-extractor pattern="group-pattern" attribute-name="O"/>
+            <user-extractor pattern="user-pattern" attribute-name="CN"/>
+        </client-certificate>
+    </authentication>
+    <tls>
+        <keystore file="keystore.pfx" key-alias="key1" password="password" key-password="key-password"/>
+        <truststore file="truststore.pfx" password="password" check-certificate-status="true" />
+    </tls>
+</gbcs:server>

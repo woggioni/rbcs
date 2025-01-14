@@ -146,29 +146,29 @@ class Xml(val doc: Document, val element: Element) {
             dbf.isExpandEntityReferences = true
             dbf.isIgnoringComments = true
             dbf.isNamespaceAware = true
-            dbf.isValidating = false
-            dbf.setFeature("http://apache.org/xml/features/validation/schema", true);
+            dbf.isValidating = schemaResourceURL == null
+            dbf.setFeature("http://apache.org/xml/features/validation/schema", true)
             schemaResourceURL?.let {
                 dbf.schema = getSchema(it)
             }
             return dbf
         }
 
-    fun newDocumentBuilder(resource: URL, schemaResourceURL: URL?): DocumentBuilder {
-        val db = newDocumentBuilderFactory(schemaResourceURL).newDocumentBuilder()
-        db.setErrorHandler(ErrorHandler(resource))
-        return db
-    }
+        fun newDocumentBuilder(resource: URL, schemaResourceURL: URL?): DocumentBuilder {
+            val db = newDocumentBuilderFactory(schemaResourceURL).newDocumentBuilder()
+            db.setErrorHandler(ErrorHandler(resource))
+            return db
+        }
 
-    fun parseXmlResource(resource: URL, schemaResourceURL: URL?): Document {
-        val db = newDocumentBuilder(resource, schemaResourceURL)
-        return resource.openStream().use(db::parse)
-    }
+        fun parseXmlResource(resource: URL, schemaResourceURL: URL?): Document {
+            val db = newDocumentBuilder(resource, schemaResourceURL)
+            return resource.openStream().use(db::parse)
+        }
 
-    fun parseXml(sourceURL : URL, sourceStream: InputStream? = null, schemaResourceURL: URL? = null): Document {
-        val db = newDocumentBuilder(sourceURL, schemaResourceURL)
-        return sourceStream?.let(db::parse) ?: sourceURL.openStream().use(db::parse)
-    }
+        fun parseXml(sourceURL: URL, sourceStream: InputStream? = null, schemaResourceURL: URL? = null): Document {
+            val db = newDocumentBuilder(sourceURL, schemaResourceURL)
+            return sourceStream?.let(db::parse) ?: sourceURL.openStream().use(db::parse)
+        }
 
         fun write(doc: Document, output: OutputStream) {
             val transformerFactory = TransformerFactory.newInstance()
@@ -183,7 +183,12 @@ class Xml(val doc: Document, val element: Element) {
             transformer.transform(source, result)
         }
 
-        fun of(namespaceURI: String, qualifiedName: String, schemaResourceURL: URL? = null, cb: Xml.(el: Element) -> Unit): Document {
+        fun of(
+            namespaceURI: String,
+            qualifiedName: String,
+            schemaResourceURL: URL? = null,
+            cb: Xml.(el: Element) -> Unit
+        ): Document {
             val dbf = newDocumentBuilderFactory(schemaResourceURL)
             val db = dbf.newDocumentBuilder()
             val doc = db.newDocument()
@@ -207,7 +212,7 @@ class Xml(val doc: Document, val element: Element) {
 
     fun node(
         name: String,
-        namespaceURI : String? = null,
+        namespaceURI: String? = null,
         attrs: Map<String, String> = emptyMap(),
         cb: Xml.(el: Element) -> Unit = {}
     ): Element {
@@ -222,7 +227,7 @@ class Xml(val doc: Document, val element: Element) {
             }
     }
 
-    fun attr(key: String, value: String, namespaceURI : String? = null) {
+    fun attr(key: String, value: String, namespaceURI: String? = null) {
         element.setAttributeNS(namespaceURI, key, value)
     }
 

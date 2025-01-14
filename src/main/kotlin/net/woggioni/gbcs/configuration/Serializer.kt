@@ -17,7 +17,7 @@ object Serializer {
             attr("useVirtualThreads", conf.isUseVirtualThread.toString())
 //            attr("xmlns:xs", GradleBuildCacheServer.XML_SCHEMA_NAMESPACE_URI)
             val value = schemaLocations.asSequence().map { (k, v) -> "$k $v" }.joinToString(" ")
-            attr("xs:schemaLocation",value , namespaceURI = GBCS.XML_SCHEMA_NAMESPACE_URI)
+            attr("xs:schemaLocation", value , namespaceURI = GBCS.XML_SCHEMA_NAMESPACE_URI)
 
             conf.serverPath
                 ?.takeIf(String::isNotEmpty)
@@ -35,10 +35,12 @@ object Serializer {
             node("authorization") {
                 node("users") {
                     for(user in conf.users.values) {
-                        node("user") {
-                            attr("name", user.name)
-                            user.password?.let { password ->
-                                attr("password", password)
+                        if(user.name.isNotEmpty()) {
+                            node("user") {
+                                attr("name", user.name)
+                                user.password?.let { password ->
+                                    attr("password", password)
+                                }
                             }
                         }
                     }
@@ -55,10 +57,18 @@ object Serializer {
                             attr("name", group.name)
                             if(users.isNotEmpty()) {
                                 node("users") {
+                                    var anonymousUser : Configuration.User? = null
                                     for(user in users) {
-                                        node("user") {
-                                            attr("ref", user.name)
+                                        if(user.name.isNotEmpty()) {
+                                            node("user") {
+                                                attr("ref", user.name)
+                                            }
+                                        } else {
+                                            anonymousUser = user
                                         }
+                                    }
+                                    if(anonymousUser != null) {
+                                        node("anonymous")
                                     }
                                 }
                             }
@@ -82,6 +92,12 @@ object Serializer {
                         }
                         is Configuration.ClientCertificateAuthentication -> {
                             node("client-certificate") {
+                                authentication.groupExtractor?.let { extractor ->
+                                    node("group-extractor") {
+                                        attr("attribute-name", extractor.rdnType)
+                                        attr("pattern", extractor.pattern)
+                                    }
+                                }
                                 authentication.userExtractor?.let { extractor ->
                                     node("user-extractor") {
                                         attr("attribute-name", extractor.rdnType)

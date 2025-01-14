@@ -102,6 +102,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
     private class ClientCertificateAuthenticator(
         authorizer: Authorizer,
         private val sslEngine: SSLEngine,
+        private val anonymousUserRoles: Set<Role>?,
         private val userExtractor: Configuration.UserExtractor?,
         private val groupExtractor: Configuration.GroupExtractor?,
     ) : AbstractNettyHttpAuthenticator(authorizer) {
@@ -112,16 +113,16 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         override fun authenticate(ctx: ChannelHandlerContext, req: HttpRequest): Set<Role>? {
             return try {
-                sslEngine.session.peerCertificates
+                sslEngine.session.peerCertificates.takeIf {
+                    it.isNotEmpty()
+                }?.let { peerCertificates ->
+                    val clientCertificate = peerCertificates.first() as X509Certificate
+                    val user = userExtractor?.extract(clientCertificate)
+                    val group = groupExtractor?.extract(clientCertificate)
+                    (group?.roles ?: emptySet()) + (user?.roles ?: emptySet())
+                } ?: anonymousUserRoles
             } catch (es: SSLPeerUnverifiedException) {
-                null
-            }?.takeIf {
-                it.isNotEmpty()
-            }?.let { peerCertificates ->
-                val clientCertificate = peerCertificates.first() as X509Certificate
-                val user = userExtractor?.extract(clientCertificate)
-                val group = groupExtractor?.extract(clientCertificate)
-                (group?.roles ?: emptySet()) + (user?.roles ?: emptySet())
+                anonymousUserRoles
             }
         }
     }
@@ -139,21 +140,21 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                 log.debug(ctx) {
                     "Missing Authorization header"
                 }
-                return null
+                return users[""]?.roles
             }
             val cursor = authorizationHeader.indexOf(' ')
             if (cursor < 0) {
                 log.debug(ctx) {
                     "Invalid Authorization header: '$authorizationHeader'"
                 }
-                return null
+                return users[""]?.roles
             }
             val authenticationType = authorizationHeader.substring(0, cursor)
             if ("Basic" != authenticationType) {
                 log.debug(ctx) {
                     "Invalid authentication type header: '$authenticationType'"
                 }
-                return null
+                return users[""]?.roles
             }
             val (username, password) = Base64.getDecoder().decode(authorizationHeader.substring(cursor + 1))
                 .let(::String)
@@ -199,8 +200,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                     SslContextBuilder.forServer(serverKey, *serverCert).apply {
                         if (tls.isVerifyClients) {
                             clientAuth(ClientAuth.OPTIONAL)
-                            val trustStore = tls.trustStore
-                            if (trustStore != null) {
+                            tls.trustStore?.let { trustStore ->
                                 val ts = loadKeystore(trustStore.file, trustStore.password)
                                 trustManager(
                                     ClientCertificateValidator.getTrustManager(ts, trustStore.isCheckCertificateStatus)
@@ -268,18 +268,17 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             val auth = cfg.authentication
             var authenticator: AbstractNettyHttpAuthenticator? = null
             if (auth is Configuration.BasicAuthentication) {
-                val roleAuthorizer = RoleAuthorizer()
-                authenticator = (NettyHttpBasicAuthenticator(cfg.users, roleAuthorizer))
+                authenticator = (NettyHttpBasicAuthenticator(cfg.users, RoleAuthorizer()))
             }
             if (sslContext != null) {
                 val sslHandler = sslContext.newHandler(ch.alloc())
                 pipeline.addLast(sslHandler)
 
                 if (auth is Configuration.ClientCertificateAuthentication) {
-                    val roleAuthorizer = RoleAuthorizer()
                     authenticator = ClientCertificateAuthenticator(
-                        roleAuthorizer,
+                        RoleAuthorizer(),
                         sslHandler.engine(),
+                        cfg.users[""]?.roles,
                         userExtractor(auth),
                         groupExtractor(auth)
                     )
@@ -446,7 +445,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
     class ServerHandle(
         httpChannelFuture: ChannelFuture,
-        private val executorGroups : Iterable<EventExecutorGroup>
+        private val executorGroups: Iterable<EventExecutorGroup>
     ) : AutoCloseable {
         private val httpChannel: Channel = httpChannelFuture.channel()
 
@@ -476,7 +475,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         val serverSocketChannel = NioServerSocketChannel::class.java
         val workerGroup = bossGroup
         val eventExecutorGroup = run {
-            val threadFactory = if(cfg.isUseVirtualThread) {
+            val threadFactory = if (cfg.isUseVirtualThread) {
                 Thread.ofVirtual().factory()
             } else {
                 null

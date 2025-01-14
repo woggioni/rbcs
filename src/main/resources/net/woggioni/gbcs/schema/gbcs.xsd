@@ -21,7 +21,6 @@
                 </xs:keyref>
             </xs:element>
             <xs:element name="authentication" type="gbcs:authenticationType" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="tls-certificate-authorization" type="gbcs:tlsCertificateAuthorizationType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="tls" type="gbcs:tlsType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
         <xs:attribute name="path" type="xs:string" use="optional"/>
@@ -127,7 +126,8 @@
 
     <xs:complexType name="userRefsType">
         <xs:sequence>
-            <xs:element name="user" type="gbcs:userRefType" maxOccurs="unbounded" minOccurs="0"/>
+                <xs:element name="user" type="gbcs:userRefType" maxOccurs="unbounded" minOccurs="0"/>
+                <xs:element name="anonymous" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
     </xs:complexType>
 

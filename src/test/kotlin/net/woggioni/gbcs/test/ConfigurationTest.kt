@@ -1,7 +1,7 @@
 package net.woggioni.gbcs.test
 
-import net.woggioni.gbcs.base.GbcsUrlStreamHandlerFactory
 import net.woggioni.gbcs.base.GBCS.toUrl
+import net.woggioni.gbcs.base.GbcsUrlStreamHandlerFactory
 import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.configuration.Parser
 import net.woggioni.gbcs.configuration.Serializer
@@ -18,6 +18,7 @@ class ConfigurationTest {
         strings = [
             "classpath:net/woggioni/gbcs/test/gbcs-default.xml",
             "classpath:net/woggioni/gbcs/test/gbcs-memcached.xml",
+            "classpath:net/woggioni/gbcs/test/gbcs-tls.xml",
         ]
     )
     @ParameterizedTest

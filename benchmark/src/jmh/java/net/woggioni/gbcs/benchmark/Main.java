@@ -2,6 +2,7 @@ package net.woggioni.gbcs.benchmark;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
+import net.woggioni.jwo.Fun;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -10,12 +11,20 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -46,9 +55,16 @@ public class Main {
         private final Random random = new Random(101325);
 
         @Getter
-        private final HttpClient client = HttpClient.newHttpClient();
+        private final HttpClient client = createHttpClient();
 
         private final Map<String, byte[]> entries = new HashMap<>();
+
+
+        private HttpClient createHttpClient() {
+            final var clientBuilder = HttpClient.newBuilder();
+            getSslContext().ifPresent(clientBuilder::sslContext);
+            return clientBuilder.build();
+        }
 
         public final Map<String, byte[]> getEntries() {
             return Collections.unmodifiableMap(entries);
@@ -80,6 +96,57 @@ public class Main {
         }
 
         @SneakyThrows
+        public Optional<String> getClientTrustStorePassword() {
+            return Optional.ofNullable(properties.getProperty("gbcs.client.ssl.truststore.password"))
+                    .filter(Predicate.not(String::isEmpty));
+
+        }
+
+        @SneakyThrows
+        public Optional<KeyStore> getClientTrustStore() {
+            return Optional.ofNullable(properties.getProperty("gbcs.client.ssl.truststore.file"))
+                    .filter(Predicate.not(String::isEmpty))
+                    .map(Path::of)
+                    .map((Fun<Path, KeyStore>) keyStoreFile -> {
+                        final var keyStore = KeyStore.getInstance("PKCS12");
+                        try (final var is = Files.newInputStream(keyStoreFile)) {
+                            keyStore.load(is, getClientTrustStorePassword().map(String::toCharArray).orElse(null));
+                        }
+                        return keyStore;
+                    });
+
+        }
+
+        @SneakyThrows
+        public Optional<KeyStore> getClientKeyStore() {
+            return Optional.ofNullable(properties.getProperty("gbcs.client.ssl.keystore.file"))
+                    .filter(Predicate.not(String::isEmpty))
+                    .map(Path::of)
+                    .map((Fun<Path, KeyStore>) keyStoreFile -> {
+                        final var keyStore = KeyStore.getInstance("PKCS12");
+                        try (final var is = Files.newInputStream(keyStoreFile)) {
+                            keyStore.load(is, getClientKeyStorePassword().map(String::toCharArray).orElse(null));
+                        }
+                        return keyStore;
+                    });
+
+        }
+
+        @SneakyThrows
+        public Optional<String> getClientKeyStorePassword() {
+            return Optional.ofNullable(properties.getProperty("gbcs.client.ssl.keystore.password"))
+                    .filter(Predicate.not(String::isEmpty));
+
+        }
+
+        @SneakyThrows
+        public Optional<String> getClientKeyPassword() {
+            return Optional.ofNullable(properties.getProperty("gbcs.client.ssl.key.password"))
+                    .filter(Predicate.not(String::isEmpty));
+
+        }
+
+        @SneakyThrows
         public String getUser() {
             return Optional.ofNullable(properties.getProperty("gbcs.server.username"))
                     .filter(Predicate.not(String::isEmpty))
@@ -99,25 +166,50 @@ public class Main {
             return "Basic " + new String(b64);
         }
 
+        @SneakyThrows
+        private Optional<SSLContext> getSslContext() {
+            return getClientKeyStore().map((Fun<KeyStore, SSLContext>) clientKeyStore -> {
+                final var kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(clientKeyStore, getClientKeyStorePassword().map(String::toCharArray).orElse(null));
+
+
+                // Set up trust manager factory with the truststore
+                final var trustManagers = getClientTrustStore().map((Fun<KeyStore, TrustManager[]>) ts -> {
+                    final var tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                    tmf.init(ts);
+                    return tmf.getTrustManagers();
+                }).orElse(new TrustManager[0]);
+
+                // Create SSL context with the key and trust managers
+                final var sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(kmf.getKeyManagers(), trustManagers, null);
+                return sslContext;
+            });
+        }
 
         @SneakyThrows
         @Setup(Level.Trial)
         public void setUp() {
-            try (final var client = HttpClient.newHttpClient()) {
-                for (int i = 0; i < 10000; i++) {
-                    final var pair = newEntry();
-                    final var requestBuilder = newRequestBuilder(pair.getKey())
-                            .header("Content-Type", "application/octet-stream")
-                            .PUT(HttpRequest.BodyPublishers.ofByteArray(pair.getValue()));
-                    final var response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-                    if (201 != response.statusCode()) {
-                        throw new IllegalStateException(Integer.toString(response.statusCode()));
-                    } else {
-                        entries.put(pair.getKey(), pair.getValue());
-                    }
+            final var client = getClient();
+            for (int i = 0; i < 1000; i++) {
+                final var pair = newEntry();
+                final var requestBuilder = newRequestBuilder(pair.getKey())
+                        .header("Content-Type", "application/octet-stream")
+                        .PUT(HttpRequest.BodyPublishers.ofByteArray(pair.getValue()));
+                final var response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+                if (201 != response.statusCode()) {
+                    throw new IllegalStateException(Integer.toString(response.statusCode()));
+                } else {
+                    entries.put(pair.getKey(), pair.getValue());
                 }
             }
         }
+
+        @TearDown
+        public void tearDown() {
+            client.close();
+        }
+
 
         private Iterator<Map.Entry<String, byte[]>> it = null;
 

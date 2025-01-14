@@ -1,16 +1,18 @@
 package net.woggioni.gbcs.auth
 
+import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.ChannelInboundHandlerAdapter
+import io.netty.handler.ssl.SslHandler
+import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import java.security.KeyStore
 import java.security.cert.CertPathValidator
+import java.security.cert.CertPathValidatorException
+import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.PKIXParameters
 import java.security.cert.PKIXRevocationChecker
 import java.security.cert.X509Certificate
 import java.util.EnumSet
-import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.ChannelInboundHandlerAdapter
-import io.netty.handler.ssl.SslHandler
-import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import javax.net.ssl.SSLSession
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
@@ -48,7 +50,11 @@ class ClientCertificateValidator private constructor(
                 object : X509TrustManager {
                     override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String) {
                         val clientCertificateChain = certificateFactory.generateCertPath(chain.toList())
-                        validator.validate(clientCertificateChain, params)
+                        try {
+                            validator.validate(clientCertificateChain, params)
+                        } catch (ex : CertPathValidatorException) {
+                            throw CertificateException(ex)
+                        }
                     }
 
                     override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String) {
