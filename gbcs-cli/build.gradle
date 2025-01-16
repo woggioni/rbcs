@@ -56,11 +56,11 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', E
 }
 
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
-    mainClass = 'net.woggioni.gbcs.GraalNativeImageConfiguration'
+    mainClass = mainClassName
 }
 
 tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
-    mainClass = 'net.woggioni.gbcs.GradleBuildCacheServer'
+    mainClass = mainClassName
     useMusl = true
     buildStaticImage = true
 }
