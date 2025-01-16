@@ -1,30 +1,22 @@
 package net.woggioni.gbcs.cli
 
-import net.woggioni.gbcs.GradleBuildCacheServer
-import net.woggioni.gbcs.GradleBuildCacheServer.Companion.DEFAULT_CONFIGURATION_URL
 import net.woggioni.gbcs.base.GbcsUrlStreamHandlerFactory
 import net.woggioni.gbcs.base.contextLogger
-import net.woggioni.gbcs.base.debug
-import net.woggioni.gbcs.base.info
 import net.woggioni.gbcs.cli.impl.AbstractVersionProvider
 import net.woggioni.gbcs.cli.impl.GbcsCommand
 import net.woggioni.gbcs.cli.impl.commands.BenchmarkCommand
 import net.woggioni.gbcs.cli.impl.commands.ClientCommand
 import net.woggioni.gbcs.cli.impl.commands.PasswordHashCommand
+import net.woggioni.gbcs.cli.impl.commands.ServerCommand
 import net.woggioni.jwo.Application
-import net.woggioni.jwo.JWO
-import org.slf4j.Logger
 import picocli.CommandLine
 import picocli.CommandLine.Model.CommandSpec
-import java.io.ByteArrayOutputStream
-import java.nio.file.Files
-import java.nio.file.Path
 
 
 @CommandLine.Command(
     name = "gbcs", versionProvider = GradleBuildCacheServerCli.VersionProvider::class
 )
-class GradleBuildCacheServerCli(application: Application, private val log: Logger) : GbcsCommand() {
+class GradleBuildCacheServerCli : GbcsCommand() {
 
     class VersionProvider : AbstractVersionProvider()
     companion object {
@@ -37,32 +29,21 @@ class GradleBuildCacheServerCli(application: Application, private val log: Logge
                 .configurationDirectoryEnvVar("GBCS_CONFIGURATION_DIR")
                 .configurationDirectoryPropertyKey("net.woggioni.gbcs.conf.dir")
                 .build()
-            val gbcsCli = GradleBuildCacheServerCli(app, log)
+            val gbcsCli = GradleBuildCacheServerCli()
             val commandLine = CommandLine(gbcsCli)
             commandLine.setExecutionExceptionHandler { ex, cl, parseResult ->
                 log.error(ex.message, ex)
                 CommandLine.ExitCode.SOFTWARE
             }
+            commandLine.addSubcommand(ServerCommand(app))
             commandLine.addSubcommand(PasswordHashCommand())
-            val clientApp = Application.builder("gbcs-client")
-                .configurationDirectoryEnvVar("GBCS_CLIENT_CONFIGURATION_DIR")
-                .configurationDirectoryPropertyKey("net.woggioni.gbcs.client.conf.dir")
-                .build()
-
             commandLine.addSubcommand(
-                CommandLine(ClientCommand(clientApp)).apply {
+                CommandLine(ClientCommand(app)).apply {
                     addSubcommand(BenchmarkCommand())
                 })
             System.exit(commandLine.execute(*args))
         }
     }
-
-    @CommandLine.Option(
-        names = ["-c", "--config-file"],
-        description = ["Read the application configuration from this file"],
-        paramLabel = "CONFIG_FILE"
-    )
-    private var configurationFile: Path = findConfigurationFile(application)
 
     @CommandLine.Option(names = ["-V", "--version"], versionHelp = true)
     var versionHelp = false
@@ -71,40 +52,8 @@ class GradleBuildCacheServerCli(application: Application, private val log: Logge
     @CommandLine.Spec
     private lateinit var spec: CommandSpec
 
-    private fun findConfigurationFile(app: Application): Path {
-        val confDir = app.computeConfigurationDirectory()
-        val configurationFile = confDir.resolve("gbcs.xml")
-        return configurationFile
-    }
-
-    private fun createDefaultConfigurationFile(configurationFile: Path) {
-        log.info {
-            "Creating default configuration file at '$configurationFile'"
-        }
-        val defaultConfigurationFileResource = DEFAULT_CONFIGURATION_URL
-        Files.newOutputStream(configurationFile).use { outputStream ->
-            defaultConfigurationFileResource.openStream().use { inputStream ->
-                JWO.copy(inputStream, outputStream)
-            }
-        }
-    }
 
     override fun run() {
-        if (!Files.exists(configurationFile)) {
-            Files.createDirectories(configurationFile.parent)
-            createDefaultConfigurationFile(configurationFile)
-        }
-
-        val configuration = GradleBuildCacheServer.loadConfiguration(configurationFile)
-        log.debug {
-            ByteArrayOutputStream().also {
-                GradleBuildCacheServer.dumpConfiguration(configuration, it)
-            }.let {
-                "Server configuration:\n${String(it.toByteArray())}"
-            }
-        }
-        val server = GradleBuildCacheServer(configuration)
-        server.run().use {
-        }
+        spec.commandLine().usage(System.out);
     }
 }

@@ -14,20 +14,12 @@ import java.nio.file.Path
 )
 class ClientCommand(app : Application) : GbcsCommand() {
 
-    companion object {
-        private fun findConfigurationFile(app: Application): Path {
-            val confDir = app.computeConfigurationDirectory()
-            val configurationFile = confDir.resolve("gbcs-client.xml")
-            return configurationFile
-        }
-    }
-
     @CommandLine.Option(
         names = ["-c", "--configuration"],
         description = ["Path to the client configuration file"],
         paramLabel = "CONFIGURATION_FILE"
     )
-    private var configurationFile : Path = findConfigurationFile(app)
+    private var configurationFile : Path = findConfigurationFile(app, "gbcs-client.xml")
 
     @CommandLine.Option(
         names = ["-p", "--profile"],
