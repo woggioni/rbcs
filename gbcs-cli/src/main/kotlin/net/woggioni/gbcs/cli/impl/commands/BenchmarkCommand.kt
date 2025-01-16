@@ -13,6 +13,7 @@ import java.util.Base64
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.random.Random
 
 @CommandLine.Command(
@@ -53,9 +54,12 @@ class BenchmarkCommand : GbcsCommand() {
         val entries = let {
             val completionQueue = LinkedBlockingQueue<Future<Pair<String, ByteArray>>>(numberOfEntries)
             val start = Instant.now()
+            val totalElapsedTime = AtomicLong(0)
             entryGenerator.take(numberOfEntries).forEach { entry ->
+                val requestStart = System.nanoTime()
                 val future = client.put(entry.first, entry.second).thenApply { entry }
                 future.whenComplete { _, _ ->
+                    totalElapsedTime.addAndGet((System.nanoTime() - requestStart))
                     completionQueue.put(future)
                 }
             }
@@ -78,6 +82,9 @@ class BenchmarkCommand : GbcsCommand() {
                 val elapsed = Duration.between(start, end).toMillis()
                 "Insertion rate: ${numberOfEntries.toDouble() / elapsed * 1000} ops/s"
             }
+            log.info {
+                "Average time per insertion: ${totalElapsedTime.get() / numberOfEntries.toDouble() * 1000} ms"
+            }
             inserted
         }
         log.info {
@@ -86,8 +93,11 @@ class BenchmarkCommand : GbcsCommand() {
         if (entries.isNotEmpty()) {
             val completionQueue = LinkedBlockingQueue<Future<Unit>>(entries.size)
             val start = Instant.now()
+            val totalElapsedTime = AtomicLong(0)
             entries.forEach { entry ->
+                val requestStart = System.nanoTime()
                 val future = client.get(entry.first).thenApply {
+                    totalElapsedTime.addAndGet((System.nanoTime() - requestStart))
                     if (it == null) {
                         log.error {
                             "Missing entry for key '${entry.first}'"
@@ -111,6 +121,9 @@ class BenchmarkCommand : GbcsCommand() {
             log.info {
                 val elapsed = Duration.between(start, end).toMillis()
                 "Retrieval rate: ${entries.size.toDouble() / elapsed * 1000} ops/s"
+            }
+            log.info {
+                "Average time per retrieval: ${totalElapsedTime.get() / numberOfEntries.toDouble() * 1e6} ms"
             }
         } else {
             log.error("Skipping retrieval benchmark as it was not possible to insert any entry in the cache")
