@@ -507,9 +507,9 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         val DEFAULT_CONFIGURATION_URL by lazy { "classpath:net/woggioni/gbcs/gbcs-default.xml".toUrl() }
 
         fun loadConfiguration(configurationFile: Path): Configuration {
-            val dbf = Xml.newDocumentBuilderFactory(null)
-            val db = dbf.newDocumentBuilder()
-            val doc = Files.newInputStream(configurationFile).use(db::parse)
+            val doc = Files.newInputStream(configurationFile).use {
+                Xml.parseXml(configurationFile.toUri().toURL(), it)
+            }
             return Parser.parse(doc)
         }
 

@@ -2,6 +2,7 @@ package net.woggioni.gbcs.base
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.event.Level
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.logging.LogManager
@@ -49,6 +50,12 @@ inline fun log(log : Logger,
                loggerMethod : Logger.(String) -> Unit, messageBuilder : () -> String) {
     if(log.filter()) {
         log.loggerMethod(messageBuilder())
+    }
+}
+
+inline fun Logger.log(level : Level, messageBuilder : () -> String) {
+    if(isEnabledForLevel(level)) {
+        makeLoggingEventBuilder(level).log(messageBuilder())
     }
 }
 

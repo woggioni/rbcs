@@ -19,7 +19,6 @@ import org.w3c.dom.TypeInfo
 import java.nio.file.Paths
 
 object Parser {
-
     fun parse(document: Document): Configuration {
         val root = document.documentElement
         val anonymousUser = User("", null, emptySet())

@@ -1,6 +1,7 @@
 package net.woggioni.gbcs.base
 
 import org.slf4j.LoggerFactory
+import org.slf4j.event.Level
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.Node
@@ -80,28 +81,17 @@ class Xml(val doc: Document, val element: Element) {
             private val log = LoggerFactory.getLogger(ErrorHandler::class.java)
         }
 
-        override fun warning(ex: SAXParseException) {
-            log.warn(
-                "Problem at {}:{}:{} parsing deployment configuration: {}",
-                fileURL, ex.lineNumber, ex.columnNumber, ex.message
-            )
-        }
+         override fun warning(ex: SAXParseException)= err(ex, Level.WARN)
 
-        override fun error(ex: SAXParseException) {
-            log.error(
-                "Problem at {}:{}:{} parsing deployment configuration: {}",
-                fileURL, ex.lineNumber, ex.columnNumber, ex.message
-            )
+        private fun err(ex: SAXParseException, level: Level) {
+            log.log(level) {
+                "Problem at ${fileURL}:${ex.lineNumber}:${ex.columnNumber} parsing deployment configuration: ${ex.message}"
+            }
             throw ex
         }
 
-        override fun fatalError(ex: SAXParseException) {
-            log.error(
-                "Problem at {}:{}:{} parsing deployment configuration: {}",
-                fileURL, ex.lineNumber, ex.columnNumber, ex.message
-            )
-            throw ex
-        }
+        override fun error(ex: SAXParseException) = err(ex, Level.ERROR)
+        override fun fatalError(ex: SAXParseException) = err(ex, Level.ERROR)
     }
 
     companion object {
