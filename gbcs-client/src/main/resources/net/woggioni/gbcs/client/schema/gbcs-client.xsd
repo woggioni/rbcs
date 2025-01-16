@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xs:schema targetNamespace="urn:net.woggioni.gbcs.client"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gbcs-client="urn:net.woggioni.gbcs.client"
+           elementFormDefault="unqualified"
+>
+    <xs:element name="profiles" type="gbcs-client:profilesType"/>
+
+    <xs:complexType name="profilesType">
+        <xs:sequence minOccurs="0">
+            <xs:element name="profile" type="gbcs-client:profileType" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="profileType">
+        <xs:choice>
+            <xs:element name="basic-auth" type="gbcs-client:basicAuthType"/>
+            <xs:element name="tls-client-auth" type="gbcs-client:tlsClientAuthType"/>
+        </xs:choice>
+        <xs:attribute name="name" type="xs:token" use="required"/>
+        <xs:attribute name="base-url" type="xs:anyURI" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="basicAuthType">
+        <xs:attribute name="user" type="xs:string" use="required"/>
+        <xs:attribute name="password" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="tlsClientAuthType">
+        <xs:attribute name="key-store-file" type="xs:anyURI" use="required"/>
+        <xs:attribute name="key-store-password" type="xs:string" use="required"/>
+        <xs:attribute name="key-alias" type="xs:string" use="required"/>
+        <xs:attribute name="key-password" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+</xs:schema>

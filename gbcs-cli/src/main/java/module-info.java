@@ -3,6 +3,7 @@ module net.woggioni.gbcs.cli {
     requires net.woggioni.gbcs;
     requires info.picocli;
     requires net.woggioni.gbcs.base;
+    requires net.woggioni.gbcs.client;
     requires kotlin.stdlib;
     requires net.woggioni.jwo;
 

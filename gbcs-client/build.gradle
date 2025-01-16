@@ -1,0 +1,13 @@
+plugins {
+    id 'java-library'
+    alias catalog.plugins.kotlin.jvm
+}
+
+dependencies {
+    implementation project(':gbcs-base')
+    implementation catalog.picocli
+    implementation catalog.netty.buffer
+    implementation catalog.netty.codec.http
+}
+
+

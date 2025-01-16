@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gbcs-client:profiles xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+                      xmlns:gbcs-client="urn:net.woggioni.gbcs.client"
+                      xs:schemaLocation="urn:net.woggioni.gbcs.client jms://net.woggioni.gbcs.client/net/woggioni/gbcs/client/schema/gbcs-client.xsd"
+                      >
+    <profile name="profile1" base-url="https://gbcs1.example.com/">
+        <tls-client-auth
+                key-store-file="keystore.pfx"
+                key-store-password="password"
+                key-alias="woggioni@c962475fa38"
+                key-password="key-password"/>
+    </profile>
+    <profile name="profile2" base-url="https://gbcs2.example.com/">
+        <basic-auth user="user" password="password"/>
+    </profile>
+</gbcs-client:profiles>

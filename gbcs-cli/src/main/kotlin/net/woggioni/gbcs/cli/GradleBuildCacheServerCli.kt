@@ -8,6 +8,8 @@ import net.woggioni.gbcs.base.debug
 import net.woggioni.gbcs.base.info
 import net.woggioni.gbcs.cli.impl.AbstractVersionProvider
 import net.woggioni.gbcs.cli.impl.GbcsCommand
+import net.woggioni.gbcs.cli.impl.commands.BenchmarkCommand
+import net.woggioni.gbcs.cli.impl.commands.ClientCommand
 import net.woggioni.gbcs.cli.impl.commands.PasswordHashCommand
 import net.woggioni.jwo.Application
 import net.woggioni.jwo.JWO
@@ -22,7 +24,7 @@ import java.nio.file.Path
 @CommandLine.Command(
     name = "gbcs", versionProvider = GradleBuildCacheServerCli.VersionProvider::class
 )
-class GradleBuildCacheServerCli(application : Application, private val log : Logger) : GbcsCommand() {
+class GradleBuildCacheServerCli(application: Application, private val log: Logger) : GbcsCommand() {
 
     class VersionProvider : AbstractVersionProvider()
     companion object {
@@ -42,6 +44,15 @@ class GradleBuildCacheServerCli(application : Application, private val log : Log
                 CommandLine.ExitCode.SOFTWARE
             }
             commandLine.addSubcommand(PasswordHashCommand())
+            val clientApp = Application.builder("gbcs-client")
+                .configurationDirectoryEnvVar("GBCS_CLIENT_CONFIGURATION_DIR")
+                .configurationDirectoryPropertyKey("net.woggioni.gbcs.client.conf.dir")
+                .build()
+
+            commandLine.addSubcommand(
+                CommandLine(ClientCommand(clientApp)).apply {
+                    addSubcommand(BenchmarkCommand())
+                })
             System.exit(commandLine.execute(*args))
         }
     }
@@ -60,13 +71,13 @@ class GradleBuildCacheServerCli(application : Application, private val log : Log
     @CommandLine.Spec
     private lateinit var spec: CommandSpec
 
-    private fun findConfigurationFile(app : Application): Path {
+    private fun findConfigurationFile(app: Application): Path {
         val confDir = app.computeConfigurationDirectory()
         val configurationFile = confDir.resolve("gbcs.xml")
         return configurationFile
     }
 
-    private fun createDefaultConfigurationFile(configurationFile : Path) {
+    private fun createDefaultConfigurationFile(configurationFile: Path) {
         log.info {
             "Creating default configuration file at '$configurationFile'"
         }

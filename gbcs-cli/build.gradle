@@ -7,12 +7,11 @@ plugins {
     id 'maven-publish'
 }
 
+
 import net.woggioni.gradle.envelope.EnvelopeJarTask
+import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
 import net.woggioni.gradle.graalvm.NativeImagePlugin
 import net.woggioni.gradle.graalvm.NativeImageTask
-import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 Property<String> mainClassName = objects.property(String.class)
 mainClassName.set('net.woggioni.gbcs.cli.GradleBuildCacheServerCli')
@@ -43,6 +42,7 @@ dependencies {
     implementation catalog.netty.codec.http
     implementation catalog.picocli
 
+    implementation project(":gbcs-client")
     implementation rootProject
 
 //    runtimeOnly catalog.slf4j.jdk14
