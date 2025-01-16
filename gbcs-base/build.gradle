@@ -6,8 +6,9 @@ plugins {
 }
 
 dependencies {
-    compileOnly project(':gbcs-api')
-    compileOnly catalog.slf4j.api
+    implementation project(':gbcs-api')
+    implementation catalog.slf4j.api
+    implementation catalog.jwo
 }
 
 publishing {

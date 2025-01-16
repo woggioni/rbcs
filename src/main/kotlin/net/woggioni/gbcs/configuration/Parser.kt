@@ -12,7 +12,9 @@ import net.woggioni.gbcs.api.Configuration.TlsCertificateExtractor
 import net.woggioni.gbcs.api.Configuration.TrustStore
 import net.woggioni.gbcs.api.Configuration.User
 import net.woggioni.gbcs.api.Role
+import net.woggioni.gbcs.api.exception.ConfigurationException
 import net.woggioni.gbcs.base.Xml.Companion.asIterable
+import net.woggioni.gbcs.base.Xml.Companion.renderAttribute
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.TypeInfo
@@ -28,9 +30,8 @@ object Parser {
         var users : Map<String, User> = mapOf(anonymousUser.name to anonymousUser)
         var groups = emptyMap<String, Group>()
         var tls: Tls? = null
-        val serverPath = root.getAttribute("path")
-        val useVirtualThread = root.getAttribute("useVirtualThreads")
-            .takeIf(String::isNotEmpty)
+        val serverPath = root.renderAttribute("path")
+        val useVirtualThread = root.renderAttribute("useVirtualThreads")
             ?.let(String::toBoolean) ?: true
         var authentication: Authentication? = null
         for (child in root.asIterable()) {
@@ -53,8 +54,8 @@ object Parser {
                 }
 
                 "bind" -> {
-                    host = child.getAttribute("host")
-                    port = Integer.parseInt(child.getAttribute("port"))
+                    host = child.renderAttribute("host") ?: throw ConfigurationException("host attribute is required")
+                    port = Integer.parseInt(child.renderAttribute("port"))
                 }
 
                 "cache" -> {
@@ -79,14 +80,14 @@ object Parser {
                                 for (ggchild in gchild.asIterable()) {
                                     when (ggchild.localName) {
                                         "group-extractor" -> {
-                                            val attrName = ggchild.getAttribute("attribute-name")
-                                            val pattern = ggchild.getAttribute("pattern")
+                                            val attrName = ggchild.renderAttribute("attribute-name")
+                                            val pattern = ggchild.renderAttribute("pattern")
                                             tlsExtractorGroup = TlsCertificateExtractor(attrName, pattern)
                                         }
 
                                         "user-extractor" -> {
-                                            val attrName = ggchild.getAttribute("attribute-name")
-                                            val pattern = ggchild.getAttribute("pattern")
+                                            val attrName = ggchild.renderAttribute("attribute-name")
+                                            val pattern = ggchild.renderAttribute("pattern")
                                             tlsExtractorUser = TlsCertificateExtractor(attrName, pattern)
                                         }
                                     }
@@ -98,20 +99,17 @@ object Parser {
                 }
 
                 "tls" -> {
-                    val verifyClients = child.getAttribute("verify-clients")
-                        .takeIf(String::isNotEmpty)
+                    val verifyClients = child.renderAttribute("verify-clients")
                         ?.let(String::toBoolean) ?: false
                     var keyStore: KeyStore? = null
                     var trustStore: TrustStore? = null
                     for (granChild in child.asIterable()) {
                         when (granChild.localName) {
                             "keystore" -> {
-                                val keyStoreFile = Paths.get(granChild.getAttribute("file"))
-                                val keyStorePassword = granChild.getAttribute("password")
-                                    .takeIf(String::isNotEmpty)
-                                val keyAlias = granChild.getAttribute("key-alias")
-                                val keyPassword = granChild.getAttribute("key-password")
-                                    .takeIf(String::isNotEmpty)
+                                val keyStoreFile = Paths.get(granChild.renderAttribute("file"))
+                                val keyStorePassword = granChild.renderAttribute("password")
+                                val keyAlias = granChild.renderAttribute("key-alias")
+                                val keyPassword = granChild.renderAttribute("key-password")
                                 keyStore = KeyStore(
                                     keyStoreFile,
                                     keyStorePassword,
@@ -121,11 +119,9 @@ object Parser {
                             }
 
                             "truststore" -> {
-                                val trustStoreFile = Paths.get(granChild.getAttribute("file"))
-                                val trustStorePassword = granChild.getAttribute("password")
-                                    .takeIf(String::isNotEmpty)
-                                val checkCertificateStatus = granChild.getAttribute("check-certificate-status")
-                                    .takeIf(String::isNotEmpty)
+                                val trustStoreFile = Paths.get(granChild.renderAttribute("file"))
+                                val trustStorePassword = granChild.renderAttribute("password")
+                                val checkCertificateStatus = granChild.renderAttribute("check-certificate-status")
                                     ?.let(String::toBoolean)
                                     ?: false
                                 trustStore = TrustStore(
@@ -152,15 +148,15 @@ object Parser {
     }.toSet()
 
     private fun parseUserRefs(root: Element) = root.asIterable().asSequence().map {
-        it.getAttribute("ref")
+        it.renderAttribute("ref")
     }.toSet()
 
     private fun parseUsers(root: Element): Sequence<User> {
         return root.asIterable().asSequence().filter {
             it.localName == "user"
         }.map { el ->
-            val username = el.getAttribute("name")
-            val password = el.getAttribute("password").takeIf(String::isNotEmpty)
+            val username = el.renderAttribute("name")
+            val password = el.renderAttribute("password")
             User(username, password, emptySet())
         }
     }
@@ -171,7 +167,7 @@ object Parser {
         val groups = root.asIterable().asSequence().filter {
             it.localName == "group"
         }.map { el ->
-            val groupName = el.getAttribute("name")
+            val groupName = el.renderAttribute("name") ?: throw ConfigurationException("Group name is required")
             var roles = emptySet<Role>()
             for (child in el.asIterable()) {
                 when (child.localName) {

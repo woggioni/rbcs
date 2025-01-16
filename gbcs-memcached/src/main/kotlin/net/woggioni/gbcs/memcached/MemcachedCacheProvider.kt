@@ -2,10 +2,12 @@ package net.woggioni.gbcs.memcached
 
 import net.rubyeye.xmemcached.transcoders.CompressionMode
 import net.woggioni.gbcs.api.CacheProvider
+import net.woggioni.gbcs.api.exception.ConfigurationException
 import net.woggioni.gbcs.base.GBCS
 import net.woggioni.gbcs.base.HostAndPort
 import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.base.Xml.Companion.asIterable
+import net.woggioni.gbcs.base.Xml.Companion.renderAttribute
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.time.Duration
@@ -22,20 +24,13 @@ class MemcachedCacheProvider : CacheProvider<MemcachedCacheConfiguration> {
 
     override fun deserialize(el: Element): MemcachedCacheConfiguration {
         val servers = mutableListOf<HostAndPort>()
-        val maxAge = el.getAttribute("max-age")
-            .takeIf(String::isNotEmpty)
+        val maxAge = el.renderAttribute("max-age")
             ?.let(Duration::parse)
             ?: Duration.ofDays(1)
-        val maxSize = el.getAttribute("max-size")
-            .takeIf(String::isNotEmpty)
+        val maxSize = el.renderAttribute("max-size")
             ?.let(String::toInt)
             ?: 0x100000
-        val enableCompression = el.getAttribute("enable-compression")
-            .takeIf(String::isNotEmpty)
-            ?.let(String::toBoolean)
-            ?: false
-        val compressionMode = el.getAttribute("compression-mode")
-            .takeIf(String::isNotEmpty)
+        val compressionMode = el.renderAttribute("compression-mode")
             ?.let {
                 when (it) {
                     "gzip" -> CompressionMode.GZIP
@@ -44,11 +39,13 @@ class MemcachedCacheProvider : CacheProvider<MemcachedCacheConfiguration> {
                 }
             }
             ?: CompressionMode.ZIP
-        val digestAlgorithm = el.getAttribute("digest").takeIf(String::isNotEmpty)
+        val digestAlgorithm = el.renderAttribute("digest")
         for (child in el.asIterable()) {
             when (child.nodeName) {
                 "server" -> {
-                    servers.add(HostAndPort(child.getAttribute("host"), child.getAttribute("port").toInt()))
+                    val host = child.renderAttribute("host") ?: throw ConfigurationException("host attribute is required")
+                    val port = child.renderAttribute("port")?.toInt() ?: throw ConfigurationException("port attribute is required")
+                    servers.add(HostAndPort(host, port))
                 }
             }
         }

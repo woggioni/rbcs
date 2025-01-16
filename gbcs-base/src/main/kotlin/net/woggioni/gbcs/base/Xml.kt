@@ -1,5 +1,9 @@
 package net.woggioni.gbcs.base
 
+import net.woggioni.jwo.CollectionUtils.mapValues
+import net.woggioni.jwo.CollectionUtils.toUnmodifiableTreeMap
+import net.woggioni.jwo.JWO
+import net.woggioni.jwo.MapBuilder
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 import org.w3c.dom.Document
@@ -12,6 +16,8 @@ import org.xml.sax.SAXParseException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.URL
+import java.util.Collections
+import java.util.TreeMap
 import javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD
 import javax.xml.XMLConstants.ACCESS_EXTERNAL_SCHEMA
 import javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING
@@ -95,6 +101,22 @@ class Xml(val doc: Document, val element: Element) {
     }
 
     companion object {
+        private val dictMap: Map<String, Map<String, Any>> = sequenceOf(
+            "env" to System.getenv().asSequence().map { (k, v) -> k to (v as Any) }.toMap(),
+            "sys" to System.getProperties().asSequence().map { (k, v) -> k as String to (v as Any) }.toMap()
+        ).toMap()
+
+        private fun renderConfigurationTemplate(template: String): String {
+            return JWO.renderTemplate(template, emptyMap(), dictMap)
+        }
+
+        fun Element.renderAttribute(name : String, namespaceURI: String? = null) = if(namespaceURI == null) {
+            getAttribute(name)
+        } else {
+            getAttributeNS(name, namespaceURI)
+        }.takeIf(String::isNotEmpty)?.let(Companion::renderConfigurationTemplate)
+
+
         fun Element.asIterable() = Iterable { ElementIterator(this, null) }
         fun NodeList.asIterable() = Iterable { NodeListIterator(this) }
 

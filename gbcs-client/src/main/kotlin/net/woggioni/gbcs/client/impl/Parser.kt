@@ -1,6 +1,8 @@
 package net.woggioni.gbcs.client.impl
 
+import net.woggioni.gbcs.api.exception.ConfigurationException
 import net.woggioni.gbcs.base.Xml.Companion.asIterable
+import net.woggioni.gbcs.base.Xml.Companion.renderAttribute
 import net.woggioni.gbcs.client.GbcsClient
 import org.w3c.dom.Document
 import java.net.URI
@@ -21,17 +23,17 @@ object Parser {
             val tagName = child.localName
             when (tagName) {
                 "profile" -> {
-                    val name = child.getAttribute("name")
-                    val uri = child.getAttribute("base-url").let(::URI)
+                    val name = child.renderAttribute("name") ?: throw ConfigurationException("name attribute is required")
+                    val uri = child.renderAttribute("base-url")?.let(::URI) ?: throw ConfigurationException("base-url attribute is required")
                     var authentication: GbcsClient.Configuration.Authentication? = null
                     for (gchild in child.asIterable()) {
                         when (gchild.localName) {
                             "tls-client-auth" -> {
-                                val keyStoreFile = gchild.getAttribute("key-store-file")
+                                val keyStoreFile = gchild.renderAttribute("key-store-file")
                                 val keyStorePassword =
-                                    gchild.getAttribute("key-store-password").takeIf(String::isNotEmpty)
-                                val keyAlias = gchild.getAttribute("key-alias")
-                                val keyPassword = gchild.getAttribute("key-password").takeIf(String::isNotEmpty)
+                                    gchild.renderAttribute("key-store-password")
+                                val keyAlias = gchild.renderAttribute("key-alias")
+                                val keyPassword = gchild.renderAttribute("key-password")
 
                                 val keystore = KeyStore.getInstance("PKCS12").apply {
                                     Files.newInputStream(Path.of(keyStoreFile)).use {
@@ -48,15 +50,14 @@ object Parser {
                             }
 
                             "basic-auth" -> {
-                                val username = gchild.getAttribute("user")
-                                val password = gchild.getAttribute("password")
+                                val username = gchild.renderAttribute("user") ?: throw ConfigurationException("username attribute is required")
+                                val password = gchild.renderAttribute("password") ?: throw ConfigurationException("password attribute is required")
                                 authentication =
                                     GbcsClient.Configuration.Authentication.BasicAuthenticationCredentials(username, password)
                             }
                         }
                     }
-                    val maxConnections = child.getAttribute("max-connections")
-                        .takeIf(String::isNotEmpty)
+                    val maxConnections = child.renderAttribute("max-connections")
                         ?.let(String::toInt)
                         ?: 50
                     profiles[name] = GbcsClient.Configuration.Profile(uri, authentication, maxConnections)

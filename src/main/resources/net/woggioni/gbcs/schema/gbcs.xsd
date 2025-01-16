@@ -28,7 +28,7 @@
     </xs:complexType>
 
     <xs:complexType name="bindType">
-        <xs:attribute name="host" type="xs:string" use="required"/>
+        <xs:attribute name="host" type="xs:token" use="required"/>
         <xs:attribute name="port" type="xs:unsignedShort" use="required"/>
     </xs:complexType>
 
@@ -54,8 +54,8 @@
     </xs:complexType>
 
     <xs:complexType name="X500NameExtractorType">
-        <xs:attribute name="attribute-name" type="xs:string"/>
-        <xs:attribute name="pattern" type="xs:string"/>
+        <xs:attribute name="attribute-name" type="xs:token"/>
+        <xs:attribute name="pattern" type="xs:token"/>
     </xs:complexType>
 
     <xs:complexType name="authorizationType">
@@ -85,7 +85,7 @@
     </xs:complexType>
 
     <xs:complexType name="userType">
-        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="name" type="xs:token" use="required"/>
         <xs:attribute name="password" type="xs:string" use="optional"/>
     </xs:complexType>
 
@@ -105,11 +105,11 @@
             </xs:element>
             <xs:element name="roles" type="gbcs:rolesType" maxOccurs="1" minOccurs="0"/>
         </xs:sequence>
-        <xs:attribute name="name" type="xs:string"/>
+        <xs:attribute name="name" type="xs:token"/>
     </xs:complexType>
 
     <xs:simpleType name="role" final="restriction" >
-        <xs:restriction base="xs:string">
+        <xs:restriction base="xs:token">
             <xs:enumeration value="READER" />
             <xs:enumeration value="WRITER" />
         </xs:restriction>

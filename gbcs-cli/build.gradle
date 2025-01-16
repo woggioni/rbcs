@@ -4,6 +4,8 @@ plugins {
     alias catalog.plugins.envelope
     alias catalog.plugins.sambal
     alias catalog.plugins.graalvm.native.image
+    alias catalog.plugins.graalvm.jlink
+    alias catalog.plugins.jpms.check
     id 'maven-publish'
 }
 
@@ -12,6 +14,8 @@ import net.woggioni.gradle.envelope.EnvelopeJarTask
 import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
 import net.woggioni.gradle.graalvm.NativeImagePlugin
 import net.woggioni.gradle.graalvm.NativeImageTask
+import net.woggioni.gradle.graalvm.JlinkPlugin
+import net.woggioni.gradle.graalvm.JlinkTask
 
 Property<String> mainClassName = objects.property(String.class)
 mainClassName.set('net.woggioni.gbcs.cli.GradleBuildCacheServerCli')
@@ -63,6 +67,11 @@ tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
     mainClass = mainClassName
     useMusl = true
     buildStaticImage = true
+}
+
+tasks.named(JlinkPlugin.JLINK_TASK_NAME, JlinkTask) {
+    mainClass = mainClassName
+    mainModule = 'net.woggioni.gbcs.cli'
 }
 
 artifacts {

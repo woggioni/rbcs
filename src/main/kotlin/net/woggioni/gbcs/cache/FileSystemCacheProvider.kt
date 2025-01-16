@@ -3,6 +3,7 @@ package net.woggioni.gbcs.cache
 import net.woggioni.gbcs.api.CacheProvider
 import net.woggioni.gbcs.base.GBCS
 import net.woggioni.gbcs.base.Xml
+import net.woggioni.gbcs.base.Xml.Companion.renderAttribute
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.nio.file.Path
@@ -18,22 +19,18 @@ class FileSystemCacheProvider : CacheProvider<FileSystemCacheConfiguration> {
     override fun getXmlNamespace() = "urn:net.woggioni.gbcs"
 
     override fun deserialize(el: Element): FileSystemCacheConfiguration {
-        val path = el.getAttribute("path")
-            .takeIf(String::isNotEmpty)
+        val path = el.renderAttribute("path")
             ?.let(Path::of)
-        val maxAge = el.getAttribute("max-age")
-            .takeIf(String::isNotEmpty)
+        val maxAge = el.renderAttribute("max-age")
             ?.let(Duration::parse)
             ?: Duration.ofDays(1)
-        val enableCompression = el.getAttribute("enable-compression")
-            .takeIf(String::isNotEmpty)
+        val enableCompression = el.renderAttribute("enable-compression")
             ?.let(String::toBoolean)
             ?: true
-        val compressionLevel = el.getAttribute("compression-level")
-            .takeIf(String::isNotEmpty)
+        val compressionLevel = el.renderAttribute("compression-level")
             ?.let(String::toInt)
             ?: Deflater.DEFAULT_COMPRESSION
-        val digestAlgorithm = el.getAttribute("digest").takeIf(String::isNotEmpty) ?: "MD5"
+        val digestAlgorithm = el.renderAttribute("digest") ?: "MD5"
 
         return FileSystemCacheConfiguration(
             path,
