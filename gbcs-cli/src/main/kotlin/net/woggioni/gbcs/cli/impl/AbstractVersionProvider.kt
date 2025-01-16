@@ -1,8 +1,6 @@
 package net.woggioni.gbcs.cli.impl
 
 import picocli.CommandLine
-import java.net.URL
-import java.util.Enumeration
 import java.util.jar.Attributes
 import java.util.jar.JarFile
 import java.util.jar.Manifest

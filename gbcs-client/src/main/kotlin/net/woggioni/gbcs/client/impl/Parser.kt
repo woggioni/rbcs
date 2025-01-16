@@ -55,7 +55,11 @@ object Parser {
                             }
                         }
                     }
-                    profiles[name] = GbcsClient.Configuration.Profile(uri, authentication)
+                    val maxConnections = child.getAttribute("max-connections")
+                        .takeIf(String::isNotEmpty)
+                        ?.let(String::toInt)
+                        ?: 50
+                    profiles[name] = GbcsClient.Configuration.Profile(uri, authentication, maxConnections)
                 }
             }
         }

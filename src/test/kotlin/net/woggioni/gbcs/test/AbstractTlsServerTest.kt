@@ -1,6 +1,5 @@
 package net.woggioni.gbcs.test
 
-import io.netty.handler.codec.http.HttpResponseStatus
 import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.api.Role
 import net.woggioni.gbcs.base.Xml
@@ -10,13 +9,9 @@ import net.woggioni.gbcs.utils.CertificateUtils
 import net.woggioni.gbcs.utils.CertificateUtils.X509Credentials
 import net.woggioni.gbcs.utils.NetworkUtils
 import org.bouncycastle.asn1.x500.X500Name
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Order
-import org.junit.jupiter.api.Test
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path

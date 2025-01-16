@@ -16,7 +16,6 @@ import net.woggioni.gbcs.base.Xml.Companion.asIterable
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.TypeInfo
-import java.lang.IllegalArgumentException
 import java.nio.file.Paths
 
 object Parser {

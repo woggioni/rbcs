@@ -8,6 +8,7 @@ module net.woggioni.gbcs.client {
     requires java.xml;
     requires net.woggioni.gbcs.base;
     requires io.netty.codec;
+    requires org.slf4j;
 
     exports net.woggioni.gbcs.client;
 

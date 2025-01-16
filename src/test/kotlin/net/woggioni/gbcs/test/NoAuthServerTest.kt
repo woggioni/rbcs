@@ -1,15 +1,14 @@
 package net.woggioni.gbcs.test
 
 import io.netty.handler.codec.http.HttpResponseStatus
-import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.api.Configuration
+import net.woggioni.gbcs.base.Xml
 import net.woggioni.gbcs.cache.FileSystemCacheConfiguration
 import net.woggioni.gbcs.configuration.Serializer
 import net.woggioni.gbcs.utils.NetworkUtils
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
-import java.net.ServerSocket
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest

@@ -1,6 +1,5 @@
 package net.woggioni.gbcs.memcached
 
-import net.rubyeye.xmemcached.MemcachedClient
 import net.rubyeye.xmemcached.XMemcachedClientBuilder
 import net.rubyeye.xmemcached.command.BinaryCommandFactory
 import net.rubyeye.xmemcached.transcoders.CompressionMode

@@ -6,6 +6,7 @@ plugins {
 dependencies {
     implementation project(':gbcs-base')
     implementation catalog.picocli
+    implementation catalog.slf4j.api
     implementation catalog.netty.buffer
     implementation catalog.netty.codec.http
 }

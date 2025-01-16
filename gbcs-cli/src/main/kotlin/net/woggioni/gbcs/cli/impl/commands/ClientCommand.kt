@@ -1,8 +1,7 @@
 package net.woggioni.gbcs.cli.impl.commands
 
-import net.woggioni.gbcs.client.GbcsClient
-
 import net.woggioni.gbcs.cli.impl.GbcsCommand
+import net.woggioni.gbcs.client.GbcsClient
 import net.woggioni.jwo.Application
 import picocli.CommandLine
 import java.nio.file.Path

@@ -2,7 +2,6 @@ package net.woggioni.gbcs.test
 
 import io.netty.handler.codec.http.HttpResponseStatus
 import net.woggioni.gbcs.api.Configuration
-import net.woggioni.gbcs.api.Role
 import net.woggioni.gbcs.base.PasswordSecurity.hashPassword
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order
