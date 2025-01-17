@@ -1,0 +1,35 @@
+plugins {
+    id 'java-library'
+    alias catalog.plugins.kotlin.jvm
+    id 'maven-publish'
+}
+
+dependencies {
+    implementation catalog.jwo
+    implementation catalog.slf4j.api
+    implementation catalog.netty.codec.http
+
+    api project(':gbcs-common')
+    api project(':gbcs-api')
+
+//    runtimeOnly catalog.slf4j.jdk14
+    testRuntimeOnly catalog.logback.classic
+
+    testImplementation catalog.bcprov.jdk18on
+    testImplementation catalog.bcpkix.jdk18on
+    testImplementation catalog.junit.jupiter.api
+    testImplementation catalog.junit.jupiter.params
+    testRuntimeOnly catalog.junit.jupiter.engine
+
+    testRuntimeOnly project(":gbcs-server-memcached")
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components["java"])
+        }
+    }
+}
+
+

@@ -1,8 +1,8 @@
 package net.woggioni.gbcs.client.impl
 
 import net.woggioni.gbcs.api.exception.ConfigurationException
-import net.woggioni.gbcs.base.Xml.Companion.asIterable
-import net.woggioni.gbcs.base.Xml.Companion.renderAttribute
+import net.woggioni.gbcs.common.Xml.Companion.asIterable
+import net.woggioni.gbcs.common.Xml.Companion.renderAttribute
 import net.woggioni.gbcs.client.GbcsClient
 import org.w3c.dom.Document
 import java.net.URI

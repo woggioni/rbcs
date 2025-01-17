@@ -1,0 +1,58 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    alias catalog.plugins.kotlin.jvm
+}
+
+configurations {
+    bundle {
+        extendsFrom runtimeClasspath
+        canBeResolved = true
+        canBeConsumed = false
+        visible = false
+
+        resolutionStrategy {
+            dependencies {
+                exclude group: 'org.slf4j', module: 'slf4j-api'
+                exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib'
+                exclude group: 'org.jetbrains', module: 'annotations'
+            }
+        }
+    }
+
+    release {
+        transitive = false
+        canBeConsumed = true
+        canBeResolved = true
+        visible = true
+    }
+}
+
+dependencies {
+    compileOnly project(':gbcs-common')
+    compileOnly project(':gbcs-api')
+    compileOnly catalog.jwo
+    implementation catalog.xmemcached
+}
+
+Provider<Tar> bundleTask = tasks.register("bundle", Tar) {
+    from(tasks.named(JavaPlugin.JAR_TASK_NAME))
+    from(configurations.bundle)
+    group = BasePlugin.BUILD_GROUP
+}
+
+tasks.named(BasePlugin.ASSEMBLE_TASK_NAME) {
+    dependsOn(bundleTask)
+}
+
+artifacts {
+    release(bundleTask)
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifact bundleTask
+        }
+    }
+}

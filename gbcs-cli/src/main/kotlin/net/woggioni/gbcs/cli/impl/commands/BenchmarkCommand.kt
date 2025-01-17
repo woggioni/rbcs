@@ -1,8 +1,8 @@
 package net.woggioni.gbcs.cli.impl.commands
 
-import net.woggioni.gbcs.base.contextLogger
-import net.woggioni.gbcs.base.error
-import net.woggioni.gbcs.base.info
+import net.woggioni.gbcs.common.contextLogger
+import net.woggioni.gbcs.common.error
+import net.woggioni.gbcs.common.info
 import net.woggioni.gbcs.cli.impl.GbcsCommand
 import net.woggioni.gbcs.client.GbcsClient
 import picocli.CommandLine

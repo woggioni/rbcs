@@ -5,7 +5,7 @@ plugins {
 
 dependencies {
     implementation project(':gbcs-api')
-    implementation project(':gbcs-base')
+    implementation project(':gbcs-common')
     implementation catalog.picocli
     implementation catalog.slf4j.api
     implementation catalog.netty.buffer

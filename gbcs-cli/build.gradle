@@ -9,7 +9,6 @@ plugins {
     id 'maven-publish'
 }
 
-
 import net.woggioni.gradle.envelope.EnvelopeJarTask
 import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
 import net.woggioni.gradle.graalvm.NativeImagePlugin
@@ -46,8 +45,8 @@ dependencies {
     implementation catalog.netty.codec.http
     implementation catalog.picocli
 
-    implementation project(":gbcs-client")
-    implementation rootProject
+    implementation project(':gbcs-client')
+    implementation project(':gbcs-server')
 
 //    runtimeOnly catalog.slf4j.jdk14
     runtimeOnly catalog.logback.classic

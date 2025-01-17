@@ -30,10 +30,9 @@ import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.stream.ChunkedWriteHandler
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.GenericFutureListener
-import net.woggioni.gbcs.base.Xml
-import net.woggioni.gbcs.base.contextLogger
-import net.woggioni.gbcs.base.debug
-import net.woggioni.gbcs.base.info
+import net.woggioni.gbcs.common.Xml
+import net.woggioni.gbcs.common.contextLogger
+import net.woggioni.gbcs.common.debug
 import net.woggioni.gbcs.client.impl.Parser
 import java.net.InetSocketAddress
 import java.net.URI

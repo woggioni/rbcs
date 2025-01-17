@@ -1,9 +1,7 @@
 plugins {
-    id 'java-library'
-    alias catalog.plugins.kotlin.jvm
+    alias catalog.plugins.kotlin.jvm apply false
     alias catalog.plugins.sambal
-    alias catalog.plugins.lombok
-    id 'maven-publish'
+    alias catalog.plugins.lombok apply false
 }
 
 
@@ -98,34 +96,6 @@ allprojects { subproject ->
                     }
                 }
             }
-        }
-    }
-}
-
-dependencies {
-    implementation catalog.jwo
-    implementation catalog.slf4j.api
-    implementation catalog.netty.codec.http
-
-    api project('gbcs-base')
-    api project('gbcs-api')
-
-//    runtimeOnly catalog.slf4j.jdk14
-    testRuntimeOnly catalog.logback.classic
-
-    testImplementation catalog.bcprov.jdk18on
-    testImplementation catalog.bcpkix.jdk18on
-    testImplementation catalog.junit.jupiter.api
-    testImplementation catalog.junit.jupiter.params
-    testRuntimeOnly catalog.junit.jupiter.engine
-
-    testRuntimeOnly project("gbcs-memcached")
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from(components["java"])
         }
     }
 }

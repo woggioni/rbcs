@@ -13,7 +13,7 @@ FROM base-release AS release-memcached
 ADD --chown=luser:luser gbcs-cli-envelope-*.jar gbcs.jar
 RUN mkdir plugins
 WORKDIR /home/luser/plugins
-RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/gbcs-memcached*.tar
+RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/gbcs-server-memcached*.tar
 WORKDIR /home/luser
 ENTRYPOINT ["java", "-jar", "/home/luser/gbcs.jar", "server"]
 

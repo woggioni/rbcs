@@ -19,7 +19,7 @@ configurations {
 
 dependencies {
     docker project(path: ':gbcs-cli', configuration: 'release')
-    docker project(path: ':gbcs-memcached', configuration: 'release')
+    docker project(path: ':gbcs-server-memcached', configuration: 'release')
 }
 
 Provider<Task> cleanTaskProvider = tasks.named(BasePlugin.CLEAN_TASK_NAME) {}

@@ -27,9 +27,9 @@ dependencyResolutionManagement {
 rootProject.name = 'gbcs'
 
 include 'gbcs-api'
-include 'gbcs-base'
-include 'gbcs-memcached'
+include 'gbcs-common'
+include 'gbcs-server-memcached'
 include 'gbcs-cli'
 include 'docker'
 include 'gbcs-client'
-
+include 'gbcs-server'

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gbcs:server useVirtualThreads="false" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:gbcs="urn:net.woggioni.gbcs.server"
+             xs:schemaLocation="urn:net.woggioni.gbcs.server jpms://net.woggioni.gbcs.server/net/woggioni/gbcs/server/schema/gbcs.xsd">
+    <bind host="127.0.0.1" port="8080"/>
+    <cache xs:type="gbcs:fileSystemCacheType" path="/tmp/gbcs" max-age="P7D"/>
+    <authentication>
+        <none/>
+    </authentication>
+</gbcs:server>
