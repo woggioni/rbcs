@@ -4,7 +4,7 @@ import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.common.error
 import net.woggioni.gbcs.common.info
 import net.woggioni.gbcs.cli.impl.GbcsCommand
-import net.woggioni.gbcs.client.GbcsClient
+import net.woggioni.gbcs.client.GradleBuildCacheClient
 import picocli.CommandLine
 import java.security.SecureRandom
 import java.time.Duration
@@ -40,7 +40,7 @@ class BenchmarkCommand : GbcsCommand() {
             clientCommand.configuration.profiles[profileName]
                 ?: throw IllegalArgumentException("Profile $profileName does not exist in configuration")
         }
-        val client = GbcsClient(profile)
+        val client = GradleBuildCacheClient(profile)
 
         val entryGenerator = sequence {
             val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())

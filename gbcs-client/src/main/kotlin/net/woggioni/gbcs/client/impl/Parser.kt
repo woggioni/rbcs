@@ -3,7 +3,7 @@ package net.woggioni.gbcs.client.impl
 import net.woggioni.gbcs.api.exception.ConfigurationException
 import net.woggioni.gbcs.common.Xml.Companion.asIterable
 import net.woggioni.gbcs.common.Xml.Companion.renderAttribute
-import net.woggioni.gbcs.client.GbcsClient
+import net.woggioni.gbcs.client.GradleBuildCacheClient
 import org.w3c.dom.Document
 import java.net.URI
 import java.nio.file.Files
@@ -15,10 +15,10 @@ import java.time.Duration
 
 object Parser {
 
-    fun parse(document: Document): GbcsClient.Configuration {
+    fun parse(document: Document): GradleBuildCacheClient.Configuration {
         val root = document.documentElement
 
-        val profiles = mutableMapOf<String, GbcsClient.Configuration.Profile>()
+        val profiles = mutableMapOf<String, GradleBuildCacheClient.Configuration.Profile>()
 
         for (child in root.asIterable()) {
             val tagName = child.localName
@@ -26,7 +26,7 @@ object Parser {
                 "profile" -> {
                     val name = child.renderAttribute("name") ?: throw ConfigurationException("name attribute is required")
                     val uri = child.renderAttribute("base-url")?.let(::URI) ?: throw ConfigurationException("base-url attribute is required")
-                    var authentication: GbcsClient.Configuration.Authentication? = null
+                    var authentication: GradleBuildCacheClient.Configuration.Authentication? = null
                     for (gchild in child.asIterable()) {
                         when (gchild.localName) {
                             "tls-client-auth" -> {
@@ -47,14 +47,14 @@ object Parser {
                                     .toList()
                                     .toTypedArray()
                                 authentication =
-                                    GbcsClient.Configuration.Authentication.TlsClientAuthenticationCredentials(key, certChain)
+                                    GradleBuildCacheClient.Configuration.Authentication.TlsClientAuthenticationCredentials(key, certChain)
                             }
 
                             "basic-auth" -> {
                                 val username = gchild.renderAttribute("user") ?: throw ConfigurationException("username attribute is required")
                                 val password = gchild.renderAttribute("password") ?: throw ConfigurationException("password attribute is required")
                                 authentication =
-                                    GbcsClient.Configuration.Authentication.BasicAuthenticationCredentials(username, password)
+                                    GradleBuildCacheClient.Configuration.Authentication.BasicAuthenticationCredentials(username, password)
                             }
                         }
                     }
@@ -63,10 +63,10 @@ object Parser {
                         ?: 50
                     val connectionTimeout = child.renderAttribute("connection-timeout")
                         ?.let(Duration::parse)
-                    profiles[name] = GbcsClient.Configuration.Profile(uri, authentication, connectionTimeout, maxConnections)
+                    profiles[name] = GradleBuildCacheClient.Configuration.Profile(uri, authentication, connectionTimeout, maxConnections)
                 }
             }
         }
-        return GbcsClient.Configuration(profiles)
+        return GradleBuildCacheClient.Configuration(profiles)
     }
 }

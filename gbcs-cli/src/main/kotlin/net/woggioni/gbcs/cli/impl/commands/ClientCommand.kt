@@ -1,7 +1,7 @@
 package net.woggioni.gbcs.cli.impl.commands
 
 import net.woggioni.gbcs.cli.impl.GbcsCommand
-import net.woggioni.gbcs.client.GbcsClient
+import net.woggioni.gbcs.client.GradleBuildCacheClient
 import net.woggioni.jwo.Application
 import picocli.CommandLine
 import java.nio.file.Path
@@ -28,8 +28,8 @@ class ClientCommand(app : Application) : GbcsCommand() {
     )
     var profileName : String? = null
 
-    val configuration : GbcsClient.Configuration by lazy {
-        GbcsClient.Configuration.parse(configurationFile)
+    val configuration : GradleBuildCacheClient.Configuration by lazy {
+        GradleBuildCacheClient.Configuration.parse(configurationFile)
     }
 
     override fun run() {

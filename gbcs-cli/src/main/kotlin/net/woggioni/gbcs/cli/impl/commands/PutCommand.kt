@@ -3,7 +3,7 @@ package net.woggioni.gbcs.cli.impl.commands
 import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.cli.impl.GbcsCommand
 import net.woggioni.gbcs.cli.impl.converters.InputStreamConverter
-import net.woggioni.gbcs.client.GbcsClient
+import net.woggioni.gbcs.client.GradleBuildCacheClient
 import picocli.CommandLine
 import java.io.InputStream
 
@@ -39,7 +39,7 @@ class PutCommand : GbcsCommand() {
             clientCommand.configuration.profiles[profileName]
                 ?: throw IllegalArgumentException("Profile $profileName does not exist in configuration")
         }
-        GbcsClient(profile).use { client ->
+        GradleBuildCacheClient(profile).use { client ->
             value.use {
                 client.put(key, it.readAllBytes())
             }.get()

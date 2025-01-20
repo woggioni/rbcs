@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import io.netty.util.concurrent.Future as NettyFuture
 
 
-class GbcsClient(private val profile: Configuration.Profile) : AutoCloseable {
+class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoCloseable {
     private val group: NioEventLoopGroup
     private var sslContext: SslContext
     private val log = contextLogger()
