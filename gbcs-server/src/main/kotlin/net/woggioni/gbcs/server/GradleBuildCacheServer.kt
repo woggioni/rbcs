@@ -304,11 +304,11 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         override fun initChannel(ch: Channel) {
             log.debug {
-                "Created connection ${ch.id().asShortText()}"
+                "Created connection ${ch.id().asShortText()} with ${ch.remoteAddress()}"
             }
             ch.closeFuture().addListener {
                 log.debug {
-                    "Closed connection ${ch.id().asShortText()}"
+                    "Closed connection ${ch.id().asShortText()} with ${ch.remoteAddress()}"
                 }
             }
             val pipeline = ch.pipeline()
