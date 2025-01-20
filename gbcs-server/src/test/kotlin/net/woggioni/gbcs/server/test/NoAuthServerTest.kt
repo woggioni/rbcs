@@ -46,7 +46,8 @@ class NoAuthServerTest : AbstractServerTest() {
             null,
             null,
             true,
-            0x10000
+            0x10000,
+            100
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }

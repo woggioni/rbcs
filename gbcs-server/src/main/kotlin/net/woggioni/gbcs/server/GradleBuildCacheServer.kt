@@ -75,7 +75,6 @@ import java.util.Base64
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import javax.naming.ldap.LdapName
-import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLPeerUnverifiedException
 
 
@@ -85,6 +84,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
     companion object {
 
         val DEFAULT_CONFIGURATION_URL by lazy { "classpath:net/woggioni/gbcs/gbcs-default.xml".toUrl() }
+        private const val SSL_HANDLER_NAME = "sslHandler"
 
         fun loadConfiguration(configurationFile: Path): Configuration {
             val doc = Files.newInputStream(configurationFile).use {
@@ -122,7 +122,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
     @Sharable
     private class ClientCertificateAuthenticator(
         authorizer: Authorizer,
-        private val sslEngine: SSLEngine,
         private val anonymousUserRoles: Set<Role>?,
         private val userExtractor: Configuration.UserExtractor?,
         private val groupExtractor: Configuration.GroupExtractor?,
@@ -130,6 +129,9 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         override fun authenticate(ctx: ChannelHandlerContext, req: HttpRequest): Set<Role>? {
             return try {
+                val sslHandler = (ctx.pipeline().get(SSL_HANDLER_NAME) as? SslHandler)
+                    ?: throw ConfigurationException("Client certificate authentication cannot be used when TLS is disabled")
+                val sslEngine = sslHandler.engine()
                 sslEngine.session.peerCertificates.takeIf {
                     it.isNotEmpty()
                 }?.let { peerCertificates ->
@@ -206,24 +208,19 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         private val exceptionHandler = ExceptionHandler()
 
-        private val basicAuthenticator by lazy {
-            NettyHttpBasicAuthenticator(cfg.users, RoleAuthorizer())
-        }
-
-        private fun getAuthenticator(sslHandler : SslHandler?) = when(val auth = cfg.authentication) {
-                is Configuration.BasicAuthentication -> basicAuthenticator
-                is Configuration.ClientCertificateAuthentication -> {
-                    if(sslHandler == null) throw ConfigurationException("Client certificate authentication cannot be used when TLS is disabled")
-                    ClientCertificateAuthenticator(
-                        RoleAuthorizer(),
-                        sslHandler.engine(),
-                        cfg.users[""]?.roles,
-                        userExtractor(auth),
-                        groupExtractor(auth)
-                    )
-                }
-                else -> null
+        private val authenticator = when (val auth = cfg.authentication) {
+            is Configuration.BasicAuthentication -> NettyHttpBasicAuthenticator(cfg.users, RoleAuthorizer())
+            is Configuration.ClientCertificateAuthentication -> {
+                ClientCertificateAuthenticator(
+                    RoleAuthorizer(),
+                    cfg.users[""]?.roles,
+                    userExtractor(auth),
+                    groupExtractor(auth)
+                )
             }
+
+            else -> null
+        }
 
         companion object {
             private fun createSslCtx(tls: Configuration.Tls): SslContext {
@@ -307,14 +304,14 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         override fun initChannel(ch: Channel) {
             val pipeline = ch.pipeline()
-            val sslHandler = sslContext?.newHandler(ch.alloc())?.also {
-                pipeline.addLast(it)
+            sslContext?.newHandler(ch.alloc())?.also {
+                pipeline.addLast(SSL_HANDLER_NAME, it)
             }
             pipeline.addLast(HttpServerCodec())
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
             pipeline.addLast(HttpObjectAggregator(cfg.maxRequestSize))
-            getAuthenticator(sslHandler)?.let {
+            authenticator?.let {
                 pipeline.addLast(it)
             }
             pipeline.addLast(eventExecutorGroup, serverHandler)
@@ -512,7 +509,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             group(bossGroup, workerGroup)
             channel(serverSocketChannel)
             childHandler(ServerInitializer(cfg, eventExecutorGroup))
-            option(ChannelOption.SO_BACKLOG, 128)
+            option(ChannelOption.SO_BACKLOG, cfg.incomingConnectionsBacklogSize)
             childOption(ChannelOption.SO_KEEPALIVE, true)
         }
 

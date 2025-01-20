@@ -25,6 +25,7 @@
         <xs:attribute name="path" type="xs:string" use="optional"/>
         <xs:attribute name="use-virtual-threads" type="xs:boolean" use="optional" default="true"/>
         <xs:attribute name="max-request-size" type="xs:unsignedInt" use="optional" default="67108864"/>
+        <xs:attribute name="incoming-connections-backlog-size" type="xs:unsignedInt" use="optional" default="1024"/>
     </xs:complexType>
 
     <xs:complexType name="bindType">

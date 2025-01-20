@@ -35,6 +35,8 @@ object Parser {
             ?.let(String::toBoolean) ?: true
         val maxRequestSize = root.renderAttribute("max-request-size")
             ?.let(String::toInt) ?: 67108864
+        val incomingConnectionsBacklogSize = root.renderAttribute("incoming-connections-backlog-size")
+            ?.let(String::toInt) ?: 1024
         var authentication: Authentication? = null
         for (child in root.asIterable()) {
             val tagName = child.localName
@@ -138,7 +140,19 @@ object Parser {
                 }
             }
         }
-        return Configuration(host, port, serverPath, users, groups, cache!!, authentication, tls, useVirtualThread, maxRequestSize)
+        return Configuration(
+            host,
+            port,
+            serverPath,
+            users,
+            groups,
+            cache!!,
+            authentication,
+            tls,
+            useVirtualThread,
+            maxRequestSize,
+            incomingConnectionsBacklogSize
+        )
     }
 
     private fun parseRoles(root: Element) = root.asIterable().asSequence().map {
