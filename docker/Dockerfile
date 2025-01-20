@@ -14,6 +14,3 @@ WORKDIR /home/luser/plugins
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/gbcs-server-memcached*.tar
 WORKDIR /home/luser
 ENTRYPOINT ["java", "-jar", "/home/luser/gbcs.jar", "server"]
-
-FROM release-memcached as compose
-COPY --chown=luser:luser conf/gbcs-memcached.xml /home/luser/.config/gbcs/gbcs.xml

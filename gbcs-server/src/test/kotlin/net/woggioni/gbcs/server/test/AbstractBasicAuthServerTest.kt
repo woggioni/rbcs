@@ -11,6 +11,7 @@ import java.net.http.HttpRequest
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.time.Duration
+import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.zip.Deflater
 import kotlin.random.Random
@@ -30,10 +31,20 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
 
     override fun setUp() {
         this.cacheDir = testDir.resolve("cache")
-        cfg = Configuration(
+        cfg = Configuration.of(
             "127.0.0.1",
             NetworkUtils.getFreePort(),
+            50,
             serverPath,
+            Configuration.EventExecutor(false),
+            Configuration.Connection(
+                Duration.of(10, ChronoUnit.SECONDS),
+                Duration.of(10, ChronoUnit.SECONDS),
+                Duration.of(60, ChronoUnit.SECONDS),
+                Duration.of(30, ChronoUnit.SECONDS),
+                Duration.of(30, ChronoUnit.SECONDS),
+                0x1000
+            ),
             users.asSequence().map { it.name to it}.toMap(),
             sequenceOf(writersGroup, readersGroup).map { it.name to it}.toMap(),
             FileSystemCacheConfiguration(this.cacheDir,
@@ -44,9 +55,6 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
             ),
             Configuration.BasicAuthentication(),
             null,
-            true,
-            0x10000,
-            100
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }

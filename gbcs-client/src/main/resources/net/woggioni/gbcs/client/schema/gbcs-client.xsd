@@ -14,6 +14,7 @@
 
     <xs:complexType name="profileType">
         <xs:choice>
+            <xs:element name="no-auth" type="gbcs-client:noAuthType"/>
             <xs:element name="basic-auth" type="gbcs-client:basicAuthType"/>
             <xs:element name="tls-client-auth" type="gbcs-client:tlsClientAuthType"/>
         </xs:choice>
@@ -21,6 +22,8 @@
         <xs:attribute name="base-url" type="xs:anyURI" use="required"/>
         <xs:attribute name="max-connections" type="xs:positiveInteger" default="50"/>
     </xs:complexType>
+
+    <xs:complexType name="noAuthType"/>
 
     <xs:complexType name="basicAuthType">
         <xs:attribute name="user" type="xs:token" use="required"/>

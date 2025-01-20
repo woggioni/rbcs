@@ -18,6 +18,7 @@ import java.nio.file.Path
 import java.security.KeyStore
 import java.security.KeyStore.PasswordProtection
 import java.time.Duration
+import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.zip.Deflater
 import javax.net.ssl.KeyManagerFactory
@@ -138,7 +139,17 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
         cfg = Configuration(
             "127.0.0.1",
             NetworkUtils.getFreePort(),
+            100,
             serverPath,
+            Configuration.EventExecutor(false),
+            Configuration.Connection(
+                Duration.of(10, ChronoUnit.SECONDS),
+                Duration.of(10, ChronoUnit.SECONDS),
+                Duration.of(60, ChronoUnit.SECONDS),
+                Duration.of(30, ChronoUnit.SECONDS),
+                Duration.of(30, ChronoUnit.SECONDS),
+                0x1000
+            ),
             users.asSequence().map { it.name to it }.toMap(),
             sequenceOf(writersGroup, readersGroup).map { it.name to it }.toMap(),
             FileSystemCacheConfiguration(this.cacheDir,
@@ -156,9 +167,6 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
                 Configuration.TrustStore(this.trustStoreFile, null, false),
                 true
             ),
-            false,
-            0x10000,
-            100
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }

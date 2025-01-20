@@ -2,10 +2,12 @@ package net.woggioni.gbcs.api;
 
 
 import lombok.EqualsAndHashCode;
+import lombok.NonNull;
 import lombok.Value;
 
 import java.nio.file.Path;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -14,15 +16,32 @@ import java.util.stream.Collectors;
 public class Configuration {
     String host;
     int port;
+    int incomingConnectionsBacklogSize;
     String serverPath;
+    @NonNull
+    EventExecutor eventExecutor;
+    @NonNull
+    Connection connection;
     Map<String, User> users;
     Map<String, Group> groups;
     Cache cache;
     Authentication authentication;
     Tls tls;
-    boolean useVirtualThread;
-    int maxRequestSize;
-    int incomingConnectionsBacklogSize;
+
+    @Value
+    public static class EventExecutor {
+        boolean useVirtualThreads;
+    }
+
+    @Value
+    public static class Connection {
+        Duration readTimeout;
+        Duration writeTimeout;
+        Duration idleTimeout;
+        Duration readIdleTimeout;
+        Duration writeIdleTimeout;
+        int maxRequestSize;
+    }
 
     @Value
     public static class Group {
@@ -103,28 +122,28 @@ public class Configuration {
     public static Configuration of(
             String host,
             int port,
+            int incomingConnectionsBacklogSize,
             String serverPath,
+            EventExecutor eventExecutor,
+            Connection connection,
             Map<String, User> users,
             Map<String, Group> groups,
             Cache cache,
             Authentication authentication,
-            Tls tls,
-            boolean useVirtualThread,
-            int maxRequestSize,
-            int incomingConnectionsBacklogSize
+            Tls tls
     ) {
         return new Configuration(
                 host,
                 port,
+                incomingConnectionsBacklogSize,
                 serverPath != null && !serverPath.isEmpty() && !serverPath.equals("/") ? serverPath : null,
+                eventExecutor,
+                connection,
                 users,
                 groups,
                 cache,
                 authentication,
-                tls,
-                useVirtualThread,
-                maxRequestSize,
-                incomingConnectionsBacklogSize
+                tls
         );
     }
 }

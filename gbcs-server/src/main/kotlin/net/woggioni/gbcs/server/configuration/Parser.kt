@@ -19,11 +19,16 @@ import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.TypeInfo
 import java.nio.file.Paths
+import java.time.Duration
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
 
 object Parser {
     fun parse(document: Document): Configuration {
         val root = document.documentElement
         val anonymousUser = User("", null, emptySet())
+        var connection: Configuration.Connection? = null
+        var eventExecutor: Configuration.EventExecutor? = null
         var cache: Cache? = null
         var host = "127.0.0.1"
         var port = 11080
@@ -31,46 +36,11 @@ object Parser {
         var groups = emptyMap<String, Group>()
         var tls: Tls? = null
         val serverPath = root.renderAttribute("path")
-        val useVirtualThread = root.renderAttribute("use-virtual-threads")
-            ?.let(String::toBoolean) ?: true
-        val maxRequestSize = root.renderAttribute("max-request-size")
-            ?.let(String::toInt) ?: 67108864
-        val incomingConnectionsBacklogSize = root.renderAttribute("incoming-connections-backlog-size")
-            ?.let(String::toInt) ?: 1024
+        var incomingConnectionsBacklogSize = 1024
         var authentication: Authentication? = null
         for (child in root.asIterable()) {
             val tagName = child.localName
             when (tagName) {
-                "authorization" -> {
-                    var knownUsers = sequenceOf(anonymousUser)
-                    for (gchild in child.asIterable()) {
-                        when (gchild.localName) {
-                            "users" -> {
-                                knownUsers += parseUsers(gchild)
-                            }
-                            "groups" -> {
-                                val pair = parseGroups(gchild, knownUsers)
-                                users = pair.first
-                                groups = pair.second
-                            }
-                        }
-                    }
-                }
-
-                "bind" -> {
-                    host = child.renderAttribute("host") ?: throw ConfigurationException("host attribute is required")
-                    port = Integer.parseInt(child.renderAttribute("port"))
-                }
-
-                "cache" -> {
-                    cache = (child as TypeInfo).let { tf ->
-                        val typeNamespace = tf.typeNamespace
-                        val typeName = tf.typeName
-                        CacheSerializers.index[typeNamespace to typeName]
-                            ?: throw IllegalArgumentException("Cache provider for namespace '$typeNamespace' not found")
-                    }.deserialize(child)
-                }
-
                 "authentication" -> {
                     for (gchild in child.asIterable()) {
                         when (gchild.localName) {
@@ -102,6 +72,66 @@ object Parser {
                     }
                 }
 
+                "authorization" -> {
+                    var knownUsers = sequenceOf(anonymousUser)
+                    for (gchild in child.asIterable()) {
+                        when (gchild.localName) {
+                            "users" -> {
+                                knownUsers += parseUsers(gchild)
+                            }
+                            "groups" -> {
+                                val pair = parseGroups(gchild, knownUsers)
+                                users = pair.first
+                                groups = pair.second
+                            }
+                        }
+                    }
+                }
+
+                "bind" -> {
+                    host = child.renderAttribute("host") ?: throw ConfigurationException("host attribute is required")
+                    port = Integer.parseInt(child.renderAttribute("port"))
+                    incomingConnectionsBacklogSize = child.renderAttribute("incoming-connections-backlog-size")
+                        ?.let(Integer::parseInt)
+                        ?: 1024
+                }
+
+                "cache" -> {
+                    cache = (child as TypeInfo).let { tf ->
+                        val typeNamespace = tf.typeNamespace
+                        val typeName = tf.typeName
+                        CacheSerializers.index[typeNamespace to typeName]
+                            ?: throw IllegalArgumentException("Cache provider for namespace '$typeNamespace' not found")
+                    }.deserialize(child)
+                }
+
+                "connection" -> {
+                    val writeTimeout = child.renderAttribute("write-timeout")
+                        ?.let(Duration::parse) ?: Duration.of(10, ChronoUnit.SECONDS)
+                    val readTimeout = child.renderAttribute("read-timeout")
+                        ?.let(Duration::parse) ?: Duration.of(10, ChronoUnit.SECONDS)
+                    val idleTimeout = child.renderAttribute("idle-timeout")
+                        ?.let(Duration::parse) ?: Duration.of(30, ChronoUnit.SECONDS)
+                    val readIdleTimeout = child.renderAttribute("read-idle-timeout")
+                        ?.let(Duration::parse) ?: Duration.of(60, ChronoUnit.SECONDS)
+                    val writeIdleTimeout = child.renderAttribute("write-idle-timeout")
+                        ?.let(Duration::parse) ?: Duration.of(60, ChronoUnit.SECONDS)
+                    val maxRequestSize = child.renderAttribute("max-request-size")
+                        ?.let(String::toInt) ?: 67108864
+                    connection = Configuration.Connection(
+                        readTimeout,
+                        writeTimeout,
+                        idleTimeout,
+                        readIdleTimeout,
+                        writeIdleTimeout,
+                        maxRequestSize
+                    )
+                }
+                "event-executor" -> {
+                    val useVirtualThread = root.renderAttribute("use-virtual-threads")
+                        ?.let(String::toBoolean) ?: true
+                    eventExecutor = Configuration.EventExecutor(useVirtualThread)
+                }
                 "tls" -> {
                     val verifyClients = child.renderAttribute("verify-clients")
                         ?.let(String::toBoolean) ?: false
@@ -140,18 +170,18 @@ object Parser {
                 }
             }
         }
-        return Configuration(
+        return Configuration.of(
             host,
             port,
+            incomingConnectionsBacklogSize,
             serverPath,
+            eventExecutor,
+            connection,
             users,
             groups,
             cache!!,
             authentication,
             tls,
-            useVirtualThread,
-            maxRequestSize,
-            incomingConnectionsBacklogSize
         )
     }
 

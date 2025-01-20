@@ -14,10 +14,6 @@ object Serializer {
             it.xmlNamespace to it.xmlSchemaLocation
         }.toMap()
         return Xml.of(GBCS.GBCS_NAMESPACE_URI, GBCS.GBCS_PREFIX + ":server") {
-            attr("use-virtual-threads", conf.isUseVirtualThread.toString())
-            attr("max-request-size", conf.maxRequestSize.toString())
-            attr("incoming-connections-backlog-size", conf.incomingConnectionsBacklogSize.toString())
-
 //            attr("xmlns:xs", GradleBuildCacheServer.XML_SCHEMA_NAMESPACE_URI)
             val value = schemaLocations.asSequence().map { (k, v) -> "$k $v" }.joinToString(" ")
             attr("xs:schemaLocation", value , namespaceURI = GBCS.XML_SCHEMA_NAMESPACE_URI)
@@ -30,6 +26,20 @@ object Serializer {
             node("bind") {
                 attr("host", conf.host)
                 attr("port", conf.port.toString())
+                attr("incoming-connections-backlog-size", conf.incomingConnectionsBacklogSize.toString())
+            }
+            node("connection") {
+                conf.connection.let { connection ->
+                    attr("read-timeout", connection.readTimeout.toString())
+                    attr("write-timeout", connection.writeTimeout.toString())
+                    attr("idle-timeout", connection.idleTimeout.toString())
+                    attr("read-idle-timeout", connection.readIdleTimeout.toString())
+                    attr("write-idle-timeout", connection.writeIdleTimeout.toString())
+                    attr("max-request-size", connection.maxRequestSize.toString())
+                }
+            }
+            node("event-executor") {
+                attr("use-virtual-threads", conf.eventExecutor.isUseVirtualThreads.toString())
             }
             val cache = conf.cache
             val serializer : CacheProvider<Configuration.Cache> =

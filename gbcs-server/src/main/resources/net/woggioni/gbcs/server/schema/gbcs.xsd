@@ -8,6 +8,8 @@
     <xs:complexType name="serverType">
         <xs:sequence minOccurs="0">
             <xs:element name="bind" type="gbcs:bindType" maxOccurs="1"/>
+            <xs:element name="connection" type="gbcs:connectionType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="event-executor" type="gbcs:eventExecutorType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="cache" type="gbcs:cacheType" maxOccurs="1"/>
             <xs:element name="authorization" type="gbcs:authorizationType" minOccurs="0">
                 <xs:key name="userId">
@@ -23,14 +25,25 @@
             <xs:element name="tls" type="gbcs:tlsType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
         <xs:attribute name="path" type="xs:string" use="optional"/>
-        <xs:attribute name="use-virtual-threads" type="xs:boolean" use="optional" default="true"/>
-        <xs:attribute name="max-request-size" type="xs:unsignedInt" use="optional" default="67108864"/>
-        <xs:attribute name="incoming-connections-backlog-size" type="xs:unsignedInt" use="optional" default="1024"/>
     </xs:complexType>
 
     <xs:complexType name="bindType">
         <xs:attribute name="host" type="xs:token" use="required"/>
         <xs:attribute name="port" type="xs:unsignedShort" use="required"/>
+        <xs:attribute name="incoming-connections-backlog-size" type="xs:unsignedInt" use="optional" default="1024"/>
+    </xs:complexType>
+
+    <xs:complexType name="connectionType">
+        <xs:attribute name="read-timeout" type="xs:duration" use="optional" default="PT10S"/>
+        <xs:attribute name="write-timeout" type="xs:duration" use="optional" default="PT10S"/>
+        <xs:attribute name="idle-timeout" type="xs:duration" use="optional" default="PT30S"/>
+        <xs:attribute name="read-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
+        <xs:attribute name="write-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
+        <xs:attribute name="max-request-size" type="xs:unsignedInt" use="optional" default="67108864"/>
+    </xs:complexType>
+
+    <xs:complexType name="eventExecutorType">
+        <xs:attribute name="use-virtual-threads" type="xs:boolean" use="optional" default="true"/>
     </xs:complexType>
 
     <xs:complexType name="cacheType" abstract="true"/>

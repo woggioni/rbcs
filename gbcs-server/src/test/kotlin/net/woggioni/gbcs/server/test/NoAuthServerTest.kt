@@ -15,6 +15,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Path
 import java.time.Duration
+import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.zip.Deflater
 import kotlin.random.Random
@@ -33,7 +34,17 @@ class NoAuthServerTest : AbstractServerTest() {
         cfg = Configuration(
             "127.0.0.1",
             NetworkUtils.getFreePort(),
+            100,
             serverPath,
+            Configuration.EventExecutor(false),
+            Configuration.Connection(
+                Duration.of(10, ChronoUnit.SECONDS),
+                Duration.of(10, ChronoUnit.SECONDS),
+                Duration.of(60, ChronoUnit.SECONDS),
+                Duration.of(30, ChronoUnit.SECONDS),
+                Duration.of(30, ChronoUnit.SECONDS),
+                0x1000
+            ),
             emptyMap(),
             emptyMap(),
             FileSystemCacheConfiguration(
@@ -45,9 +56,6 @@ class NoAuthServerTest : AbstractServerTest() {
             ),
             null,
             null,
-            true,
-            0x10000,
-            100
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }
