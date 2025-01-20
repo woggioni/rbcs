@@ -30,16 +30,18 @@ import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.stream.ChunkedWriteHandler
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.GenericFutureListener
+import net.woggioni.gbcs.client.impl.Parser
 import net.woggioni.gbcs.common.Xml
 import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.common.debug
-import net.woggioni.gbcs.client.impl.Parser
+import net.woggioni.gbcs.common.trace
 import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import java.time.Duration
 import java.util.Base64
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
@@ -67,6 +69,7 @@ class GbcsClient(private val profile: Configuration.Profile) : AutoCloseable {
         data class Profile(
             val serverURI: URI,
             val authentication: Authentication?,
+            val connectionTimeout : Duration?,
             val maxConnections : Int
         )
 
@@ -104,6 +107,9 @@ class GbcsClient(private val profile: Configuration.Profile) : AutoCloseable {
             option(ChannelOption.TCP_NODELAY, true)
             option(ChannelOption.SO_KEEPALIVE, true)
             remoteAddress(InetSocketAddress(host, port))
+            profile.connectionTimeout?.let {
+                option(ChannelOption.CONNECT_TIMEOUT_MILLIS, it.toMillis().toInt())
+            }
         }
         val channelPoolHandler = object : AbstractChannelPoolHandler() {
 
@@ -114,20 +120,29 @@ class GbcsClient(private val profile: Configuration.Profile) : AutoCloseable {
             private var leaseCount = AtomicInteger()
 
             override fun channelReleased(ch: Channel) {
-                log.debug {
-                    "Released lease ${leaseCount.decrementAndGet()}"
+                val activeLeases = leaseCount.decrementAndGet()
+                log.trace {
+                    "Released channel ${ch.id().asShortText()}, number of active leases: $activeLeases"
                 }
             }
 
-            override fun channelAcquired(ch: Channel?) {
-                log.debug {
-                    "Acquired lease ${leaseCount.getAndIncrement()}"
+            override fun channelAcquired(ch: Channel) {
+                val activeLeases = leaseCount.getAndIncrement()
+                log.trace {
+                    "Acquired channel ${ch.id().asShortText()}, number of active leases: $activeLeases"
                 }
             }
 
             override fun channelCreated(ch: Channel) {
+                val connectionId = connectionCount.getAndIncrement()
                 log.debug {
-                    "Created connection ${connectionCount.getAndIncrement()}"
+                    "Created connection $connectionId, total number of active connections: $connectionId"
+                }
+                ch.closeFuture().addListener {
+                    val activeConnections = connectionCount.decrementAndGet()
+                    log.debug {
+                        "Closed connection $connectionId, total number of active connections: $activeConnections"
+                    }
                 }
                 val pipeline: ChannelPipeline = ch.pipeline()
 
@@ -202,6 +217,7 @@ class GbcsClient(private val profile: Configuration.Profile) : AutoCloseable {
                             ctx.close()
                             pipeline.removeLast()
                             pool.release(channel)
+                            super.exceptionCaught(ctx, cause)
                         }
                     })
                     // Prepare the HTTP request
@@ -219,7 +235,7 @@ class GbcsClient(private val profile: Configuration.Profile) : AutoCloseable {
                                     set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes())
                                 }
                                 set(HttpHeaderNames.HOST, profile.serverURI.host)
-                                set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+                                set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
                                 set(
                                     HttpHeaderNames.ACCEPT_ENCODING,
                                     HttpHeaderValues.GZIP.toString() + "," + HttpHeaderValues.DEFLATE.toString()
@@ -237,6 +253,8 @@ class GbcsClient(private val profile: Configuration.Profile) : AutoCloseable {
                     // Set headers
                     // Send the request
                     channel.writeAndFlush(request)
+                } else {
+                    responseFuture.completeExceptionally(channelFuture.cause())
                 }
             }
         })

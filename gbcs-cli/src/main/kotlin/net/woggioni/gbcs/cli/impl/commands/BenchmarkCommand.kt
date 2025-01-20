@@ -46,7 +46,8 @@ class BenchmarkCommand : GbcsCommand() {
             val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
             while (true) {
                 val key = Base64.getUrlEncoder().encode(random.nextBytes(16)).toString(Charsets.UTF_8)
-                val value = random.nextBytes(0x1000)
+                val content = random.nextInt().toByte()
+                val value = ByteArray(0x1000, { _ -> content })
                 yield(key to value)
             }
         }

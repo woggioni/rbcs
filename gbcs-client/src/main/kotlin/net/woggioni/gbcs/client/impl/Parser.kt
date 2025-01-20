@@ -11,6 +11,7 @@ import java.nio.file.Path
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import java.time.Duration
 
 object Parser {
 
@@ -60,7 +61,9 @@ object Parser {
                     val maxConnections = child.renderAttribute("max-connections")
                         ?.let(String::toInt)
                         ?: 50
-                    profiles[name] = GbcsClient.Configuration.Profile(uri, authentication, maxConnections)
+                    val connectionTimeout = child.renderAttribute("connection-timeout")
+                        ?.let(Duration::parse)
+                    profiles[name] = GbcsClient.Configuration.Profile(uri, authentication, connectionTimeout, maxConnections)
                 }
             }
         }

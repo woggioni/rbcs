@@ -21,14 +21,20 @@ import org.w3c.dom.TypeInfo
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
 
 object Parser {
     fun parse(document: Document): Configuration {
         val root = document.documentElement
         val anonymousUser = User("", null, emptySet())
-        var connection: Configuration.Connection? = null
-        var eventExecutor: Configuration.EventExecutor? = null
+        var connection: Configuration.Connection = Configuration.Connection(
+            Duration.of(10, ChronoUnit.SECONDS),
+            Duration.of(10, ChronoUnit.SECONDS),
+            Duration.of(60, ChronoUnit.SECONDS),
+            Duration.of(30, ChronoUnit.SECONDS),
+            Duration.of(30, ChronoUnit.SECONDS),
+            67108864
+        )
+        var eventExecutor: Configuration.EventExecutor = Configuration.EventExecutor(true)
         var cache: Cache? = null
         var host = "127.0.0.1"
         var port = 11080

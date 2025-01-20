@@ -21,6 +21,7 @@
         <xs:attribute name="name" type="xs:token" use="required"/>
         <xs:attribute name="base-url" type="xs:anyURI" use="required"/>
         <xs:attribute name="max-connections" type="xs:positiveInteger" default="50"/>
+        <xs:attribute name="connection-timeout" type="xs:duration"/>
     </xs:complexType>
 
     <xs:complexType name="noAuthType"/>
