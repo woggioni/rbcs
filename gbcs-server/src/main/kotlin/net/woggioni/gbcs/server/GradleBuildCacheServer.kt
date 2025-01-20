@@ -37,6 +37,7 @@ import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContext
 import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.ssl.SslHandler
 import io.netty.handler.stream.ChunkedNioFile
 import io.netty.handler.stream.ChunkedNioStream
 import io.netty.handler.stream.ChunkedWriteHandler
@@ -45,17 +46,18 @@ import io.netty.util.concurrent.EventExecutorGroup
 import net.woggioni.gbcs.api.Cache
 import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.api.Role
+import net.woggioni.gbcs.api.exception.ConfigurationException
 import net.woggioni.gbcs.api.exception.ContentTooLargeException
-import net.woggioni.gbcs.server.auth.AbstractNettyHttpAuthenticator
-import net.woggioni.gbcs.server.auth.Authorizer
-import net.woggioni.gbcs.server.auth.ClientCertificateValidator
-import net.woggioni.gbcs.server.auth.RoleAuthorizer
 import net.woggioni.gbcs.common.GBCS.toUrl
 import net.woggioni.gbcs.common.PasswordSecurity.decodePasswordHash
 import net.woggioni.gbcs.common.PasswordSecurity.hashPassword
 import net.woggioni.gbcs.common.Xml
 import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.common.info
+import net.woggioni.gbcs.server.auth.AbstractNettyHttpAuthenticator
+import net.woggioni.gbcs.server.auth.Authorizer
+import net.woggioni.gbcs.server.auth.ClientCertificateValidator
+import net.woggioni.gbcs.server.auth.RoleAuthorizer
 import net.woggioni.gbcs.server.configuration.Parser
 import net.woggioni.gbcs.server.configuration.Serializer
 import net.woggioni.jwo.JWO
@@ -117,6 +119,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         }
     }
 
+    @Sharable
     private class ClientCertificateAuthenticator(
         authorizer: Authorizer,
         private val sslEngine: SSLEngine,
@@ -141,6 +144,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         }
     }
 
+    @Sharable
     private class NettyHttpBasicAuthenticator(
         private val users: Map<String, Configuration.User>, authorizer: Authorizer
     ) : AbstractNettyHttpAuthenticator(authorizer) {
@@ -201,6 +205,25 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         }
 
         private val exceptionHandler = ExceptionHandler()
+
+        private val basicAuthenticator by lazy {
+            NettyHttpBasicAuthenticator(cfg.users, RoleAuthorizer())
+        }
+
+        private fun getAuthenticator(sslHandler : SslHandler?) = when(val auth = cfg.authentication) {
+                is Configuration.BasicAuthentication -> basicAuthenticator
+                is Configuration.ClientCertificateAuthentication -> {
+                    if(sslHandler == null) throw ConfigurationException("Client certificate authentication cannot be used when TLS is disabled")
+                    ClientCertificateAuthenticator(
+                        RoleAuthorizer(),
+                        sslHandler.engine(),
+                        cfg.users[""]?.roles,
+                        userExtractor(auth),
+                        groupExtractor(auth)
+                    )
+                }
+                else -> null
+            }
 
         companion object {
             private fun createSslCtx(tls: Configuration.Tls): SslContext {
@@ -284,30 +307,14 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
         override fun initChannel(ch: Channel) {
             val pipeline = ch.pipeline()
-            val auth = cfg.authentication
-            var authenticator: AbstractNettyHttpAuthenticator? = null
-            if (auth is Configuration.BasicAuthentication) {
-                authenticator = (NettyHttpBasicAuthenticator(cfg.users, RoleAuthorizer()))
-            }
-            if (sslContext != null) {
-                val sslHandler = sslContext.newHandler(ch.alloc())
-                pipeline.addLast(sslHandler)
-
-                if (auth is Configuration.ClientCertificateAuthentication) {
-                    authenticator = ClientCertificateAuthenticator(
-                        RoleAuthorizer(),
-                        sslHandler.engine(),
-                        cfg.users[""]?.roles,
-                        userExtractor(auth),
-                        groupExtractor(auth)
-                    )
-                }
+            val sslHandler = sslContext?.newHandler(ch.alloc())?.also {
+                pipeline.addLast(it)
             }
             pipeline.addLast(HttpServerCodec())
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
             pipeline.addLast(HttpObjectAggregator(cfg.maxRequestSize))
-            authenticator?.let {
+            getAuthenticator(sslHandler)?.let {
                 pipeline.addLast(it)
             }
             pipeline.addLast(eventExecutorGroup, serverHandler)
