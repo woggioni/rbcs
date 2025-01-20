@@ -200,8 +200,12 @@ object Parser {
     }.toSet()
 
     private fun parseUserRefs(root: Element) = root.asIterable().asSequence().map {
-        it.renderAttribute("ref")
-    }.toSet()
+        when(it.localName) {
+            "user" -> it.renderAttribute("ref")
+            "anonymous" -> ""
+            else -> ConfigurationException("Unrecognized tag '${it.localName}'")
+        }
+    }
 
     private fun parseUsers(root: Element): Sequence<User> {
         return root.asIterable().asSequence().filter {

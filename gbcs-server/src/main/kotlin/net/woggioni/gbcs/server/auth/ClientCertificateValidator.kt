@@ -19,8 +19,9 @@ import javax.net.ssl.X509TrustManager
 
 
 class ClientCertificateValidator private constructor(
-    private val sslHandler : SslHandler,
-    private val x509TrustManager: X509TrustManager) : ChannelInboundHandlerAdapter() {
+    private val sslHandler: SslHandler,
+    private val x509TrustManager: X509TrustManager
+) : ChannelInboundHandlerAdapter() {
     override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
         if (evt is SslHandshakeCompletionEvent) {
             if (evt.isSuccess) {
@@ -36,13 +37,14 @@ class ClientCertificateValidator private constructor(
     }
 
     companion object {
-        fun getTrustManager(trustStore : KeyStore?, certificateRevocationEnabled : Boolean) : X509TrustManager {
-            return if(trustStore != null) {
+        fun getTrustManager(trustStore: KeyStore?, certificateRevocationEnabled: Boolean): X509TrustManager {
+            return if (trustStore != null) {
                 val certificateFactory = CertificateFactory.getInstance("X.509")
                 val validator = CertPathValidator.getInstance("PKIX").apply {
                     val rc = revocationChecker as PKIXRevocationChecker
                     rc.options = EnumSet.of(
-                        PKIXRevocationChecker.Option.NO_FALLBACK)
+                        PKIXRevocationChecker.Option.NO_FALLBACK
+                    )
                 }
                 val params = PKIXParameters(trustStore).apply {
                     isRevocationEnabled = certificateRevocationEnabled
@@ -52,7 +54,7 @@ class ClientCertificateValidator private constructor(
                         val clientCertificateChain = certificateFactory.generateCertPath(chain.toList())
                         try {
                             validator.validate(clientCertificateChain, params)
-                        } catch (ex : CertPathValidatorException) {
+                        } catch (ex: CertPathValidatorException) {
                             throw CertificateException(ex)
                         }
                     }
@@ -62,7 +64,7 @@ class ClientCertificateValidator private constructor(
                     }
 
                     private val acceptedIssuers = trustStore.aliases().asSequence()
-                        .filter (trustStore::isCertificateEntry)
+                        .filter(trustStore::isCertificateEntry)
                         .map(trustStore::getCertificate)
                         .map { it as X509Certificate }
                         .toList()
@@ -72,11 +74,16 @@ class ClientCertificateValidator private constructor(
                 }
             } else {
                 val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-                trustManagerFactory.trustManagers.asSequence().filter { it is X509TrustManager }.single() as X509TrustManager
+                trustManagerFactory.trustManagers.asSequence().filter { it is X509TrustManager }
+                    .single() as X509TrustManager
             }
         }
 
-        fun of(sslHandler : SslHandler, trustStore : KeyStore?, certificateRevocationEnabled : Boolean) : ClientCertificateValidator {
+        fun of(
+            sslHandler: SslHandler,
+            trustStore: KeyStore?,
+            certificateRevocationEnabled: Boolean
+        ): ClientCertificateValidator {
             return ClientCertificateValidator(sslHandler, getTrustManager(trustStore, certificateRevocationEnabled))
         }
     }

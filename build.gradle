@@ -66,6 +66,15 @@ allprojects { subproject ->
         }
     }
 
+    pluginManager.withPlugin('jacoco') {
+        test {
+            finalizedBy jacocoTestReport
+        }
+        jacocoTestReport {
+            dependsOn test
+        }
+    }
+
     pluginManager.withPlugin(catalog.plugins.kotlin.jvm.get().pluginId) {
         tasks.withType(KotlinCompile.class) {
             compilerOptions.jvmTarget = JvmTarget.JVM_21
