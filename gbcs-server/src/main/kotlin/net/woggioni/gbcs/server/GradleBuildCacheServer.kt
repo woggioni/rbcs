@@ -7,6 +7,7 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelFutureListener
+import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
@@ -77,6 +78,23 @@ import javax.net.ssl.SSLPeerUnverifiedException
 
 
 class GradleBuildCacheServer(private val cfg: Configuration) {
+    private val log = contextLogger()
+
+    companion object {
+
+        val DEFAULT_CONFIGURATION_URL by lazy { "classpath:net/woggioni/gbcs/gbcs-default.xml".toUrl() }
+
+        fun loadConfiguration(configurationFile: Path): Configuration {
+            val doc = Files.newInputStream(configurationFile).use {
+                Xml.parseXml(configurationFile.toUri().toURL(), it)
+            }
+            return Parser.parse(doc)
+        }
+
+        fun dumpConfiguration(conf: Configuration, outputStream: OutputStream) {
+            Xml.write(Serializer.serialize(conf), outputStream)
+        }
+    }
 
     private class HttpChunkContentCompressor(
         threshold: Int,
@@ -107,10 +125,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         private val groupExtractor: Configuration.GroupExtractor?,
     ) : AbstractNettyHttpAuthenticator(authorizer) {
 
-        companion object {
-            private val log = contextLogger()
-        }
-
         override fun authenticate(ctx: ChannelHandlerContext, req: HttpRequest): Set<Role>? {
             return try {
                 sslEngine.session.peerCertificates.takeIf {
@@ -130,10 +144,7 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
     private class NettyHttpBasicAuthenticator(
         private val users: Map<String, Configuration.User>, authorizer: Authorizer
     ) : AbstractNettyHttpAuthenticator(authorizer) {
-
-        companion object {
-            private val log = contextLogger()
-        }
+        private val log = contextLogger()
 
         override fun authenticate(ctx: ChannelHandlerContext, req: HttpRequest): Set<Role>? {
             val authorizationHeader = req.headers()[HttpHeaderNames.AUTHORIZATION] ?: let {
@@ -182,6 +193,14 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         private val cfg: Configuration,
         private val eventExecutorGroup: EventExecutorGroup
     ) : ChannelInitializer<Channel>() {
+
+        private val serverHandler = let {
+            val cacheImplementation = cfg.cache.materialize()
+            val prefix = Path.of("/").resolve(Path.of(cfg.serverPath ?: "/"))
+            ServerHandler(cacheImplementation, prefix)
+        }
+
+        private val exceptionHandler = ExceptionHandler()
 
         companion object {
             private fun createSslCtx(tls: Configuration.Tls): SslContext {
@@ -287,17 +306,16 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             pipeline.addLast(HttpServerCodec())
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
-            pipeline.addLast(HttpObjectAggregator(Int.MAX_VALUE))
+            pipeline.addLast(HttpObjectAggregator(cfg.maxRequestSize))
             authenticator?.let {
                 pipeline.addLast(it)
             }
-            val cacheImplementation = cfg.cache.materialize()
-            val prefix = Path.of("/").resolve(Path.of(cfg.serverPath ?: "/"))
-            pipeline.addLast(eventExecutorGroup, ServerHandler(cacheImplementation, prefix))
-            pipeline.addLast(ExceptionHandler())
+            pipeline.addLast(eventExecutorGroup, serverHandler)
+            pipeline.addLast(exceptionHandler)
         }
     }
 
+    @Sharable
     private class ExceptionHandler : ChannelDuplexHandler() {
         private val log = contextLogger()
 
@@ -338,12 +356,11 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         }
     }
 
+    @Sharable
     private class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
         SimpleChannelInboundHandler<FullHttpRequest>() {
 
-        companion object {
-            private val log = contextLogger()
-        }
+        private val log = contextLogger()
 
         override fun channelRead0(ctx: ChannelHandlerContext, msg: FullHttpRequest) {
             val keepAlive: Boolean = HttpUtil.isKeepAlive(msg)
@@ -448,8 +465,8 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
         private val executorGroups: Iterable<EventExecutorGroup>
     ) : AutoCloseable {
         private val httpChannel: Channel = httpChannelFuture.channel()
-
         private val closeFuture: ChannelFuture = httpChannel.closeFuture()
+        private val log = contextLogger()
 
         fun shutdown(): ChannelFuture {
             return httpChannel.close()
@@ -500,23 +517,5 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             "GradleBuildCacheServer is listening on ${cfg.host}:${cfg.port}"
         }
         return ServerHandle(httpChannel, setOf(bossGroup, workerGroup, eventExecutorGroup))
-    }
-
-    companion object {
-
-        val DEFAULT_CONFIGURATION_URL by lazy { "classpath:net/woggioni/gbcs/gbcs-default.xml".toUrl() }
-
-        fun loadConfiguration(configurationFile: Path): Configuration {
-            val doc = Files.newInputStream(configurationFile).use {
-                Xml.parseXml(configurationFile.toUri().toURL(), it)
-            }
-            return Parser.parse(doc)
-        }
-
-        fun dumpConfiguration(conf: Configuration, outputStream: OutputStream) {
-            Xml.write(Serializer.serialize(conf), outputStream)
-        }
-
-        private val log = contextLogger()
     }
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<gbcs:server useVirtualThreads="false" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+<gbcs:server use-virtual-threads="false" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:gbcs="urn:net.woggioni.gbcs.server"
              xmlns:gbcs-memcached="urn:net.woggioni.gbcs.server.memcached"
              xs:schemaLocation="urn:net.woggioni.gbcs.server.memcached jpms://net.woggioni.gbcs.server.memcached/net/woggioni/gbcs/server/memcached/schema/gbcs-memcached.xsd urn:net.woggioni.gbcs.server jpms://net.woggioni.gbcs.server/net/woggioni/gbcs/server/schema/gbcs.xsd">

@@ -157,6 +157,7 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
                 true
             ),
             false,
+            0x10000
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }

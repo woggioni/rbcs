@@ -1,6 +1,4 @@
-FROM alpine:latest AS base-release
-RUN --mount=type=cache,target=/var/cache/apk apk update
-RUN --mount=type=cache,target=/var/cache/apk apk add openjdk21-jre
+FROM 21-jre-alpine AS base-release
 RUN adduser -D luser
 USER luser
 WORKDIR /home/luser

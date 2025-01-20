@@ -14,7 +14,8 @@ object Serializer {
             it.xmlNamespace to it.xmlSchemaLocation
         }.toMap()
         return Xml.of(GBCS.GBCS_NAMESPACE_URI, GBCS.GBCS_PREFIX + ":server") {
-            attr("useVirtualThreads", conf.isUseVirtualThread.toString())
+            attr("use-virtual-threads", conf.isUseVirtualThread.toString())
+            attr("max-request-size", conf.maxRequestSize.toString())
 //            attr("xmlns:xs", GradleBuildCacheServer.XML_SCHEMA_NAMESPACE_URI)
             val value = schemaLocations.asSequence().map { (k, v) -> "$k $v" }.joinToString(" ")
             attr("xs:schemaLocation", value , namespaceURI = GBCS.XML_SCHEMA_NAMESPACE_URI)

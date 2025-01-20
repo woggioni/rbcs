@@ -45,6 +45,7 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
             Configuration.BasicAuthentication(),
             null,
             true,
+            0x10000
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }

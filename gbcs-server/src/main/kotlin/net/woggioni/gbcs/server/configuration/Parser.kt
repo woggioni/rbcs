@@ -31,8 +31,10 @@ object Parser {
         var groups = emptyMap<String, Group>()
         var tls: Tls? = null
         val serverPath = root.renderAttribute("path")
-        val useVirtualThread = root.renderAttribute("useVirtualThreads")
+        val useVirtualThread = root.renderAttribute("use-virtual-threads")
             ?.let(String::toBoolean) ?: true
+        val maxRequestSize = root.renderAttribute("max-request-size")
+            ?.let(String::toInt) ?: 67108864
         var authentication: Authentication? = null
         for (child in root.asIterable()) {
             val tagName = child.localName
@@ -136,7 +138,7 @@ object Parser {
                 }
             }
         }
-        return Configuration(host, port, serverPath, users, groups, cache!!, authentication, tls, useVirtualThread)
+        return Configuration(host, port, serverPath, users, groups, cache!!, authentication, tls, useVirtualThread, maxRequestSize)
     }
 
     private fun parseRoles(root: Element) = root.asIterable().asSequence().map {

@@ -21,6 +21,7 @@ public class Configuration {
     Authentication authentication;
     Tls tls;
     boolean useVirtualThread;
+    int maxRequestSize;
 
     @Value
     public static class Group {
@@ -107,7 +108,8 @@ public class Configuration {
             Cache cache,
             Authentication authentication,
             Tls tls,
-            boolean useVirtualThread
+            boolean useVirtualThread,
+            int maxRequestSize
     ) {
         return new Configuration(
                 host,
@@ -118,7 +120,8 @@ public class Configuration {
                 cache,
                 authentication,
                 tls,
-                useVirtualThread
+                useVirtualThread,
+                maxRequestSize
         );
     }
 }
