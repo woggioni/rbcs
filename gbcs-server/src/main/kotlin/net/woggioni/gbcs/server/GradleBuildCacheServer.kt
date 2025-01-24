@@ -26,8 +26,6 @@ import io.netty.handler.ssl.SslHandler
 import io.netty.handler.stream.ChunkedWriteHandler
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
-import io.netty.handler.timeout.ReadTimeoutHandler
-import io.netty.handler.timeout.WriteTimeoutHandler
 import io.netty.util.AttributeKey
 import io.netty.util.concurrent.DefaultEventExecutorGroup
 import io.netty.util.concurrent.EventExecutorGroup
@@ -310,9 +308,8 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             }
             val pipeline = ch.pipeline()
             cfg.connection.also { conn ->
-                pipeline.addLast(ReadTimeoutHandler(conn.readTimeout.toMillis(), TimeUnit.MILLISECONDS))
-                pipeline.addLast(WriteTimeoutHandler(conn.writeTimeout.toMillis(), TimeUnit.MILLISECONDS))
-                pipeline.addLast(IdleStateHandler(false, 0, 0, conn.idleTimeout.toMillis(), TimeUnit.MILLISECONDS))
+                pipeline.addLast(IdleStateHandler(false, conn.readTimeout.toMillis(), conn.writeTimeout.toMillis(), 0, TimeUnit.MILLISECONDS))
+                pipeline.addLast(IdleStateHandler(true, conn.readIdleTimeout.toMillis(), conn.writeIdleTimeout.toMillis(), conn.idleTimeout.toMillis(), TimeUnit.MILLISECONDS))
             }
             pipeline.addLast(object : ChannelInboundHandlerAdapter() {
                 override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
@@ -379,7 +376,6 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             }
             DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors(), threadFactory)
         }
-        // A helper class that simplifies server configuration
         val bootstrap = ServerBootstrap().apply {
             // Configure the server
             group(bossGroup, workerGroup)
