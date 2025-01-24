@@ -1,6 +1,5 @@
 pluginManagement {
     repositories {
-        mavenLocal()
         maven {
             url = getProperty('gitea.maven.url')
         }

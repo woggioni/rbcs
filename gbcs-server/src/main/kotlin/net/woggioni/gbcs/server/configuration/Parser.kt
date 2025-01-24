@@ -114,9 +114,9 @@ object Parser {
 
                 "connection" -> {
                     val writeTimeout = child.renderAttribute("write-timeout")
-                        ?.let(Duration::parse) ?: Duration.of(10, ChronoUnit.SECONDS)
+                        ?.let(Duration::parse) ?: Duration.of(0, ChronoUnit.SECONDS)
                     val readTimeout = child.renderAttribute("read-timeout")
-                        ?.let(Duration::parse) ?: Duration.of(10, ChronoUnit.SECONDS)
+                        ?.let(Duration::parse) ?: Duration.of(0, ChronoUnit.SECONDS)
                     val idleTimeout = child.renderAttribute("idle-timeout")
                         ?.let(Duration::parse) ?: Duration.of(30, ChronoUnit.SECONDS)
                     val readIdleTimeout = child.renderAttribute("read-idle-timeout")

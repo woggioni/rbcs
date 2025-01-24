@@ -11,8 +11,10 @@ import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.server.GradleBuildCacheServer
 import net.woggioni.jwo.Bucket
+import net.woggioni.jwo.LongMath
 import java.net.InetSocketAddress
 import java.time.Duration
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
 
@@ -54,23 +56,29 @@ class ThrottlingHandler(cfg: Configuration) :
         if (buckets.isEmpty()) {
             return super.channelRead(ctx, msg)
         } else {
-            var nextAttempt = Long.MAX_VALUE
-            for (bucket in buckets) {
-                val bucketNextAttempt = bucket.removeTokensWithEstimate(1)
-                if (bucketNextAttempt < 0) {
-                    return super.channelRead(ctx, msg)
-                } else if (bucketNextAttempt < nextAttempt) {
-                    nextAttempt = bucketNextAttempt
-                }
+            handleBuckets(buckets, ctx, msg, true)
+        }
+    }
+
+    private fun handleBuckets(buckets : List<Bucket>, ctx : ChannelHandlerContext, msg : Any, delayResponse : Boolean) {
+        var nextAttempt = -1L
+        for (bucket in buckets) {
+            val bucketNextAttempt = bucket.removeTokensWithEstimate(1)
+            if (bucketNextAttempt > nextAttempt) {
+                nextAttempt = bucketNextAttempt
             }
-            val waitDuration = Duration.ofNanos(nextAttempt)
-            if (waitDuration < waitThreshold) {
-                ctx.executor().schedule({
-                    ctx.fireChannelRead(msg)
-                }, waitDuration.toNanos(), TimeUnit.NANOSECONDS)
-            } else {
-                sendThrottledResponse(ctx, waitDuration)
-            }
+        }
+        if(nextAttempt < 0) {
+            super.channelRead(ctx, msg)
+            return
+        }
+        val waitDuration = Duration.of(LongMath.ceilDiv(nextAttempt, 100_000_000L) * 100L, ChronoUnit.MILLIS)
+        if (delayResponse && waitDuration < waitThreshold) {
+            ctx.executor().schedule({
+                handleBuckets(buckets, ctx, msg, false)
+            }, waitDuration.toMillis(), TimeUnit.MILLISECONDS)
+        } else {
+            sendThrottledResponse(ctx, waitDuration)
         }
     }
 
@@ -80,7 +88,12 @@ class ThrottlingHandler(cfg: Configuration) :
             HttpResponseStatus.TOO_MANY_REQUESTS
         )
         response.headers()[HttpHeaderNames.CONTENT_LENGTH] = 0
-        response.headers()[HttpHeaderNames.RETRY_AFTER] = retryAfter.seconds
+        retryAfter.seconds.takeIf {
+            it > 0
+        }?.let {
+            response.headers()[HttpHeaderNames.RETRY_AFTER] = retryAfter.seconds
+        }
+
         ctx.writeAndFlush(response)
     }
 }

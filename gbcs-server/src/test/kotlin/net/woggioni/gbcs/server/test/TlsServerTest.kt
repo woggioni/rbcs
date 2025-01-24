@@ -133,4 +133,19 @@ class TlsServerTest : AbstractTlsServerTest() {
         val response: HttpResponse<String> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString())
         Assertions.assertEquals(HttpResponseStatus.FORBIDDEN.code(), response.statusCode())
     }
+
+    @Test
+    @Order(8)
+    fun traceAsAnonymousUser() {
+        val client: HttpClient = getHttpClient(null)
+        val requestBuilder = newRequestBuilder("").method(
+            "TRACE",
+            HttpRequest.BodyPublishers.ofByteArray("sfgsdgfaiousfiuhsd".toByteArray())
+        )
+
+        val response: HttpResponse<ByteArray> =
+            client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        Assertions.assertEquals(HttpResponseStatus.OK.code(), response.statusCode())
+        println(String(response.body()))
+    }
 }

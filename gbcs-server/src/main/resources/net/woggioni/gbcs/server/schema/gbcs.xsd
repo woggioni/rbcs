@@ -34,8 +34,8 @@
     </xs:complexType>
 
     <xs:complexType name="connectionType">
-        <xs:attribute name="read-timeout" type="xs:duration" use="optional" default="PT10S"/>
-        <xs:attribute name="write-timeout" type="xs:duration" use="optional" default="PT10S"/>
+        <xs:attribute name="read-timeout" type="xs:duration" use="optional" default="PT0S"/>
+        <xs:attribute name="write-timeout" type="xs:duration" use="optional" default="PT0S"/>
         <xs:attribute name="idle-timeout" type="xs:duration" use="optional" default="PT30S"/>
         <xs:attribute name="read-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
         <xs:attribute name="write-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>

@@ -309,8 +309,33 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             }
             val pipeline = ch.pipeline()
             cfg.connection.also { conn ->
-                pipeline.addLast(IdleStateHandler(false, conn.readTimeout.toMillis(), conn.writeTimeout.toMillis(), 0, TimeUnit.MILLISECONDS))
-                pipeline.addLast(IdleStateHandler(true, conn.readIdleTimeout.toMillis(), conn.writeIdleTimeout.toMillis(), conn.idleTimeout.toMillis(), TimeUnit.MILLISECONDS))
+                val readTimeout = conn.readTimeout.toMillis()
+                val writeTimeout = conn.writeTimeout.toMillis()
+                if(readTimeout > 0 || writeTimeout > 0) {
+                    pipeline.addLast(
+                        IdleStateHandler(
+                            false,
+                            readTimeout,
+                            writeTimeout,
+                            0,
+                            TimeUnit.MILLISECONDS
+                        )
+                    )
+                }
+                val readIdleTimeout = conn.readIdleTimeout.toMillis()
+                val writeIdleTimeout = conn.writeIdleTimeout.toMillis()
+                val idleTimeout = conn.idleTimeout.toMillis()
+                if(readIdleTimeout > 0 || writeIdleTimeout > 0 || idleTimeout > 0) {
+                    pipeline.addLast(
+                        IdleStateHandler(
+                            true,
+                            readIdleTimeout,
+                            writeIdleTimeout,
+                            idleTimeout,
+                            TimeUnit.MILLISECONDS
+                        )
+                    )
+                }
             }
             pipeline.addLast(object : ChannelInboundHandlerAdapter() {
                 override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
