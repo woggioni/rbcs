@@ -4,6 +4,7 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.common.Xml
 import net.woggioni.gbcs.server.cache.FileSystemCacheConfiguration
+import net.woggioni.gbcs.server.cache.InMemoryCacheConfiguration
 import net.woggioni.gbcs.server.configuration.Serializer
 import net.woggioni.gbcs.server.test.utils.NetworkUtils
 import org.junit.jupiter.api.Assertions
@@ -23,7 +24,7 @@ import kotlin.random.Random
 
 class NoAuthServerTest : AbstractServerTest() {
 
-    private lateinit var cacheDir : Path
+    private lateinit var cacheDir: Path
 
     private val random = Random(101325)
     private val keyValuePair = newEntry(random)
@@ -47,8 +48,7 @@ class NoAuthServerTest : AbstractServerTest() {
             ),
             emptyMap(),
             emptyMap(),
-            FileSystemCacheConfiguration(
-                this.cacheDir,
+            InMemoryCacheConfiguration(
                 maxAge = Duration.ofSeconds(3600 * 24),
                 compressionEnabled = true,
                 digestAlgorithm = "MD5",
@@ -63,10 +63,10 @@ class NoAuthServerTest : AbstractServerTest() {
     override fun tearDown() {
     }
 
-    fun newRequestBuilder(key : String) = HttpRequest.newBuilder()
+    fun newRequestBuilder(key: String) = HttpRequest.newBuilder()
         .uri(URI.create("http://${cfg.host}:${cfg.port}/$serverPath/$key"))
 
-    fun newEntry(random : Random) : Pair<String, ByteArray> {
+    fun newEntry(random: Random): Pair<String, ByteArray> {
         val key = ByteArray(0x10).let {
             random.nextBytes(it)
             Base64.getUrlEncoder().encodeToString(it)
@@ -95,10 +95,11 @@ class NoAuthServerTest : AbstractServerTest() {
     @Order(2)
     fun getWithNoAuthorizationHeader() {
         val client: HttpClient = HttpClient.newHttpClient()
-        val (key, value ) = keyValuePair
+        val (key, value) = keyValuePair
         val requestBuilder = newRequestBuilder(key)
             .GET()
-        val response: HttpResponse<ByteArray> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        val response: HttpResponse<ByteArray> =
+            client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
         Assertions.assertEquals(HttpResponseStatus.OK.code(), response.statusCode())
         Assertions.assertArrayEquals(value, response.body())
     }
@@ -111,31 +112,23 @@ class NoAuthServerTest : AbstractServerTest() {
         val (key, _) = newEntry(random)
         val requestBuilder = newRequestBuilder(key).GET()
 
-        val response: HttpResponse<ByteArray> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        val response: HttpResponse<ByteArray> =
+            client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
         Assertions.assertEquals(HttpResponseStatus.NOT_FOUND.code(), response.statusCode())
     }
 
-//    @Test
-//    @Order(4)
-//    fun manyRequestsTest() {
-//        val client: HttpClient = HttpClient.newHttpClient()
-//
-//        for(i in 0 until 100000) {
-//
-//            val newEntry = random.nextBoolean()
-//            val (key, _) = if(newEntry) {
-//                newEntry(random)
-//            } else {
-//                keyValuePair
-//            }
-//            val requestBuilder = newRequestBuilder(key).GET()
-//
-//            val response: HttpResponse<ByteArray> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
-//            if(newEntry) {
-//                Assertions.assertEquals(HttpResponseStatus.NOT_FOUND.code(), response.statusCode())
-//            } else {
-//                Assertions.assertEquals(HttpResponseStatus.OK.code(), response.statusCode())
-//            }
-//        }
-//    }
+    @Test
+    @Order(4)
+    fun traceTest() {
+        val client: HttpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
+        val requestBuilder = newRequestBuilder("").method(
+            "TRACE",
+            HttpRequest.BodyPublishers.ofByteArray("sfgsdgfaiousfiuhsd".toByteArray())
+        )
+
+        val response: HttpResponse<ByteArray> =
+            client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        Assertions.assertEquals(HttpResponseStatus.OK.code(), response.statusCode())
+        println(String(response.body()))
+    }
 }

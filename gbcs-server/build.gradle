@@ -25,6 +25,11 @@ dependencies {
     testRuntimeOnly project(":gbcs-server-memcached")
 }
 
+test {
+    systemProperty("io.netty.leakDetectionLevel", "PARANOID")
+    systemProperty("jdk.httpclient.redirects.retrylimit", "1")
+}
+
 publishing {
     publications {
         maven(MavenPublication) {

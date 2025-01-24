@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.Duration
+import java.time.temporal.ChronoUnit
 
 
 class BasicAuthServerTest : AbstractBasicAuthServerTest() {
@@ -19,10 +21,16 @@ class BasicAuthServerTest : AbstractBasicAuthServerTest() {
     }
 
     override val users = listOf(
-        Configuration.User("user1", hashPassword(PASSWORD), setOf(readersGroup)),
-        Configuration.User("user2", hashPassword(PASSWORD), setOf(writersGroup)),
-        Configuration.User("user3", hashPassword(PASSWORD), setOf(readersGroup, writersGroup)),
-        Configuration.User("", null, setOf(readersGroup))
+        Configuration.User("user1", hashPassword(PASSWORD), setOf(readersGroup), null),
+        Configuration.User("user2", hashPassword(PASSWORD), setOf(writersGroup), null),
+        Configuration.User("user3", hashPassword(PASSWORD), setOf(readersGroup, writersGroup), null),
+        Configuration.User("", null, setOf(readersGroup), null),
+        Configuration.User("user4", hashPassword(PASSWORD), setOf(readersGroup),
+            Configuration.Quota(1, Duration.of(1, ChronoUnit.DAYS), 0, 1)
+        ),
+        Configuration.User("user5", hashPassword(PASSWORD), setOf(readersGroup),
+            Configuration.Quota(1, Duration.of(5, ChronoUnit.SECONDS), 0, 1)
+        )
     )
 
     @Test
@@ -143,5 +151,42 @@ class BasicAuthServerTest : AbstractBasicAuthServerTest() {
 
         val response: HttpResponse<ByteArray> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
         Assertions.assertEquals(HttpResponseStatus.NOT_FOUND.code(), response.statusCode())
+    }
+
+    @Test
+    @Order(6)
+    fun getAsAThrottledUser() {
+        val client: HttpClient = HttpClient.newHttpClient()
+
+        val (key, value) = keyValuePair
+        val user = cfg.users.values.find {
+            it.name == "user4"
+        } ?: throw RuntimeException("user4 not found")
+
+        val requestBuilder = newRequestBuilder(key)
+            .header("Authorization", buildAuthorizationHeader(user, PASSWORD))
+            .GET()
+
+        val response: HttpResponse<ByteArray> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        Assertions.assertEquals(HttpResponseStatus.TOO_MANY_REQUESTS.code(), response.statusCode())
+    }
+
+    @Test
+    @Order(7)
+    fun getAsAThrottledUser2() {
+        val client: HttpClient = HttpClient.newHttpClient()
+
+        val (key, value) = keyValuePair
+        val user = cfg.users.values.find {
+            it.name == "user5"
+        } ?: throw RuntimeException("user5 not found")
+
+        val requestBuilder = newRequestBuilder(key)
+            .header("Authorization", buildAuthorizationHeader(user, PASSWORD))
+            .GET()
+
+        val response: HttpResponse<ByteArray> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        Assertions.assertEquals(HttpResponseStatus.OK.code(), response.statusCode())
+        Assertions.assertArrayEquals(value, response.body())
     }
 }

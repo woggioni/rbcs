@@ -6,12 +6,13 @@ import java.net.URL
 import java.net.URLConnection
 import java.net.URLStreamHandler
 import java.net.URLStreamHandlerFactory
+import java.net.spi.URLStreamHandlerProvider
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.stream.Collectors
 
 
-class GbcsUrlStreamHandlerFactory : URLStreamHandlerFactory {
+class GbcsUrlStreamHandlerFactory : URLStreamHandlerProvider() {
 
     private class ClasspathHandler(private val classLoader: ClassLoader = GbcsUrlStreamHandlerFactory::class.java.classLoader) :
         URLStreamHandler() {

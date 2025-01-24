@@ -8,7 +8,7 @@ class RoleAuthorizer : Authorizer {
 
     companion object {
         private val METHOD_MAP = mapOf(
-            Role.Reader to setOf(HttpMethod.GET, HttpMethod.HEAD),
+            Role.Reader to setOf(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.TRACE),
             Role.Writer to setOf(HttpMethod.PUT, HttpMethod.POST)
         )
     }

@@ -18,9 +18,9 @@ class NoAnonymousUserBasicAuthServerTest : AbstractBasicAuthServerTest() {
     }
 
     override val users = listOf(
-        Configuration.User("user1", hashPassword(PASSWORD), setOf(readersGroup)),
-        Configuration.User("user2", hashPassword(PASSWORD), setOf(writersGroup)),
-        Configuration.User("user3", hashPassword(PASSWORD), setOf(readersGroup, writersGroup)),
+        Configuration.User("user1", hashPassword(PASSWORD), setOf(readersGroup), null),
+        Configuration.User("user2", hashPassword(PASSWORD), setOf(writersGroup), null),
+        Configuration.User("user3", hashPassword(PASSWORD), setOf(readersGroup, writersGroup), null),
     )
 
     @Test

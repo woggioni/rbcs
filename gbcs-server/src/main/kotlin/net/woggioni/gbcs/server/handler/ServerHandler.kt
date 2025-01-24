@@ -15,9 +15,9 @@ import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpUtil
 import io.netty.handler.codec.http.LastHttpContent
-import io.netty.handler.stream.ChunkedNioFile
 import io.netty.handler.stream.ChunkedNioStream
 import net.woggioni.gbcs.api.Cache
+import net.woggioni.gbcs.api.exception.CacheException
 import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.server.debug
 import net.woggioni.gbcs.server.warn
@@ -38,7 +38,11 @@ class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
             val prefix = path.parent
             val key = path.fileName.toString()
             if (serverPrefix == prefix) {
-                cache.get(key)?.let { channel ->
+                try {
+                    cache.get(key)
+                } catch(ex : Throwable) {
+                    throw CacheException("Error accessing the cache backend", ex)
+                }?.let { channel ->
                     log.debug(ctx) {
                         "Cache hit for key '$key'"
                     }
@@ -55,17 +59,18 @@ class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
                     when (channel) {
                         is FileChannel -> {
                             if (keepAlive) {
-                                ctx.write(ChunkedNioFile(channel))
-                                ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+                                ctx.write(DefaultFileRegion(channel, 0, channel.size()))
+                                ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT.retainedDuplicate())
                             } else {
                                 ctx.writeAndFlush(DefaultFileRegion(channel, 0, channel.size()))
                                     .addListener(ChannelFutureListener.CLOSE)
                             }
                         }
-
                         else -> {
-                            ctx.write(ChunkedNioStream(channel))
-                            ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+                            ctx.write(ChunkedNioStream(channel)).addListener { evt ->
+                                channel.close()
+                            }
+                            ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT.retainedDuplicate())
                         }
                     }
                 } ?: let {
@@ -102,7 +107,11 @@ class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
                         array()
                     }
                 }
-                cache.put(key, bodyBytes)
+                try {
+                    cache.put(key, bodyBytes)
+                } catch(ex : Throwable) {
+                    throw CacheException("Error accessing the cache backend", ex)
+                }
                 val response = DefaultFullHttpResponse(
                     msg.protocolVersion(), HttpResponseStatus.CREATED,
                     Unpooled.copiedBuffer(key.toByteArray())
@@ -117,11 +126,35 @@ class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
                 response.headers()[HttpHeaderNames.CONTENT_LENGTH] = "0"
                 ctx.writeAndFlush(response)
             }
+        } else if(method == HttpMethod.TRACE) {
+            val replayedRequestHead = ctx.alloc().buffer()
+            replayedRequestHead.writeCharSequence("TRACE ${Path.of(msg.uri())} ${msg.protocolVersion().text()}\r\n", Charsets.US_ASCII)
+            msg.headers().forEach { (key, value) ->
+                replayedRequestHead.apply {
+                    writeCharSequence(key, Charsets.US_ASCII)
+                    writeCharSequence(": ", Charsets.US_ASCII)
+                    writeCharSequence(value, Charsets.UTF_8)
+                    writeCharSequence("\r\n", Charsets.US_ASCII)
+                }
+            }
+            replayedRequestHead.writeCharSequence("\r\n", Charsets.US_ASCII)
+            val requestBody = msg.content()
+            requestBody.retain()
+            val responseBody = ctx.alloc().compositeBuffer(2).apply {
+                addComponents(true, replayedRequestHead)
+                addComponents(true, requestBody)
+            }
+            val response = DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.OK, responseBody)
+            response.headers().apply {
+                set(HttpHeaderNames.CONTENT_TYPE, "message/http")
+                set(HttpHeaderNames.CONTENT_LENGTH, responseBody.readableBytes())
+            }
+            ctx.writeAndFlush(response)
         } else {
             log.warn(ctx) {
                 "Got request with unhandled method '${msg.method().name()}'"
             }
-            val response = DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.BAD_REQUEST)
+            val response = DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.METHOD_NOT_ALLOWED)
             response.headers()[HttpHeaderNames.CONTENT_LENGTH] = "0"
             ctx.writeAndFlush(response)
         }

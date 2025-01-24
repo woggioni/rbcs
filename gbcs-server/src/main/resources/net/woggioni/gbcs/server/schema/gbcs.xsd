@@ -48,6 +48,17 @@
 
     <xs:complexType name="cacheType" abstract="true"/>
 
+    <xs:complexType name="inMemoryCacheType">
+        <xs:complexContent>
+            <xs:extension base="gbcs:cacheType">
+                <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
+                <xs:attribute name="digest" type="xs:token" default="MD5"/>
+                <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
+                <xs:attribute name="compression-level" type="xs:byte" default="-1"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
     <xs:complexType name="fileSystemCacheType">
         <xs:complexContent>
             <xs:extension base="gbcs:cacheType">
@@ -92,15 +103,32 @@
         </xs:choice>
     </xs:complexType>
 
-    <xs:complexType name="usersType">
+    <xs:complexType name="quotaType">
+        <xs:attribute name="calls" type="xs:positiveInteger" use="required"/>
+        <xs:attribute name="period" type="xs:duration" use="required"/>
+        <xs:attribute name="max-available-calls" type="xs:positiveInteger" use="optional"/>
+        <xs:attribute name="initial-available-calls" type="xs:positiveInteger" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="anonymousUserType">
         <xs:sequence>
-            <xs:element name="user" type="gbcs:userType" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="quota" type="gbcs:quotaType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="userType">
+        <xs:sequence>
+            <xs:element name="quota" type="gbcs:quotaType" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
         <xs:attribute name="name" type="xs:token" use="required"/>
         <xs:attribute name="password" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="usersType">
+        <xs:sequence>
+            <xs:element name="user" type="gbcs:userType" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="anonymous" type="gbcs:anonymousUserType" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="groupsType">
@@ -118,6 +146,7 @@
                 </xs:unique>
             </xs:element>
             <xs:element name="roles" type="gbcs:rolesType" maxOccurs="1" minOccurs="0"/>
+            <xs:element name="quota" type="gbcs:quotaType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
         <xs:attribute name="name" type="xs:token"/>
     </xs:complexType>

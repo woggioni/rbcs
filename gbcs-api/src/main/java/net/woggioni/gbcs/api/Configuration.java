@@ -44,10 +44,19 @@ public class Configuration {
     }
 
     @Value
+    public static class Quota {
+        long calls;
+        Duration period;
+        long initialAvailableCalls;
+        long maxAvailableCalls;
+    }
+
+    @Value
     public static class Group {
         @EqualsAndHashCode.Include
         String name;
         Set<Role> roles;
+        Quota quota;
     }
 
     @Value
@@ -56,7 +65,7 @@ public class Configuration {
         String name;
         String password;
         Set<Group> groups;
-
+        Quota quota;
 
         public Set<Role> getRoles() {
             return groups.stream()
@@ -73,6 +82,13 @@ public class Configuration {
     @FunctionalInterface
     public interface GroupExtractor {
         Group extract(X509Certificate cert);
+    }
+
+    @Value
+    public static class Throttling {
+        KeyStore keyStore;
+        TrustStore trustStore;
+        boolean verifyClients;
     }
 
     @Value

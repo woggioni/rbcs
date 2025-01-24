@@ -25,7 +25,7 @@ import java.time.temporal.ChronoUnit
 object Parser {
     fun parse(document: Document): Configuration {
         val root = document.documentElement
-        val anonymousUser = User("", null, emptySet())
+        val anonymousUser = User("", null, emptySet(), null)
         var connection: Configuration.Connection = Configuration.Connection(
             Duration.of(10, ChronoUnit.SECONDS),
             Duration.of(10, ChronoUnit.SECONDS),
@@ -38,7 +38,7 @@ object Parser {
         var cache: Cache? = null
         var host = "127.0.0.1"
         var port = 11080
-        var users : Map<String, User> = mapOf(anonymousUser.name to anonymousUser)
+        var users: Map<String, User> = mapOf(anonymousUser.name to anonymousUser)
         var groups = emptyMap<String, Group>()
         var tls: Tls? = null
         val serverPath = root.renderAttribute("path")
@@ -85,6 +85,7 @@ object Parser {
                             "users" -> {
                                 knownUsers += parseUsers(gchild)
                             }
+
                             "groups" -> {
                                 val pair = parseGroups(gchild, knownUsers)
                                 users = pair.first
@@ -107,7 +108,7 @@ object Parser {
                         val typeNamespace = tf.typeNamespace
                         val typeName = tf.typeName
                         CacheSerializers.index[typeNamespace to typeName]
-                            ?: throw IllegalArgumentException("Cache provider for namespace '$typeNamespace' not found")
+                            ?: throw IllegalArgumentException("Cache provider for namespace '$typeNamespace' with name '$typeName' not found")
                     }.deserialize(child)
                 }
 
@@ -133,11 +134,13 @@ object Parser {
                         maxRequestSize
                     )
                 }
+
                 "event-executor" -> {
                     val useVirtualThread = root.renderAttribute("use-virtual-threads")
                         ?.let(String::toBoolean) ?: true
                     eventExecutor = Configuration.EventExecutor(useVirtualThread)
                 }
+
                 "tls" -> {
                     val verifyClients = child.renderAttribute("verify-clients")
                         ?.let(String::toBoolean) ?: false
@@ -200,20 +203,54 @@ object Parser {
     }.toSet()
 
     private fun parseUserRefs(root: Element) = root.asIterable().asSequence().map {
-        when(it.localName) {
+        when (it.localName) {
             "user" -> it.renderAttribute("ref")
             "anonymous" -> ""
             else -> ConfigurationException("Unrecognized tag '${it.localName}'")
         }
     }
 
+    private fun parseQuota(el: Element): Configuration.Quota {
+        val calls = el.renderAttribute("calls")
+            ?.let(String::toLong)
+            ?: throw ConfigurationException("Missing attribute 'calls'")
+        val maxAvailableCalls = el.renderAttribute("max-available-calls")
+            ?.let(String::toLong)
+            ?: calls
+        val initialAvailableCalls = el.renderAttribute("initial-available-calls")
+            ?.let(String::toLong)
+            ?: maxAvailableCalls
+        val period = el.renderAttribute("period")
+            ?.let(Duration::parse)
+            ?: throw ConfigurationException("Missing attribute 'period'")
+        return Configuration.Quota(calls, period, initialAvailableCalls, maxAvailableCalls)
+    }
+
     private fun parseUsers(root: Element): Sequence<User> {
-        return root.asIterable().asSequence().filter {
-            it.localName == "user"
-        }.map { el ->
-            val username = el.renderAttribute("name")
-            val password = el.renderAttribute("password")
-            User(username, password, emptySet())
+        return root.asIterable().asSequence().mapNotNull { child ->
+            when (child.localName) {
+                "user" -> {
+                    val username = child.renderAttribute("name")
+                    val password = child.renderAttribute("password")
+                    var quota: Configuration.Quota? = null
+                    for (gchild in child.asIterable()) {
+                        if (gchild.localName == "quota") {
+                            quota = parseQuota(gchild)
+                        }
+                    }
+                    User(username, password, emptySet(), quota)
+                }
+                "anonymous" -> {
+                    var quota: Configuration.Quota? = null
+                    for (gchild in child.asIterable()) {
+                        if (gchild.localName == "quota") {
+                            quota= parseQuota(gchild)
+                        }
+                    }
+                    User("", null, emptySet(), quota)
+                }
+                else -> null
+            }
         }
     }
 
@@ -225,6 +262,7 @@ object Parser {
         }.map { el ->
             val groupName = el.renderAttribute("name") ?: throw ConfigurationException("Group name is required")
             var roles = emptySet<Role>()
+            var quota: Configuration.Quota? = null
             for (child in el.asIterable()) {
                 when (child.localName) {
                     "users" -> {
@@ -238,12 +276,15 @@ object Parser {
                     "roles" -> {
                         roles = parseRoles(child)
                     }
+                    "quota" -> {
+                        quota = parseQuota(child)
+                    }
                 }
             }
-            groupName to Group(groupName, roles)
+            groupName to Group(groupName, roles, quota)
         }.toMap()
         val users = knownUsersMap.map { (name, user) ->
-            name to User(name, user.password, userGroups[name]?.mapNotNull { groups[it] }?.toSet() ?: emptySet())
+            name to User(name, user.password, userGroups[name]?.mapNotNull { groups[it] }?.toSet() ?: emptySet(), user.quota)
         }.toMap()
         return users to groups
     }

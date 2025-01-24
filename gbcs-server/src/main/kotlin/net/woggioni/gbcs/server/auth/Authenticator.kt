@@ -11,32 +11,48 @@ import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.util.ReferenceCountUtil
+import net.woggioni.gbcs.api.Configuration
+import net.woggioni.gbcs.api.Configuration.Group
 import net.woggioni.gbcs.api.Role
+import net.woggioni.gbcs.server.GradleBuildCacheServer
 
 
-abstract class AbstractNettyHttpAuthenticator(private val authorizer : Authorizer)
-        : ChannelInboundHandlerAdapter() {
+abstract class AbstractNettyHttpAuthenticator(private val authorizer: Authorizer) : ChannelInboundHandlerAdapter() {
 
     companion object {
         private val AUTHENTICATION_FAILED: FullHttpResponse = DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED, Unpooled.EMPTY_BUFFER).apply {
+            HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED, Unpooled.EMPTY_BUFFER
+        ).apply {
             headers()[HttpHeaderNames.CONTENT_LENGTH] = "0"
         }
 
         private val NOT_AUTHORIZED: FullHttpResponse = DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN, Unpooled.EMPTY_BUFFER).apply {
+            HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN, Unpooled.EMPTY_BUFFER
+        ).apply {
             headers()[HttpHeaderNames.CONTENT_LENGTH] = "0"
         }
     }
 
+    class AuthenticationResult(val user: Configuration.User?, val groups: Set<Group>)
 
-    abstract fun authenticate(ctx : ChannelHandlerContext, req : HttpRequest) : Set<Role>?
+    abstract fun authenticate(ctx: ChannelHandlerContext, req: HttpRequest): AuthenticationResult?
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-        if(msg is HttpRequest) {
-            val roles = authenticate(ctx, msg) ?: return authenticationFailure(ctx, msg)
+        if (msg is HttpRequest) {
+            val result = authenticate(ctx, msg) ?: return authenticationFailure(ctx, msg)
+            ctx.channel().attr(GradleBuildCacheServer.userAttribute).set(result.user)
+            ctx.channel().attr(GradleBuildCacheServer.groupAttribute).set(result.groups)
+
+            val roles = (
+                (result.user?.let { user ->
+                    user.groups.asSequence().flatMap { group ->
+                        group.roles.asSequence()
+                    }
+                } ?: emptySequence<Role>()) +
+                        result.groups.asSequence().flatMap { it.roles.asSequence() }
+            ).toSet()
             val authorized = authorizer.authorize(roles, msg)
-            if(authorized) {
+            if (authorized) {
                 super.channelRead(ctx, msg)
             } else {
                 authorizationFailure(ctx, msg)

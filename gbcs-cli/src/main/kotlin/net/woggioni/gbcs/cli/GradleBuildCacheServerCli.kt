@@ -13,6 +13,7 @@ import net.woggioni.gbcs.cli.impl.commands.ServerCommand
 import net.woggioni.jwo.Application
 import picocli.CommandLine
 import picocli.CommandLine.Model.CommandSpec
+import java.net.URI
 
 
 @CommandLine.Command(

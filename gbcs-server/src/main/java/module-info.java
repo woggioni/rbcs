@@ -1,5 +1,6 @@
 import net.woggioni.gbcs.api.CacheProvider;
 import net.woggioni.gbcs.server.cache.FileSystemCacheProvider;
+import net.woggioni.gbcs.server.cache.InMemoryCacheProvider;
 
 module net.woggioni.gbcs.server {
     requires java.sql;
@@ -24,5 +25,5 @@ module net.woggioni.gbcs.server {
     opens net.woggioni.gbcs.server.schema;
 
     uses CacheProvider;
-    provides CacheProvider with FileSystemCacheProvider;
+    provides CacheProvider with FileSystemCacheProvider, InMemoryCacheProvider;
 }

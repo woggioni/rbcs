@@ -4,6 +4,7 @@ import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.api.Role
 import net.woggioni.gbcs.common.Xml
 import net.woggioni.gbcs.server.cache.FileSystemCacheConfiguration
+import net.woggioni.gbcs.server.cache.InMemoryCacheConfiguration
 import net.woggioni.gbcs.server.configuration.Serializer
 import net.woggioni.gbcs.server.test.utils.CertificateUtils
 import net.woggioni.gbcs.server.test.utils.CertificateUtils.X509Credentials
@@ -45,8 +46,8 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
     private lateinit var trustStore: KeyStore
     protected lateinit var ca: X509Credentials
 
-    protected val readersGroup = Configuration.Group("readers", setOf(Role.Reader))
-    protected val writersGroup = Configuration.Group("writers", setOf(Role.Writer))
+    protected val readersGroup = Configuration.Group("readers", setOf(Role.Reader), null)
+    protected val writersGroup = Configuration.Group("writers", setOf(Role.Writer), null)
     protected val random = Random(101325)
     protected val keyValuePair = newEntry(random)
     private val serverPath : String? = null
@@ -158,6 +159,12 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
                 digestAlgorithm = "MD5"
             ),
+//            InMemoryCacheConfiguration(
+//                maxAge = Duration.ofSeconds(3600 * 24),
+//                compressionEnabled = true,
+//                compressionLevel = Deflater.DEFAULT_COMPRESSION,
+//                digestAlgorithm = "MD5"
+//            ),
             Configuration.ClientCertificateAuthentication(
                 Configuration.TlsCertificateExtractor("CN", "(.*)"),
                 null

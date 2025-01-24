@@ -11,23 +11,28 @@
             idle-timeout="PT30M"
             max-request-size="4096"/>
     <event-executor use-virtual-threads="false"/>
-    <cache xs:type="gbcs:fileSystemCacheType" path="/tmp/gbcs" max-age="P7D"/>
+    <cache xs:type="gbcs:inMemoryCacheType" max-age="P7D"/>
     <authorization>
         <users>
-            <user name="user1" password="password1"/>
+            <user name="user1" password="password1">
+                <quota calls="3600" period="PT1H"/>
+            </user>
             <user name="user2" password="password2"/>
             <user name="user3" password="password3"/>
+            <anonymous>
+                <quota calls="10" period="PT1M"/>
+            </anonymous>
         </users>
         <groups>
             <group name="readers">
                 <users>
                     <user ref="user1"/>
-<!--                    <user ref="user5"/>-->
                     <anonymous/>
                 </users>
                 <roles>
                     <reader/>
                 </roles>
+                <quota calls="10" period="PT1S"/>
             </group>
             <group name="writers">
                 <users>
@@ -45,6 +50,7 @@
                     <reader/>
                     <writer/>
                 </roles>
+                <quota calls="1000" period="P1D"/>
             </group>
         </groups>
     </authorization>

@@ -184,7 +184,7 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
     fun put(key: String, content: ByteArray): CompletableFuture<Unit> {
         return sendRequest(profile.serverURI.resolve(key), HttpMethod.PUT, content).thenApply {
             val status = it.status()
-            if (it.status() != HttpResponseStatus.CREATED) {
+            if (it.status() != HttpResponseStatus.CREATED && it.status() != HttpResponseStatus.OK) {
                 throw HttpException(status)
             }
         }

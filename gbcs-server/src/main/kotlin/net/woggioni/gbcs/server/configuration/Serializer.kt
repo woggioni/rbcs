@@ -54,9 +54,30 @@ object Serializer {
                                 user.password?.let { password ->
                                     attr("password", password)
                                 }
+                                user.quota?.let { quota ->
+                                    node("quota") {
+                                        attr("calls", quota.calls.toString())
+                                        attr("period", quota.period.toString())
+                                        attr("max-available-calls", quota.maxAvailableCalls.toString())
+                                        attr("initial-available-calls", quota.initialAvailableCalls.toString())
+                                    }
+                                }
                             }
                         }
                     }
+                    conf.users[""]
+                        ?.let { anonymousUser ->
+                            anonymousUser.quota?.let { quota ->
+                                node("anonymous") {
+                                    node("quota") {
+                                        attr("calls", quota.calls.toString())
+                                        attr("period", quota.period.toString())
+                                        attr("max-available-calls", quota.maxAvailableCalls.toString())
+                                        attr("initial-available-calls", quota.initialAvailableCalls.toString())
+                                    }
+                                }
+                            }
+                        }
                 }
                 node("groups") {
                     val groups = conf.users.values.asSequence()
@@ -90,6 +111,14 @@ object Serializer {
                                     for(role in group.roles) {
                                         node(role.toString().lowercase())
                                     }
+                                }
+                            }
+                            group.quota?.let { quota ->
+                                node("quota") {
+                                    attr("calls", quota.calls.toString())
+                                    attr("period", quota.period.toString())
+                                    attr("max-available-calls", quota.maxAvailableCalls.toString())
+                                    attr("initial-available-calls", quota.initialAvailableCalls.toString())
                                 }
                             }
                         }

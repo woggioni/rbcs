@@ -4,6 +4,7 @@ import net.woggioni.gbcs.api.exception.ContentTooLargeException;
 
 import java.nio.channels.ReadableByteChannel;
 
+
 public interface Cache extends AutoCloseable {
     ReadableByteChannel get(String key);
 

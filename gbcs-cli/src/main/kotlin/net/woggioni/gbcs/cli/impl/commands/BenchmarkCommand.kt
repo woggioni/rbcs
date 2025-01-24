@@ -5,6 +5,7 @@ import net.woggioni.gbcs.common.error
 import net.woggioni.gbcs.common.info
 import net.woggioni.gbcs.cli.impl.GbcsCommand
 import net.woggioni.gbcs.client.GradleBuildCacheClient
+import net.woggioni.jwo.JWO
 import picocli.CommandLine
 import java.security.SecureRandom
 import java.time.Duration
@@ -45,7 +46,7 @@ class BenchmarkCommand : GbcsCommand() {
         val entryGenerator = sequence {
             val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
             while (true) {
-                val key = Base64.getUrlEncoder().encode(random.nextBytes(16)).toString(Charsets.UTF_8)
+                val key = JWO.bytesToHex(random.nextBytes(16))
                 val content = random.nextInt().toByte()
                 val value = ByteArray(0x1000, { _ -> content })
                 yield(key to value)

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gbcs:server xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:gbcs="urn:net.woggioni.gbcs.server"
+             xs:schemaLocation="urn:net.woggioni.gbcs.server jpms://net.woggioni.gbcs.server/net/woggioni/gbcs/server/schema/gbcs.xsd">
+    <bind host="127.0.0.1" port="11443"/>
+    <cache xs:type="gbcs:fileSystemCacheType" path="/tmp/gbcs" max-age="P7D"/>
+    <authorization>
+        <users>
+            <user name="user1" password="password1"/>
+            <user name="user2" password="password2"/>
+        </users>
+        <groups>
+            <group name="group1">
+                <users>
+                    <anonymous/>
+                    <user ref="user1"/>
+                    <anonymous/>
+                </users>
+                <roles>
+                    <reader/>
+                </roles>
+            </group>
+        </groups>
+    </authorization>
+</gbcs:server>

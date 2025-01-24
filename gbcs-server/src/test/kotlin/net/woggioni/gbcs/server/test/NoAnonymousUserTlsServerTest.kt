@@ -12,9 +12,9 @@ import java.net.http.HttpResponse
 class NoAnonymousUserTlsServerTest : AbstractTlsServerTest() {
 
     override val users = listOf(
-        Configuration.User("user1", null, setOf(readersGroup)),
-        Configuration.User("user2", null, setOf(writersGroup)),
-        Configuration.User("user3", null, setOf(readersGroup, writersGroup)),
+        Configuration.User("user1", null, setOf(readersGroup), null),
+        Configuration.User("user2", null, setOf(writersGroup), null),
+        Configuration.User("user3", null, setOf(readersGroup, writersGroup), null),
     )
 
     @Test
