@@ -36,7 +36,12 @@ class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
         if (method === HttpMethod.GET) {
             val path = Path.of(msg.uri())
             val prefix = path.parent
-            val key = path.fileName.toString()
+            val key = path.fileName?.toString() ?: let {
+                val response = DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.NOT_FOUND)
+                response.headers()[HttpHeaderNames.CONTENT_LENGTH] = 0
+                ctx.writeAndFlush(response)
+                return
+            }
             if (serverPrefix == prefix) {
                 try {
                     cache.get(key)
