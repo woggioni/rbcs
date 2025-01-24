@@ -183,7 +183,7 @@
             <xs:element name="keystore" type="gbcs:keyStoreType" />
             <xs:element name="truststore" type="gbcs:trustStoreType" minOccurs="0"/>
         </xs:all>
-        <xs:attribute name="verify-clients" type="xs:boolean" use="optional"/>
+        <xs:attribute name="verify-clients" type="xs:boolean" use="optional" default="false"/>
     </xs:complexType>
 
     <xs:complexType name="keyStoreType">

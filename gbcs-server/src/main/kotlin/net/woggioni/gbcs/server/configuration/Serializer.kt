@@ -154,6 +154,9 @@ object Serializer {
 
             conf.tls?.let { tlsConfiguration ->
                 node("tls") {
+                    if(tlsConfiguration.isVerifyClients) {
+                        attr("verify-clients", "true")
+                    }
                     tlsConfiguration.keyStore?.let { keyStore ->
                         node("keystore") {
                             attr("file", keyStore.file.toString())

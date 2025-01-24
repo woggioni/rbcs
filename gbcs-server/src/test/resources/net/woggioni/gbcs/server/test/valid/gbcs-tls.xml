@@ -60,7 +60,7 @@
             <user-extractor pattern="user-pattern" attribute-name="CN"/>
         </client-certificate>
     </authentication>
-    <tls>
+    <tls verify-clients="true">
         <keystore file="keystore.pfx" key-alias="key1" password="password" key-password="key-password"/>
         <truststore file="truststore.pfx" password="password" check-certificate-status="true" />
     </tls>

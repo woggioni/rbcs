@@ -154,7 +154,7 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                 // HTTP handlers
                 pipeline.addLast("codec", HttpClientCodec())
                 pipeline.addLast("decompressor", HttpContentDecompressor())
-                pipeline.addLast("aggregator", HttpObjectAggregator(1048576))
+                pipeline.addLast("aggregator", HttpObjectAggregator(134217728))
                 pipeline.addLast("chunked", ChunkedWriteHandler())
             }
         }
@@ -203,9 +203,9 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                             ctx: ChannelHandlerContext,
                             response: FullHttpResponse
                         ) {
-                            responseFuture.complete(response)
                             pipeline.removeLast()
                             pool.release(channel)
+                            responseFuture.complete(response)
                         }
 
                         override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
@@ -217,7 +217,6 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                             ctx.close()
                             pipeline.removeLast()
                             pool.release(channel)
-                            super.exceptionCaught(ctx, cause)
                         }
                     })
                     // Prepare the HTTP request

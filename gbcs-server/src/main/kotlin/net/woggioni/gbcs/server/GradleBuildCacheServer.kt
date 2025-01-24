@@ -24,6 +24,7 @@ import io.netty.handler.ssl.SslContext
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.stream.ChunkedWriteHandler
+import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.AttributeKey
@@ -314,8 +315,17 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
             pipeline.addLast(object : ChannelInboundHandlerAdapter() {
                 override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
                     if (evt is IdleStateEvent) {
-                        log.debug {
-                            "Idle timeout reached on channel ${ch.id().asShortText()}, closing the connection"
+                        when(evt.state()) {
+                            IdleState.READER_IDLE -> log.debug {
+                                "Read timeout reached on channel ${ch.id().asShortText()}, closing the connection"
+                            }
+                            IdleState.WRITER_IDLE -> log.debug {
+                                "Write timeout reached on channel ${ch.id().asShortText()}, closing the connection"
+                            }
+                            IdleState.ALL_IDLE -> log.debug {
+                                "Idle timeout reached on channel ${ch.id().asShortText()}, closing the connection"
+                            }
+                            null -> throw IllegalStateException("This should never happen")
                         }
                         ctx.close()
                     }
