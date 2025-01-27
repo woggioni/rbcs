@@ -208,15 +208,15 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
                             .map { it as X509Certificate }
                             .toArray { size -> Array<X509Certificate?>(size) { null } }
                     SslContextBuilder.forServer(serverKey, *serverCert).apply {
-                        if (tls.isVerifyClients) {
-                            clientAuth(ClientAuth.OPTIONAL)
-                            tls.trustStore?.let { trustStore ->
-                                val ts = loadKeystore(trustStore.file, trustStore.password)
-                                trustManager(
-                                    ClientCertificateValidator.getTrustManager(ts, trustStore.isCheckCertificateStatus)
-                                )
-                            }
-                        }
+                        val clientAuth = tls.trustStore?.let { trustStore ->
+                            val ts = loadKeystore(trustStore.file, trustStore.password)
+                            trustManager(
+                                ClientCertificateValidator.getTrustManager(ts, trustStore.isCheckCertificateStatus)
+                            )
+                            if(trustStore.isRequireClientCertificate) ClientAuth.REQUIRE
+                            else ClientAuth.OPTIONAL
+                        } ?: ClientAuth.NONE
+                        clientAuth(clientAuth)
                     }.build()
                 }
             }

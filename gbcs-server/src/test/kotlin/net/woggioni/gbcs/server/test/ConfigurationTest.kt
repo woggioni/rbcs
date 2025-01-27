@@ -20,6 +20,7 @@ class ConfigurationTest {
             "classpath:net/woggioni/gbcs/server/test/valid/gbcs-default.xml",
             "classpath:net/woggioni/gbcs/server/test/valid/gbcs-memcached.xml",
             "classpath:net/woggioni/gbcs/server/test/valid/gbcs-tls.xml",
+            "classpath:net/woggioni/gbcs/server/test/valid/gbcs-memcached-tls.xml",
         ]
     )
     @ParameterizedTest

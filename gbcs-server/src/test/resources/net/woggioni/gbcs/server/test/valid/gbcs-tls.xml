@@ -60,8 +60,8 @@
             <user-extractor pattern="user-pattern" attribute-name="CN"/>
         </client-certificate>
     </authentication>
-    <tls verify-clients="true">
+    <tls>
         <keystore file="keystore.pfx" key-alias="key1" password="password" key-password="key-password"/>
-        <truststore file="truststore.pfx" password="password" check-certificate-status="true" />
+        <truststore file="truststore.pfx" password="password" check-certificate-status="true" require-client-certificate="true"/>
     </tls>
 </gbcs:server>

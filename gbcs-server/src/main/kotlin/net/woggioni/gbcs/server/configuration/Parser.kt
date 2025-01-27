@@ -142,10 +142,9 @@ object Parser {
                 }
 
                 "tls" -> {
-                    val verifyClients = child.renderAttribute("verify-clients")
-                        ?.let(String::toBoolean) ?: false
                     var keyStore: KeyStore? = null
                     var trustStore: TrustStore? = null
+
                     for (granChild in child.asIterable()) {
                         when (granChild.localName) {
                             "keystore" -> {
@@ -167,15 +166,19 @@ object Parser {
                                 val checkCertificateStatus = granChild.renderAttribute("check-certificate-status")
                                     ?.let(String::toBoolean)
                                     ?: false
+                                val requireClientCertificate = child.renderAttribute("require-client-certificate")
+                                    ?.let(String::toBoolean) ?: false
+
                                 trustStore = TrustStore(
                                     trustStoreFile,
                                     trustStorePassword,
-                                    checkCertificateStatus
+                                    checkCertificateStatus,
+                                    requireClientCertificate
                                 )
                             }
                         }
                     }
-                    tls = Tls(keyStore, trustStore, verifyClients)
+                    tls = Tls(keyStore, trustStore)
                 }
             }
         }

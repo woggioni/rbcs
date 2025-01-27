@@ -171,9 +171,8 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
             ),
             Configuration.Tls(
                 Configuration.KeyStore(this.serverKeyStoreFile, null, SERVER_CERTIFICATE_ENTRY, PASSWORD),
-                Configuration.TrustStore(this.trustStoreFile, null, false),
-                true
-            ),
+                Configuration.TrustStore(this.trustStoreFile, null, false, false),
+            )
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }

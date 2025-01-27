@@ -91,11 +91,14 @@ public class Configuration {
         boolean verifyClients;
     }
 
+    public enum ClientCertificate {
+        REQUIRED, OPTIONAL
+    }
+
     @Value
     public static class Tls {
         KeyStore keyStore;
         TrustStore trustStore;
-        boolean verifyClients;
     }
 
     @Value
@@ -111,6 +114,7 @@ public class Configuration {
         Path file;
         String password;
         boolean checkCertificateStatus;
+        boolean requireClientCertificate;
     }
 
     @Value

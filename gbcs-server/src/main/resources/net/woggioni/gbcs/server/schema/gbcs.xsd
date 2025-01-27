@@ -183,7 +183,6 @@
             <xs:element name="keystore" type="gbcs:keyStoreType" />
             <xs:element name="truststore" type="gbcs:trustStoreType" minOccurs="0"/>
         </xs:all>
-        <xs:attribute name="verify-clients" type="xs:boolean" use="optional" default="false"/>
     </xs:complexType>
 
     <xs:complexType name="keyStoreType">
@@ -197,6 +196,7 @@
         <xs:attribute name="file" type="xs:string" use="required"/>
         <xs:attribute name="password" type="xs:string"/>
         <xs:attribute name="check-certificate-status" type="xs:boolean"/>
+        <xs:attribute name="require-client-certificate" type="xs:boolean" use="optional" default="false"/>
     </xs:complexType>
 
     <xs:complexType name="propertiesType">
