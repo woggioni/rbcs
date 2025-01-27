@@ -213,9 +213,9 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
         }
     }
 
-    fun get(key: String): CompletableFuture<ByteArray?> {
+    fun get(key: String, eventListener : RequestEventListener? = null): CompletableFuture<ByteArray?> {
         return executeWithRetry {
-            sendRequest(profile.serverURI.resolve(key), HttpMethod.GET, null)
+            sendRequest(profile.serverURI.resolve(key), HttpMethod.GET, null, eventListener)
         }.thenApply {
             val status = it.status()
             if (it.status() == HttpResponseStatus.NOT_FOUND) {
@@ -234,9 +234,9 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
         }
     }
 
-    fun put(key: String, content: ByteArray): CompletableFuture<Unit> {
+    fun put(key: String, content: ByteArray, eventListener : RequestEventListener? = null): CompletableFuture<Unit> {
         return executeWithRetry {
-            sendRequest(profile.serverURI.resolve(key), HttpMethod.PUT, content)
+            sendRequest(profile.serverURI.resolve(key), HttpMethod.PUT, content, eventListener)
         }.thenApply {
             val status = it.status()
             if (it.status() != HttpResponseStatus.CREATED && it.status() != HttpResponseStatus.OK) {
@@ -245,7 +245,7 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
         }
     }
 
-    private fun sendRequest(uri: URI, method: HttpMethod, body: ByteArray?): CompletableFuture<FullHttpResponse> {
+    private fun sendRequest(uri: URI, method: HttpMethod, body: ByteArray?, eventListener : RequestEventListener?): CompletableFuture<FullHttpResponse> {
         val responseFuture = CompletableFuture<FullHttpResponse>()
         // Custom handler for processing responses
         pool.acquire().addListener(object : GenericFutureListener<NettyFuture<Channel>> {
@@ -261,6 +261,7 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                             pipeline.removeLast()
                             pool.release(channel)
                             responseFuture.complete(response)
+                            eventListener?.responseReceived(response)
                         }
 
                         override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
@@ -306,7 +307,11 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
 
                     // Set headers
                     // Send the request
-                    channel.writeAndFlush(request)
+                    channel.writeAndFlush(request).addListener {
+                        if(it.isSuccess) {
+                            eventListener?.requestSent(request)
+                        }
+                    }
                 } else {
                     responseFuture.completeExceptionally(channelFuture.cause())
                 }

@@ -7,6 +7,7 @@ module net.woggioni.gbcs.cli {
     requires kotlin.stdlib;
     requires net.woggioni.jwo;
     requires net.woggioni.gbcs.api;
+    requires io.netty.codec.http;
 
     exports net.woggioni.gbcs.cli.impl.converters to info.picocli;
     opens net.woggioni.gbcs.cli.impl.commands to info.picocli;
