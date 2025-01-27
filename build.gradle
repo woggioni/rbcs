@@ -46,6 +46,12 @@ allprojects { subproject ->
             }
         }
 
+        dependencies {
+            testImplementation catalog.junit.jupiter.api
+            testImplementation catalog.junit.jupiter.params
+            testRuntimeOnly catalog.junit.jupiter.engine
+        }
+
         test {
             useJUnitPlatform()
         }

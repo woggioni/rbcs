@@ -18,9 +18,6 @@ dependencies {
 
     testImplementation catalog.bcprov.jdk18on
     testImplementation catalog.bcpkix.jdk18on
-    testImplementation catalog.junit.jupiter.api
-    testImplementation catalog.junit.jupiter.params
-    testRuntimeOnly catalog.junit.jupiter.engine
 
     testRuntimeOnly project(":gbcs-server-memcached")
 }

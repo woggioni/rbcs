@@ -10,6 +10,8 @@ dependencies {
     implementation catalog.slf4j.api
     implementation catalog.netty.buffer
     implementation catalog.netty.codec.http
+
+    testRuntimeOnly catalog.logback.classic
 }
 
 

@@ -17,16 +17,18 @@ object Parser {
 
     fun parse(document: Document): GradleBuildCacheClient.Configuration {
         val root = document.documentElement
-
         val profiles = mutableMapOf<String, GradleBuildCacheClient.Configuration.Profile>()
 
         for (child in root.asIterable()) {
             val tagName = child.localName
             when (tagName) {
                 "profile" -> {
-                    val name = child.renderAttribute("name") ?: throw ConfigurationException("name attribute is required")
-                    val uri = child.renderAttribute("base-url")?.let(::URI) ?: throw ConfigurationException("base-url attribute is required")
+                    val name =
+                        child.renderAttribute("name") ?: throw ConfigurationException("name attribute is required")
+                    val uri = child.renderAttribute("base-url")?.let(::URI)
+                        ?: throw ConfigurationException("base-url attribute is required")
                     var authentication: GradleBuildCacheClient.Configuration.Authentication? = null
+                    var retryPolicy: GradleBuildCacheClient.Configuration.RetryPolicy? = null
                     for (gchild in child.asIterable()) {
                         when (gchild.localName) {
                             "tls-client-auth" -> {
@@ -47,14 +49,42 @@ object Parser {
                                     .toList()
                                     .toTypedArray()
                                 authentication =
-                                    GradleBuildCacheClient.Configuration.Authentication.TlsClientAuthenticationCredentials(key, certChain)
+                                    GradleBuildCacheClient.Configuration.Authentication.TlsClientAuthenticationCredentials(
+                                        key,
+                                        certChain
+                                    )
                             }
 
                             "basic-auth" -> {
-                                val username = gchild.renderAttribute("user") ?: throw ConfigurationException("username attribute is required")
-                                val password = gchild.renderAttribute("password") ?: throw ConfigurationException("password attribute is required")
+                                val username = gchild.renderAttribute("user")
+                                    ?: throw ConfigurationException("username attribute is required")
+                                val password = gchild.renderAttribute("password")
+                                    ?: throw ConfigurationException("password attribute is required")
                                 authentication =
-                                    GradleBuildCacheClient.Configuration.Authentication.BasicAuthenticationCredentials(username, password)
+                                    GradleBuildCacheClient.Configuration.Authentication.BasicAuthenticationCredentials(
+                                        username,
+                                        password
+                                    )
+                            }
+
+                            "retry-policy" -> {
+                                val maxAttempts =
+                                    gchild.renderAttribute("max-attempts")
+                                        ?.let(String::toInt)
+                                        ?: throw ConfigurationException("max-attempts attribute is required")
+                                val initialDelay =
+                                    gchild.renderAttribute("initial-delay")
+                                        ?.let(Duration::parse)
+                                        ?: Duration.ofSeconds(1)
+                                val exp =
+                                    gchild.renderAttribute("exp")
+                                        ?.let(String::toDouble)
+                                        ?: 2.0f
+                                retryPolicy = GradleBuildCacheClient.Configuration.RetryPolicy(
+                                    maxAttempts,
+                                    initialDelay.toMillis(),
+                                    exp.toDouble()
+                                )
                             }
                         }
                     }
@@ -63,7 +93,13 @@ object Parser {
                         ?: 50
                     val connectionTimeout = child.renderAttribute("connection-timeout")
                         ?.let(Duration::parse)
-                    profiles[name] = GradleBuildCacheClient.Configuration.Profile(uri, authentication, connectionTimeout, maxConnections)
+                    profiles[name] = GradleBuildCacheClient.Configuration.Profile(
+                        uri,
+                        authentication,
+                        connectionTimeout,
+                        maxConnections,
+                        retryPolicy
+                    )
                 }
             }
         }

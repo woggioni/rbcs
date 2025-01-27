@@ -13,11 +13,14 @@
     </xs:complexType>
 
     <xs:complexType name="profileType">
-        <xs:choice>
-            <xs:element name="no-auth" type="gbcs-client:noAuthType"/>
-            <xs:element name="basic-auth" type="gbcs-client:basicAuthType"/>
-            <xs:element name="tls-client-auth" type="gbcs-client:tlsClientAuthType"/>
-        </xs:choice>
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="no-auth" type="gbcs-client:noAuthType"/>
+                <xs:element name="basic-auth" type="gbcs-client:basicAuthType"/>
+                <xs:element name="tls-client-auth" type="gbcs-client:tlsClientAuthType"/>
+            </xs:choice>
+            <xs:element name="retry-policy" type="gbcs-client:retryType" minOccurs="0"/>
+        </xs:sequence>
         <xs:attribute name="name" type="xs:token" use="required"/>
         <xs:attribute name="base-url" type="xs:anyURI" use="required"/>
         <xs:attribute name="max-connections" type="xs:positiveInteger" default="50"/>
@@ -36,6 +39,12 @@
         <xs:attribute name="key-store-password" type="xs:string" use="required"/>
         <xs:attribute name="key-alias" type="xs:token" use="required"/>
         <xs:attribute name="key-password" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="retryType">
+        <xs:attribute name="max-attempts" type="xs:positiveInteger" use="required"/>
+        <xs:attribute name="initial-delay" type="xs:duration" default="PT1S"/>
+        <xs:attribute name="exp" type="xs:double" default="2.0"/>
     </xs:complexType>
 
 </xs:schema>

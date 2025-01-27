@@ -66,11 +66,18 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
             data class BasicAuthenticationCredentials(val username: String, val password: String) : Authentication()
         }
 
+        class RetryPolicy(
+            val maxAttempts: Int,
+            val initialDelayMillis: Long,
+            val exp: Double
+        )
+
         data class Profile(
             val serverURI: URI,
             val authentication: Authentication?,
-            val connectionTimeout : Duration?,
-            val maxConnections : Int
+            val connectionTimeout: Duration?,
+            val maxConnections: Int,
+            val retryPolicy: RetryPolicy?,
         )
 
         companion object {
@@ -161,28 +168,76 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
         pool = FixedChannelPool(bootstrap, channelPoolHandler, profile.maxConnections)
     }
 
-    fun get(key: String): CompletableFuture<ByteArray?> {
-        return sendRequest(profile.serverURI.resolve(key), HttpMethod.GET, null)
-            .thenApply {
-                val status = it.status()
-                if (it.status() == HttpResponseStatus.NOT_FOUND) {
-                    null
-                } else if (it.status() != HttpResponseStatus.OK) {
-                    throw HttpException(status)
-                } else {
-                    it.content()
-                }
-            }.thenApply { maybeByteBuf ->
-                maybeByteBuf?.let {
-                    val result = ByteArray(it.readableBytes())
-                    it.getBytes(0, result)
-                    result
+    private fun executeWithRetry(operation: () -> CompletableFuture<FullHttpResponse>): CompletableFuture<FullHttpResponse> {
+        val retryPolicy = profile.retryPolicy
+        return if (retryPolicy != null) {
+            val outcomeHandler = OutcomeHandler<FullHttpResponse> { outcome ->
+                when (outcome) {
+                    is OperationOutcome.Success -> {
+                        val response = outcome.result
+                        val status = response.status()
+                        when (status) {
+                            HttpResponseStatus.TOO_MANY_REQUESTS -> {
+                                val retryAfter = response.headers()[HttpHeaderNames.RETRY_AFTER]?.let { headerValue ->
+                                    try {
+                                        headerValue.toLong() * 1000
+                                    } catch (nfe: NumberFormatException) {
+                                        null
+                                    }
+                                }
+                                OutcomeHandlerResult.Retry(retryAfter)
+                            }
+
+                            HttpResponseStatus.INTERNAL_SERVER_ERROR, HttpResponseStatus.SERVICE_UNAVAILABLE ->
+                                OutcomeHandlerResult.Retry()
+
+                            else -> OutcomeHandlerResult.DoNotRetry()
+                        }
+                    }
+
+                    is OperationOutcome.Failure -> {
+                        OutcomeHandlerResult.Retry()
+                    }
                 }
             }
+            executeWithRetry(
+                group,
+                retryPolicy.maxAttempts,
+                retryPolicy.initialDelayMillis.toDouble(),
+                retryPolicy.exp,
+                outcomeHandler,
+                operation
+            )
+        } else {
+            operation()
+        }
+    }
+
+    fun get(key: String): CompletableFuture<ByteArray?> {
+        return executeWithRetry {
+            sendRequest(profile.serverURI.resolve(key), HttpMethod.GET, null)
+        }.thenApply {
+            val status = it.status()
+            if (it.status() == HttpResponseStatus.NOT_FOUND) {
+                null
+            } else if (it.status() != HttpResponseStatus.OK) {
+                throw HttpException(status)
+            } else {
+                it.content()
+            }
+        }.thenApply { maybeByteBuf ->
+            maybeByteBuf?.let {
+                val result = ByteArray(it.readableBytes())
+                it.getBytes(0, result)
+                result
+            }
+        }
     }
 
     fun put(key: String, content: ByteArray): CompletableFuture<Unit> {
-        return sendRequest(profile.serverURI.resolve(key), HttpMethod.PUT, content).thenApply {
+        return executeWithRetry {
+            sendRequest(profile.serverURI.resolve(key), HttpMethod.PUT, content)
+        }.thenApply {
             val status = it.status()
             if (it.status() != HttpResponseStatus.CREATED && it.status() != HttpResponseStatus.OK) {
                 throw HttpException(status)
