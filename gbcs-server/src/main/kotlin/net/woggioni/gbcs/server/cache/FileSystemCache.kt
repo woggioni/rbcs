@@ -1,8 +1,8 @@
 package net.woggioni.gbcs.server.cache
 
 import net.woggioni.gbcs.api.Cache
+import net.woggioni.gbcs.common.GBCS.digestString
 import net.woggioni.gbcs.common.contextLogger
-import net.woggioni.gbcs.server.cache.CacheUtils.digestString
 import net.woggioni.jwo.LockFile
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
