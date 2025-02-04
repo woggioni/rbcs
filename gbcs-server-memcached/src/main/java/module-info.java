@@ -7,6 +7,13 @@ module net.woggioni.gbcs.server.memcached {
     requires net.woggioni.jwo;
     requires java.xml;
     requires kotlin.stdlib;
+    requires io.netty.common;
+    requires io.netty.handler;
+    requires io.netty.codec.memcache;
+    requires io.netty.transport;
+    requires org.slf4j;
+    requires io.netty.buffer;
+    requires io.netty.codec;
 
     provides CacheProvider with net.woggioni.gbcs.server.memcached.MemcachedCacheProvider;
 

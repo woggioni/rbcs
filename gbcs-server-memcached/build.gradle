@@ -26,13 +26,24 @@ configurations {
         canBeResolved = true
         visible = true
     }
+
+    testImplementation {
+        extendsFrom compileOnly
+    }
 }
 
 dependencies {
     compileOnly project(':gbcs-common')
     compileOnly project(':gbcs-api')
     compileOnly catalog.jwo
+    compileOnly catalog.slf4j.api
     implementation catalog.xmemcached
+    implementation catalog.netty.codec.memcache
+    implementation catalog.netty.common
+    implementation group: 'io.netty', name: 'netty-handler', version: catalog.versions.netty.get()
+
+    testRuntimeOnly catalog.logback.classic
+
 }
 
 Provider<Tar> bundleTask = tasks.register("bundle", Tar) {
@@ -40,6 +51,11 @@ Provider<Tar> bundleTask = tasks.register("bundle", Tar) {
     from(configurations.bundle)
     group = BasePlugin.BUILD_GROUP
 }
+
+tasks.named(JavaPlugin.TEST_TASK_NAME, Test) {
+    systemProperty("io.netty.leakDetectionLevel", "PARANOID")
+}
+
 
 tasks.named(BasePlugin.ASSEMBLE_TASK_NAME) {
     dependsOn(bundleTask)

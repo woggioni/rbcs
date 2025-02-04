@@ -51,7 +51,7 @@ class MemcachedCacheProvider : CacheProvider<MemcachedCacheConfiguration> {
         }
 
         return MemcachedCacheConfiguration(
-            servers,
+            servers.map { MemcachedCacheConfiguration.Server(it, null, null, 1) },
             maxAge,
             maxSize,
             digestAlgorithm,
@@ -67,8 +67,8 @@ class MemcachedCacheProvider : CacheProvider<MemcachedCacheConfiguration> {
             attr("xs:type", "${xmlNamespacePrefix}:$xmlType", GBCS.XML_SCHEMA_NAMESPACE_URI)
             for (server in servers) {
                 node("server") {
-                    attr("host", server.host)
-                    attr("port", server.port.toString())
+                    attr("host", server.endpoint.host)
+                    attr("port", server.endpoint.port.toString())
                 }
             }
             attr("max-age", maxAge.toString())
