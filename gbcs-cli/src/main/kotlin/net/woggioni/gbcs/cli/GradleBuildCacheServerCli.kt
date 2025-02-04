@@ -1,7 +1,5 @@
 package net.woggioni.gbcs.cli
 
-import net.woggioni.gbcs.common.GbcsUrlStreamHandlerFactory
-import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.cli.impl.AbstractVersionProvider
 import net.woggioni.gbcs.cli.impl.GbcsCommand
 import net.woggioni.gbcs.cli.impl.commands.BenchmarkCommand
@@ -10,10 +8,11 @@ import net.woggioni.gbcs.cli.impl.commands.GetCommand
 import net.woggioni.gbcs.cli.impl.commands.PasswordHashCommand
 import net.woggioni.gbcs.cli.impl.commands.PutCommand
 import net.woggioni.gbcs.cli.impl.commands.ServerCommand
+import net.woggioni.gbcs.common.GbcsUrlStreamHandlerFactory
+import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.jwo.Application
 import picocli.CommandLine
 import picocli.CommandLine.Model.CommandSpec
-import java.net.URI
 
 
 @CommandLine.Command(

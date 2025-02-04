@@ -1,9 +1,9 @@
 package net.woggioni.gbcs.client.impl
 
 import net.woggioni.gbcs.api.exception.ConfigurationException
+import net.woggioni.gbcs.client.GradleBuildCacheClient
 import net.woggioni.gbcs.common.Xml.Companion.asIterable
 import net.woggioni.gbcs.common.Xml.Companion.renderAttribute
-import net.woggioni.gbcs.client.GradleBuildCacheClient
 import org.w3c.dom.Document
 import java.net.URI
 import java.nio.file.Files

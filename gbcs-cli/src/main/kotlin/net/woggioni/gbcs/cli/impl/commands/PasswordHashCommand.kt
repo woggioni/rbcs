@@ -1,8 +1,8 @@
 package net.woggioni.gbcs.cli.impl.commands
 
-import net.woggioni.gbcs.common.PasswordSecurity.hashPassword
 import net.woggioni.gbcs.cli.impl.GbcsCommand
 import net.woggioni.gbcs.cli.impl.converters.OutputStreamConverter
+import net.woggioni.gbcs.common.PasswordSecurity.hashPassword
 import net.woggioni.jwo.UncloseableOutputStream
 import picocli.CommandLine
 import java.io.OutputStream

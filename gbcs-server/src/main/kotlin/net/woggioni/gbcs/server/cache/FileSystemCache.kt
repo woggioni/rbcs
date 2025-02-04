@@ -1,8 +1,11 @@
 package net.woggioni.gbcs.server.cache
 
+import io.netty.buffer.ByteBuf
 import net.woggioni.gbcs.api.Cache
+import net.woggioni.gbcs.common.ByteBufInputStream
 import net.woggioni.gbcs.common.GBCS.digestString
 import net.woggioni.gbcs.common.contextLogger
+import net.woggioni.jwo.JWO
 import net.woggioni.jwo.LockFile
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
@@ -14,6 +17,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
@@ -28,7 +32,10 @@ class FileSystemCache(
     val compressionLevel: Int
 ) : Cache {
 
-    private val log = contextLogger()
+    private companion object {
+        @JvmStatic
+        private val log = contextLogger()
+    }
 
     init {
         Files.createDirectories(root)
@@ -62,10 +69,12 @@ class FileSystemCache(
                 }
             }.also {
                 gc()
+            }.let {
+                CompletableFuture.completedFuture(it)
             }
     }
 
-    override fun put(key: String, content: ByteArray) {
+    override fun put(key: String, content: ByteBuf): CompletableFuture<Void> {
         (digestAlgorithm
             ?.let(MessageDigest::getInstance)
             ?.let { md ->
@@ -82,7 +91,7 @@ class FileSystemCache(
                         it
                     }
                 }.use {
-                    it.write(content)
+                    JWO.copy(ByteBufInputStream(content), it)
                 }
                 Files.move(tmpFile, file, StandardCopyOption.ATOMIC_MOVE)
             } catch (t: Throwable) {
@@ -92,6 +101,7 @@ class FileSystemCache(
         }.also {
             gc()
         }
+        return CompletableFuture.completedFuture(null)
     }
 
     private fun gc() {

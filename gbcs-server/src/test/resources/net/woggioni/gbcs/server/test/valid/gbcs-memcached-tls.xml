@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <gbcs:server xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:gbcs="urn:net.woggioni.gbcs.server"
-             xmlns:gbcs-memcached="urn:net.woggioni.gbcs.server.memcached"
-             xs:schemaLocation="urn:net.woggioni.gbcs.server.memcached jpms://net.woggioni.gbcs.server.memcached/net/woggioni/gbcs/server/memcached/schema/gbcs-memcached.xsd urn:net.woggioni.gbcs.server jpms://net.woggioni.gbcs.server/net/woggioni/gbcs/server/schema/gbcs.xsd"
+             xmlns:gbcs-memcache="urn:net.woggioni.gbcs.server.memcache"
+             xs:schemaLocation="urn:net.woggioni.gbcs.server.memcache jpms://net.woggioni.gbcs.server.memcache/net/woggioni/gbcs/server/memcache/schema/gbcs-memcache.xsd urn:net.woggioni.gbcs.server jpms://net.woggioni.gbcs.server/net/woggioni/gbcs/server/schema/gbcs.xsd"
 >
     <bind host="0.0.0.0" port="8443" incoming-connections-backlog-size="4096"/>
     <connection
@@ -13,7 +13,7 @@
             read-timeout="PT5M"
             write-timeout="PT5M"/>
     <event-executor use-virtual-threads="true"/>
-    <cache xs:type="gbcs-memcached:memcachedCacheType" max-age="P7D" max-size="16777216" compression-mode="zip">
+    <cache xs:type="gbcs-memcache:memcacheCacheType" max-age="P7D" max-size="16777216" compression-mode="deflate">
         <server host="memcached" port="11211"/>
     </cache>
     <authorization>

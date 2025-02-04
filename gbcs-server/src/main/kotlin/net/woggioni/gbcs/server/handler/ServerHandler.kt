@@ -17,7 +17,6 @@ import io.netty.handler.codec.http.HttpUtil
 import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.stream.ChunkedNioStream
 import net.woggioni.gbcs.api.Cache
-import net.woggioni.gbcs.api.exception.CacheException
 import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.server.debug
 import net.woggioni.gbcs.server.warn
@@ -43,49 +42,41 @@ class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
                 return
             }
             if (serverPrefix == prefix) {
-                try {
-                    cache.get(key)
-                } catch(ex : Throwable) {
-                    throw CacheException("Error accessing the cache backend", ex)
-                }?.let { channel ->
-                    log.debug(ctx) {
-                        "Cache hit for key '$key'"
-                    }
-                    val response = DefaultHttpResponse(msg.protocolVersion(), HttpResponseStatus.OK)
-                    response.headers()[HttpHeaderNames.CONTENT_TYPE] = HttpHeaderValues.APPLICATION_OCTET_STREAM
-                    if (!keepAlive) {
-                        response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
-                        response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.IDENTITY)
-                    } else {
-                        response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
-                        response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
-                    }
-                    ctx.write(response)
-                    when (channel) {
-                        is FileChannel -> {
-                            if (keepAlive) {
-                                ctx.write(DefaultFileRegion(channel, 0, channel.size()))
-                                ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT.retainedDuplicate())
-                            } else {
-                                ctx.writeAndFlush(DefaultFileRegion(channel, 0, channel.size()))
-                                    .addListener(ChannelFutureListener.CLOSE)
-                            }
+                cache.get(key).thenApply { channel ->
+                    if(channel != null) {
+                        log.debug(ctx) {
+                            "Cache hit for key '$key'"
                         }
-                        else -> {
-                            ctx.write(ChunkedNioStream(channel)).addListener { evt ->
-                                channel.close()
-                            }
+                        val response = DefaultHttpResponse(msg.protocolVersion(), HttpResponseStatus.OK)
+                        response.headers()[HttpHeaderNames.CONTENT_TYPE] = HttpHeaderValues.APPLICATION_OCTET_STREAM
+                        if (!keepAlive) {
+                            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE)
+                            response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.IDENTITY)
+                        } else {
+                            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
+                            response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
+                        }
+                        ctx.write(response)
+                        val content : Any = when (channel) {
+                            is FileChannel -> DefaultFileRegion(channel, 0, channel.size())
+                            else -> ChunkedNioStream(channel)
+                        }
+                        if (keepAlive) {
+                            ctx.write(content)
                             ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT.retainedDuplicate())
+                        } else {
+                            ctx.writeAndFlush(content)
+                                .addListener(ChannelFutureListener.CLOSE)
                         }
+                    } else {
+                        log.debug(ctx) {
+                            "Cache miss for key '$key'"
+                        }
+                        val response = DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.NOT_FOUND)
+                        response.headers()[HttpHeaderNames.CONTENT_LENGTH] = 0
+                        ctx.writeAndFlush(response)
                     }
-                } ?: let {
-                    log.debug(ctx) {
-                        "Cache miss for key '$key'"
-                    }
-                    val response = DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.NOT_FOUND)
-                    response.headers()[HttpHeaderNames.CONTENT_LENGTH] = 0
-                    ctx.writeAndFlush(response)
-                }
+                }.whenComplete { _, ex -> ex?.let(ctx::fireExceptionCaught) }
             } else {
                 log.warn(ctx) {
                     "Got request for unhandled path '${msg.uri()}'"
@@ -103,26 +94,16 @@ class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
                 log.debug(ctx) {
                     "Added value for key '$key' to build cache"
                 }
-                val bodyBytes = msg.content().run {
-                    if (isDirect) {
-                        ByteArray(readableBytes()).also {
-                            readBytes(it)
-                        }
-                    } else {
-                        array()
-                    }
+                cache.put(key, msg.content().retain()).thenRun {
+                    val response = DefaultFullHttpResponse(
+                        msg.protocolVersion(), HttpResponseStatus.CREATED,
+                        Unpooled.copiedBuffer(key.toByteArray())
+                    )
+                    response.headers()[HttpHeaderNames.CONTENT_LENGTH] = response.content().readableBytes()
+                    ctx.writeAndFlush(response)
+                }.whenComplete { _, ex ->
+                    ctx.fireExceptionCaught(ex)
                 }
-                try {
-                    cache.put(key, bodyBytes)
-                } catch(ex : Throwable) {
-                    throw CacheException("Error accessing the cache backend", ex)
-                }
-                val response = DefaultFullHttpResponse(
-                    msg.protocolVersion(), HttpResponseStatus.CREATED,
-                    Unpooled.copiedBuffer(key.toByteArray())
-                )
-                response.headers()[HttpHeaderNames.CONTENT_LENGTH] = response.content().readableBytes()
-                ctx.writeAndFlush(response)
             } else {
                 log.warn(ctx) {
                     "Got request for unhandled path '${msg.uri()}'"

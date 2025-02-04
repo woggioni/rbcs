@@ -400,9 +400,9 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
 
     fun run(): ServerHandle {
         // Create the multithreaded event loops for the server
-        val bossGroup = NioEventLoopGroup(0)
+        val bossGroup = NioEventLoopGroup(1)
         val serverSocketChannel = NioServerSocketChannel::class.java
-        val workerGroup = bossGroup
+        val workerGroup = NioEventLoopGroup(0)
         val eventExecutorGroup = run {
             val threadFactory = if (cfg.eventExecutor.isUseVirtualThreads) {
                 Thread.ofVirtual().factory()

@@ -32,7 +32,8 @@
                 <roles>
                     <reader/>
                 </roles>
-                <quota calls="10" period="PT1S"/>
+                <user-quota calls="30" period="PT1M"/>
+                <group-quota calls="10" period="PT1S"/>
             </group>
             <group name="writers">
                 <users>
@@ -50,7 +51,7 @@
                     <reader/>
                     <writer/>
                 </roles>
-                <quota calls="1000" period="P1D"/>
+                <group-quota calls="1000" period="P1D"/>
             </group>
         </groups>
     </authorization>

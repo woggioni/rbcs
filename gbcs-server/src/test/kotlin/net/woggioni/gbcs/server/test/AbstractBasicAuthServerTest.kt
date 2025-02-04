@@ -24,8 +24,8 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
     protected val random = Random(101325)
     protected val keyValuePair = newEntry(random)
     protected val serverPath = "gbcs"
-    protected val readersGroup = Configuration.Group("readers", setOf(Role.Reader), null)
-    protected val writersGroup = Configuration.Group("writers", setOf(Role.Writer), null)
+    protected val readersGroup = Configuration.Group("readers", setOf(Role.Reader), null, null)
+    protected val writersGroup = Configuration.Group("writers", setOf(Role.Writer), null, null)
 
     abstract protected val users : List<Configuration.User>
 

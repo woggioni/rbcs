@@ -1,13 +1,17 @@
 package net.woggioni.gbcs.server.cache
 
+import io.netty.buffer.ByteBuf
+import io.netty.buffer.Unpooled
 import net.woggioni.gbcs.api.Cache
+import net.woggioni.gbcs.common.ByteBufInputStream
 import net.woggioni.gbcs.common.GBCS.digestString
-import java.io.ByteArrayInputStream
+import net.woggioni.jwo.JWO
 import java.io.ByteArrayOutputStream
 import java.nio.channels.Channels
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.PriorityBlockingQueue
 import java.util.zip.Deflater
@@ -22,9 +26,9 @@ class InMemoryCache(
     val compressionLevel: Int
 ) : Cache {
 
-    private val map = ConcurrentHashMap<String, ByteArray>()
+    private val map = ConcurrentHashMap<String, ByteBuf>()
     
-    private class RemovalQueueElement(val key: String, val value : ByteArray, val expiry : Instant) : Comparable<RemovalQueueElement> {
+    private class RemovalQueueElement(val key: String, val value : ByteBuf, val expiry : Instant) : Comparable<RemovalQueueElement> {
         override fun compareTo(other: RemovalQueueElement) = expiry.compareTo(other.expiry)
     }
 
@@ -62,14 +66,16 @@ class InMemoryCache(
                     ?.let { value ->
                     if (compressionEnabled) {
                         val inflater = Inflater()
-                        Channels.newChannel(InflaterInputStream(ByteArrayInputStream(value), inflater))
+                        Channels.newChannel(InflaterInputStream(ByteBufInputStream(value), inflater))
                     } else {
-                        Channels.newChannel(ByteArrayInputStream(value))
+                        Channels.newChannel(ByteBufInputStream(value))
                     }
                 }
+            }.let {
+                CompletableFuture.completedFuture(it)
             }
 
-    override fun put(key: String, content: ByteArray) {
+    override fun put(key: String, content: ByteBuf) =
         (digestAlgorithm
             ?.let(MessageDigest::getInstance)
             ?.let { md ->
@@ -79,14 +85,15 @@ class InMemoryCache(
                 val deflater = Deflater(compressionLevel)
                 val baos = ByteArrayOutputStream()
                 DeflaterOutputStream(baos, deflater).use { stream ->
-                    stream.write(content)
+                    JWO.copy(ByteBufInputStream(content), stream)
                 }
-                baos.toByteArray()
+                Unpooled.wrappedBuffer(baos.toByteArray())
             } else {
                 content
             }
             map[digest] = value
             removalQueue.put(RemovalQueueElement(digest, value, Instant.now().plus(maxAge)))
+        }.let {
+            CompletableFuture.completedFuture<Void>(null)
         }
-    }
 }

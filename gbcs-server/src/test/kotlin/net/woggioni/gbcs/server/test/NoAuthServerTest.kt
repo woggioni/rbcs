@@ -3,7 +3,6 @@ package net.woggioni.gbcs.server.test
 import io.netty.handler.codec.http.HttpResponseStatus
 import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.common.Xml
-import net.woggioni.gbcs.server.cache.FileSystemCacheConfiguration
 import net.woggioni.gbcs.server.cache.InMemoryCacheConfiguration
 import net.woggioni.gbcs.server.configuration.Serializer
 import net.woggioni.gbcs.server.test.utils.NetworkUtils

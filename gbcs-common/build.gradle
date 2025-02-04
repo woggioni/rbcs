@@ -9,6 +9,7 @@ dependencies {
     implementation project(':gbcs-api')
     implementation catalog.slf4j.api
     implementation catalog.jwo
+    implementation catalog.netty.buffer
 }
 
 publishing {

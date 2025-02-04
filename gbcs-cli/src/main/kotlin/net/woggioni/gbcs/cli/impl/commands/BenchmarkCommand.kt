@@ -33,6 +33,13 @@ class BenchmarkCommand : GbcsCommand() {
     )
     private var numberOfEntries = 1000
 
+    @CommandLine.Option(
+        names = ["-s", "--size"],
+        description = ["Size of a cache value in bytes"],
+        paramLabel = "SIZE"
+    )
+    private var size = 0x1000
+
     override fun run() {
         val clientCommand = spec.parent().userObject() as ClientCommand
         val profile = clientCommand.profileName.let { profileName ->
@@ -46,7 +53,7 @@ class BenchmarkCommand : GbcsCommand() {
             while (true) {
                 val key = JWO.bytesToHex(random.nextBytes(16))
                 val content = random.nextInt().toByte()
-                val value = ByteArray(0x1000, { _ -> content })
+                val value = ByteArray(size, { _ -> content })
                 yield(key to value)
             }
         }

@@ -42,7 +42,7 @@ class ThrottlingHandler(cfg: Configuration) :
         val buckets = mutableListOf<Bucket>()
         val user = ctx.channel().attr(GradleBuildCacheServer.userAttribute).get()
         if (user != null) {
-            bucketManager.getBucketByUser(user)?.let(buckets::add)
+            bucketManager.getBucketByUser(user)?.let(buckets::addAll)
         }
         val groups = ctx.channel().attr(GradleBuildCacheServer.groupAttribute).get() ?: emptySet()
         if (groups.isNotEmpty()) {

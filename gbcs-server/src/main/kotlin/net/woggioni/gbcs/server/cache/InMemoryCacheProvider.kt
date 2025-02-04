@@ -6,7 +6,6 @@ import net.woggioni.gbcs.common.Xml
 import net.woggioni.gbcs.common.Xml.Companion.renderAttribute
 import org.w3c.dom.Document
 import org.w3c.dom.Element
-import java.nio.file.Path
 import java.time.Duration
 import java.util.zip.Deflater
 

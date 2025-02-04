@@ -27,7 +27,7 @@ rootProject.name = 'gbcs'
 
 include 'gbcs-api'
 include 'gbcs-common'
-include 'gbcs-server-memcached'
+include 'gbcs-server-memcache'
 include 'gbcs-cli'
 include 'docker'
 include 'gbcs-client'

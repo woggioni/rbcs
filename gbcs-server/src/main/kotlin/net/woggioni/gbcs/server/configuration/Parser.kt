@@ -265,7 +265,8 @@ object Parser {
         }.map { el ->
             val groupName = el.renderAttribute("name") ?: throw ConfigurationException("Group name is required")
             var roles = emptySet<Role>()
-            var quota: Configuration.Quota? = null
+            var userQuota: Configuration.Quota? = null
+            var groupQuota: Configuration.Quota? = null
             for (child in el.asIterable()) {
                 when (child.localName) {
                     "users" -> {
@@ -279,12 +280,15 @@ object Parser {
                     "roles" -> {
                         roles = parseRoles(child)
                     }
-                    "quota" -> {
-                        quota = parseQuota(child)
+                    "group-quota" -> {
+                        userQuota = parseQuota(child)
+                    }
+                    "user-quota" -> {
+                        groupQuota = parseQuota(child)
                     }
                 }
             }
-            groupName to Group(groupName, roles, quota)
+            groupName to Group(groupName, roles, userQuota, groupQuota)
         }.toMap()
         val users = knownUsersMap.map { (name, user) ->
             name to User(name, user.password, userGroups[name]?.mapNotNull { groups[it] }?.toSet() ?: emptySet(), user.quota)

@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 
 class BucketManager private constructor(
-    private val bucketsByUser: Map<Configuration.User, Bucket> = HashMap(),
+    private val bucketsByUser: Map<Configuration.User, List<Bucket>> = HashMap(),
     private val bucketsByGroup: Map<Configuration.Group, Bucket> = HashMap(),
     loader: Function<InetSocketAddress, Bucket>?
 ) {
@@ -43,22 +43,27 @@ class BucketManager private constructor(
 
     companion object {
         fun from(cfg : Configuration) : BucketManager {
-            val bucketsByUser = cfg.users.values.asSequence().filter {
-                it.quota != null
-            }.map { user ->
-                val quota = user.quota
-                val bucket = Bucket.local(
-                    quota.maxAvailableCalls,
-                    quota.calls,
-                    quota.period,
-                    quota.initialAvailableCalls
-                )
-                user to bucket
+            val bucketsByUser = cfg.users.values.asSequence().map { user ->
+                val buckets = (
+                        user.quota
+                            ?.let { quota ->
+                                sequenceOf(quota)
+                            } ?: user.groups.asSequence()
+                                .mapNotNull(Configuration.Group::getUserQuota)
+                ).map { quota ->
+                    Bucket.local(
+                        quota.maxAvailableCalls,
+                        quota.calls,
+                        quota.period,
+                        quota.initialAvailableCalls
+                    )
+                }.toList()
+                user to buckets
             }.toMap()
             val bucketsByGroup = cfg.groups.values.asSequence().filter {
-                it.quota != null
+                it.groupQuota != null
             }.map { group ->
-                val quota = group.quota
+                val quota = group.groupQuota
                 val bucket = Bucket.local(
                     quota.maxAvailableCalls,
                     quota.calls,

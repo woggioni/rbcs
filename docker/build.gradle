@@ -19,7 +19,7 @@ configurations {
 
 dependencies {
     docker project(path: ':gbcs-cli', configuration: 'release')
-    docker project(path: ':gbcs-server-memcached', configuration: 'release')
+    docker project(path: ':gbcs-server-memcache', configuration: 'release')
 }
 
 Provider<Task> cleanTaskProvider = tasks.named(BasePlugin.CLEAN_TASK_NAME) {}
@@ -46,22 +46,22 @@ Provider<DockerTagImage> dockerTag = tasks.register('dockerTagImage', DockerTagI
     tag = version
 }
 
-Provider<DockerTagImage> dockerTagMemcached = tasks.register('dockerTagMemcachedImage', DockerTagImage) {
+Provider<DockerTagImage> dockerTagMemcache = tasks.register('dockerTagMemcacheImage', DockerTagImage) {
     group = 'docker'
     repository = 'gitea.woggioni.net/woggioni/gbcs'
-    imageId = 'gitea.woggioni.net/woggioni/gbcs:memcached'
-    tag = "${version}-memcached"
+    imageId = 'gitea.woggioni.net/woggioni/gbcs:memcache'
+    tag = "${version}-memcache"
 }
 
 Provider<DockerPushImage> dockerPush = tasks.register('dockerPushImage', DockerPushImage) {
     group = 'docker'
-    dependsOn dockerTag, dockerTagMemcached
+    dependsOn dockerTag, dockerTagMemcache
     registryCredentials {
         url = getProperty('docker.registry.url')
         username = 'woggioni'
         password = System.getenv().get("PUBLISHER_TOKEN")
     }
-    images = [dockerTag.flatMap{ it.tag }, dockerTagMemcached.flatMap{ it.tag }]
+    images = [dockerTag.flatMap{ it.tag }, dockerTagMemcache.flatMap{ it.tag }]
 }
 
 

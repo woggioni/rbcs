@@ -6,10 +6,10 @@ plugins {
 
 configurations {
     bundle {
-        extendsFrom runtimeClasspath
         canBeResolved = true
         canBeConsumed = false
         visible = false
+        transitive = false
 
         resolutionStrategy {
             dependencies {
@@ -29,10 +29,20 @@ configurations {
 }
 
 dependencies {
-    compileOnly project(':gbcs-common')
-    compileOnly project(':gbcs-api')
-    compileOnly catalog.jwo
-    implementation catalog.xmemcached
+    implementation project(':gbcs-common')
+    implementation project(':gbcs-api')
+    implementation catalog.jwo
+    implementation catalog.slf4j.api
+    implementation catalog.netty.common
+    implementation catalog.netty.codec.memcache
+
+    bundle catalog.netty.codec.memcache
+
+    testRuntimeOnly catalog.logback.classic
+}
+
+tasks.named(JavaPlugin.TEST_TASK_NAME, Test) {
+    systemProperty("io.netty.leakDetectionLevel", "PARANOID")
 }
 
 Provider<Tar> bundleTask = tasks.register("bundle", Tar) {

@@ -1,12 +1,12 @@
 package net.woggioni.gbcs.cli.impl.commands
 
-import net.woggioni.gbcs.server.GradleBuildCacheServer
-import net.woggioni.gbcs.server.GradleBuildCacheServer.Companion.DEFAULT_CONFIGURATION_URL
 import net.woggioni.gbcs.api.Configuration
+import net.woggioni.gbcs.cli.impl.GbcsCommand
 import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.common.debug
 import net.woggioni.gbcs.common.info
-import net.woggioni.gbcs.cli.impl.GbcsCommand
+import net.woggioni.gbcs.server.GradleBuildCacheServer
+import net.woggioni.gbcs.server.GradleBuildCacheServer.Companion.DEFAULT_CONFIGURATION_URL
 import net.woggioni.jwo.Application
 import net.woggioni.jwo.JWO
 import picocli.CommandLine

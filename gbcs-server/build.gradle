@@ -19,7 +19,7 @@ dependencies {
     testImplementation catalog.bcprov.jdk18on
     testImplementation catalog.bcpkix.jdk18on
 
-    testRuntimeOnly project(":gbcs-server-memcached")
+    testRuntimeOnly project(":gbcs-server-memcache")
 }
 
 test {

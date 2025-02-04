@@ -44,7 +44,7 @@ jobs:
           target: release
           cache-from: type=registry,ref=gitea.woggioni.net/woggioni/gbcs:buildx
       -
-        name: Build gbcs memcached Docker image
+        name: Build gbcs memcache Docker image
         uses: docker/build-push-action@v5.3.0
         with:
           context: "docker/build/docker"
@@ -52,9 +52,9 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/gbcs:memcached
-            gitea.woggioni.net/woggioni/gbcs:memcached-${{ steps.retrieve-version.outputs.VERSION }}
-          target: release-memcached
+            gitea.woggioni.net/woggioni/gbcs:memcache
+            gitea.woggioni.net/woggioni/gbcs:memcache-${{ steps.retrieve-version.outputs.VERSION }}
+          target: release-memcache
           cache-from: type=registry,ref=gitea.woggioni.net/woggioni/gbcs:buildx
           cache-to: type=registry,mode=max,compression=zstd,image-manifest=true,oci-mediatypes=true,ref=gitea.woggioni.net/woggioni/gbcs:buildx
       - name: Publish artifacts

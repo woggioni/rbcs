@@ -56,7 +56,8 @@ public class Configuration {
         @EqualsAndHashCode.Include
         String name;
         Set<Role> roles;
-        Quota quota;
+        Quota groupQuota;
+        Quota userQuota;
     }
 
     @Value

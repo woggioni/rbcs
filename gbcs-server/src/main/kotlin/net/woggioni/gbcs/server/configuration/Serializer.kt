@@ -8,8 +8,14 @@ import org.w3c.dom.Document
 
 object Serializer {
 
-    fun serialize(conf : Configuration) : Document {
+    private fun Xml.serializeQuota(quota : Configuration.Quota) {
+        attr("calls", quota.calls.toString())
+        attr("period", quota.period.toString())
+        attr("max-available-calls", quota.maxAvailableCalls.toString())
+        attr("initial-available-calls", quota.initialAvailableCalls.toString())
+    }
 
+    fun serialize(conf : Configuration) : Document {
         val schemaLocations = CacheSerializers.index.values.asSequence().map {
             it.xmlNamespace to it.xmlSchemaLocation
         }.toMap()
@@ -56,10 +62,7 @@ object Serializer {
                                 }
                                 user.quota?.let { quota ->
                                     node("quota") {
-                                        attr("calls", quota.calls.toString())
-                                        attr("period", quota.period.toString())
-                                        attr("max-available-calls", quota.maxAvailableCalls.toString())
-                                        attr("initial-available-calls", quota.initialAvailableCalls.toString())
+                                        serializeQuota(quota)
                                     }
                                 }
                             }
@@ -70,10 +73,7 @@ object Serializer {
                             anonymousUser.quota?.let { quota ->
                                 node("anonymous") {
                                     node("quota") {
-                                        attr("calls", quota.calls.toString())
-                                        attr("period", quota.period.toString())
-                                        attr("max-available-calls", quota.maxAvailableCalls.toString())
-                                        attr("initial-available-calls", quota.initialAvailableCalls.toString())
+                                        serializeQuota(quota)
                                     }
                                 }
                             }
@@ -113,12 +113,14 @@ object Serializer {
                                     }
                                 }
                             }
-                            group.quota?.let { quota ->
-                                node("quota") {
-                                    attr("calls", quota.calls.toString())
-                                    attr("period", quota.period.toString())
-                                    attr("max-available-calls", quota.maxAvailableCalls.toString())
-                                    attr("initial-available-calls", quota.initialAvailableCalls.toString())
+                            group.userQuota?.let { quota ->
+                                node("user-quota") {
+                                    serializeQuota(quota)
+                                }
+                            }
+                            group.groupQuota?.let { quota ->
+                                node("group-quota") {
+                                    serializeQuota(quota)
                                 }
                             }
                         }
