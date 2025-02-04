@@ -213,6 +213,25 @@ class GradleBuildCacheClient(private val profile: Configuration.Profile) : AutoC
         }
     }
 
+    fun healthCheck(nonce: ByteArray): CompletableFuture<ByteArray?> {
+        return executeWithRetry {
+            sendRequest(profile.serverURI, HttpMethod.TRACE, nonce)
+        }.thenApply {
+            val status = it.status()
+            if (it.status() != HttpResponseStatus.OK) {
+                throw HttpException(status)
+            } else {
+                it.content()
+            }
+        }.thenApply { maybeByteBuf ->
+            maybeByteBuf?.let {
+                val result = ByteArray(it.readableBytes())
+                it.getBytes(0, result)
+                result
+            }
+        }
+    }
+
     fun get(key: String): CompletableFuture<ByteArray?> {
         return executeWithRetry {
             sendRequest(profile.serverURI.resolve(key), HttpMethod.GET, null)

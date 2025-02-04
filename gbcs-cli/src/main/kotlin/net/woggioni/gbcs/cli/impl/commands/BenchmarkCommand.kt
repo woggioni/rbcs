@@ -46,90 +46,91 @@ class BenchmarkCommand : GbcsCommand() {
             clientCommand.configuration.profiles[profileName]
                 ?: throw IllegalArgumentException("Profile $profileName does not exist in configuration")
         }
-        val client = GradleBuildCacheClient(profile)
+        GradleBuildCacheClient(profile).use { client ->
 
-        val entryGenerator = sequence {
-            val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
-            while (true) {
-                val key = JWO.bytesToHex(random.nextBytes(16))
-                val content = random.nextInt().toByte()
-                val value = ByteArray(size, { _ -> content })
-                yield(key to value)
+            val entryGenerator = sequence {
+                val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
+                while (true) {
+                    val key = JWO.bytesToHex(random.nextBytes(16))
+                    val content = random.nextInt().toByte()
+                    val value = ByteArray(size, { _ -> content })
+                    yield(key to value)
+                }
             }
-        }
 
-        log.info {
-            "Starting insertion"
-        }
-        val entries = let {
-            val completionCounter = AtomicLong(0)
-            val completionQueue = LinkedBlockingQueue<Pair<String, ByteArray>>(numberOfEntries)
-            val start = Instant.now()
-            val semaphore = Semaphore(profile.maxConnections * 3)
-            val iterator = entryGenerator.take(numberOfEntries).iterator()
-            while(completionCounter.get() < numberOfEntries) {
-                if(iterator.hasNext()) {
-                    val entry = iterator.next()
+            log.info {
+                "Starting insertion"
+            }
+            val entries = let {
+                val completionCounter = AtomicLong(0)
+                val completionQueue = LinkedBlockingQueue<Pair<String, ByteArray>>(numberOfEntries)
+                val start = Instant.now()
+                val semaphore = Semaphore(profile.maxConnections * 3)
+                val iterator = entryGenerator.take(numberOfEntries).iterator()
+                while (completionCounter.get() < numberOfEntries) {
+                    if (iterator.hasNext()) {
+                        val entry = iterator.next()
+                        semaphore.acquire()
+                        val future = client.put(entry.first, entry.second).thenApply { entry }
+                        future.whenComplete { result, ex ->
+                            if (ex != null) {
+                                log.error(ex.message, ex)
+                            } else {
+                                completionQueue.put(result)
+                            }
+                            semaphore.release()
+                            completionCounter.incrementAndGet()
+                        }
+                    }
+                }
+
+                val inserted = completionQueue.toList()
+                val end = Instant.now()
+                log.info {
+                    val elapsed = Duration.between(start, end).toMillis()
+                    val opsPerSecond = String.format("%.2f", numberOfEntries.toDouble() / elapsed * 1000)
+                    "Insertion rate: $opsPerSecond ops/s"
+                }
+                inserted
+            }
+            log.info {
+                "Inserted ${entries.size} entries"
+            }
+            log.info {
+                "Starting retrieval"
+            }
+            if (entries.isNotEmpty()) {
+                val completionCounter = AtomicLong(0)
+                val semaphore = Semaphore(profile.maxConnections * 3)
+                val start = Instant.now()
+                entries.forEach { entry ->
                     semaphore.acquire()
-                    val future = client.put(entry.first, entry.second).thenApply { entry }
-                    future.whenComplete { result, ex ->
-                        if (ex != null) {
-                            log.error(ex.message, ex)
-                        } else {
-                            completionQueue.put(result)
+
+                    val future = client.get(entry.first).thenApply {
+                        if (it == null) {
+                            log.error {
+                                "Missing entry for key '${entry.first}'"
+                            }
+                        } else if (!entry.second.contentEquals(it)) {
+                            log.error {
+                                "Retrieved a value different from what was inserted for key '${entry.first}'"
+                            }
                         }
-                        semaphore.release()
+                    }
+                    future.whenComplete { _, _ ->
                         completionCounter.incrementAndGet()
+                        semaphore.release()
                     }
                 }
-            }
-
-            val inserted = completionQueue.toList()
-            val end = Instant.now()
-            log.info {
-                val elapsed = Duration.between(start, end).toMillis()
-                val opsPerSecond = String.format("%.2f", numberOfEntries.toDouble() / elapsed * 1000)
-                "Insertion rate: $opsPerSecond ops/s"
-            }
-            inserted
-        }
-        log.info {
-            "Inserted ${entries.size} entries"
-        }
-        log.info {
-            "Starting retrieval"
-        }
-        if (entries.isNotEmpty()) {
-            val completionCounter = AtomicLong(0)
-            val semaphore = Semaphore(profile.maxConnections * 3)
-            val start = Instant.now()
-            entries.forEach { entry ->
-                semaphore.acquire()
-
-                val future = client.get(entry.first).thenApply {
-                    if (it == null) {
-                        log.error {
-                            "Missing entry for key '${entry.first}'"
-                        }
-                    } else if (!entry.second.contentEquals(it)) {
-                        log.error {
-                            "Retrieved a value different from what was inserted for key '${entry.first}'"
-                        }
-                    }
+                val end = Instant.now()
+                log.info {
+                    val elapsed = Duration.between(start, end).toMillis()
+                    val opsPerSecond = String.format("%.2f", entries.size.toDouble() / elapsed * 1000)
+                    "Retrieval rate: $opsPerSecond ops/s"
                 }
-                future.whenComplete { _, _ ->
-                    completionCounter.incrementAndGet()
-                    semaphore.release()
-                }
+            } else {
+                log.error("Skipping retrieval benchmark as it was not possible to insert any entry in the cache")
             }
-            val end = Instant.now()
-            log.info {
-                val elapsed = Duration.between(start, end).toMillis()
-                val opsPerSecond = String.format("%.2f", entries.size.toDouble() / elapsed * 1000)
-                "Retrieval rate: $opsPerSecond ops/s"
-            }
-        } else {
-            log.error("Skipping retrieval benchmark as it was not possible to insert any entry in the cache")
         }
     }
 }

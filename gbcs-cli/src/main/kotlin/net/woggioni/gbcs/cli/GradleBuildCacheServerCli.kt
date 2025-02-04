@@ -5,6 +5,7 @@ import net.woggioni.gbcs.cli.impl.GbcsCommand
 import net.woggioni.gbcs.cli.impl.commands.BenchmarkCommand
 import net.woggioni.gbcs.cli.impl.commands.ClientCommand
 import net.woggioni.gbcs.cli.impl.commands.GetCommand
+import net.woggioni.gbcs.cli.impl.commands.HealthCheckCommand
 import net.woggioni.gbcs.cli.impl.commands.PasswordHashCommand
 import net.woggioni.gbcs.cli.impl.commands.PutCommand
 import net.woggioni.gbcs.cli.impl.commands.ServerCommand
@@ -44,6 +45,7 @@ class GradleBuildCacheServerCli : GbcsCommand() {
                     addSubcommand(BenchmarkCommand())
                     addSubcommand(PutCommand())
                     addSubcommand(GetCommand())
+                    addSubcommand(HealthCheckCommand())
                 })
             System.exit(commandLine.execute(*args))
         }
