@@ -5,7 +5,7 @@ WORKDIR /home/luser
 
 FROM base-release AS release
 ADD gbcs-cli-envelope-*.jar gbcs.jar
-ENTRYPOINT ["java", "-jar", "/home/luser/gbcs.jar", "server"]
+ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "/home/luser/gbcs.jar", "server"]
 
 FROM base-release AS release-memcache
 ADD --chown=luser:luser gbcs-cli-envelope-*.jar gbcs.jar
@@ -13,4 +13,4 @@ RUN mkdir plugins
 WORKDIR /home/luser/plugins
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/gbcs-server-memcache*.tar
 WORKDIR /home/luser
-ENTRYPOINT ["java", "-jar", "/home/luser/gbcs.jar", "server"]
+ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "/home/luser/gbcs.jar", "server"]
