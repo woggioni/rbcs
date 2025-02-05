@@ -15,6 +15,4 @@
     <root level="info">
         <appender-ref ref="console"/>
     </root>
-    <logger name="com.google.code.yanf4j" level="warn"/>
-    <logger name="net.rubyeye.xmemcached" level="warn"/>
 </configuration>

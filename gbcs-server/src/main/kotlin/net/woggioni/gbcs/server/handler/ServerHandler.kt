@@ -57,16 +57,29 @@ class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
                             response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
                         }
                         ctx.write(response)
-                        val content : Any = when (channel) {
-                            is FileChannel -> DefaultFileRegion(channel, 0, channel.size())
-                            else -> ChunkedNioStream(channel)
-                        }
-                        if (keepAlive) {
-                            ctx.write(content)
-                            ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT.retainedDuplicate())
-                        } else {
-                            ctx.writeAndFlush(content)
-                                .addListener(ChannelFutureListener.CLOSE)
+                        when (channel) {
+                            is FileChannel -> {
+                                val content = DefaultFileRegion(channel, 0, channel.size())
+                                if (keepAlive) {
+                                    ctx.write(content)
+                                    ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT.retainedDuplicate())
+                                } else {
+                                    ctx.writeAndFlush(content)
+                                        .addListener(ChannelFutureListener.CLOSE)
+                                }
+                            }
+                            else -> {
+                                val content = ChunkedNioStream(channel)
+                                if (keepAlive) {
+                                    ctx.write(content).addListener {
+                                        content.close()
+                                    }
+                                    ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT.retainedDuplicate())
+                                } else {
+                                    ctx.writeAndFlush(content)
+                                        .addListener(ChannelFutureListener.CLOSE)
+                                }
+                            }
                         }
                     } else {
                         log.debug(ctx) {

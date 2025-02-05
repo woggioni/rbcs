@@ -25,8 +25,12 @@ class GradleBuildCacheServerCli : GbcsCommand() {
     companion object {
         @JvmStatic
         fun main(vararg args: String) {
-            Thread.currentThread().contextClassLoader = GradleBuildCacheServerCli::class.java.classLoader
-            GbcsUrlStreamHandlerFactory.install()
+            val currentClassLoader = GradleBuildCacheServerCli::class.java.classLoader
+            Thread.currentThread().contextClassLoader = currentClassLoader
+            if(currentClassLoader.javaClass.name == "net.woggioni.envelope.loader.ModuleClassLoader") {
+                //We're running in an envelope jar and custom URL protocols won't work
+                GbcsUrlStreamHandlerFactory.install()
+            }
             val log = contextLogger()
             val app = Application.builder("gbcs")
                 .configurationDirectoryEnvVar("GBCS_CONFIGURATION_DIR")

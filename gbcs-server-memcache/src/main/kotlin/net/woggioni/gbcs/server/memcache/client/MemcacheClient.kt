@@ -114,13 +114,14 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
                     val channel = channelFuture.now
                     val pipeline = channel.pipeline()
                     channel.pipeline()
-                        .addLast("handler", object : SimpleChannelInboundHandler<FullBinaryMemcacheResponse>() {
+                        .addLast("client-handler", object : SimpleChannelInboundHandler<FullBinaryMemcacheResponse>() {
                             override fun channelRead0(
                                 ctx: ChannelHandlerContext,
                                 msg: FullBinaryMemcacheResponse
                             ) {
                                 pipeline.removeLast()
                                 pool.release(channel)
+                                msg.touch("The method's caller must remember to release this")
                                 response.complete(msg.retain())
                             }
 
@@ -164,7 +165,8 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
             when (val status = response.status()) {
                 BinaryMemcacheResponseStatus.SUCCESS -> {
                     val compressionMode = cfg.compressionMode
-                    val content = response.content()
+                    val content = response.content().retain()
+                    response.release()
                     if (compressionMode != null) {
                         when (compressionMode) {
                             MemcacheCacheConfiguration.CompressionMode.GZIP -> {
@@ -224,9 +226,13 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
             }
         }
         return sendRequest(request).thenApply { response ->
-            when(val status = response.status()) {
-                BinaryMemcacheResponseStatus.SUCCESS -> null
-                else -> throw MemcacheException(status)
+            try {
+                when (val status = response.status()) {
+                    BinaryMemcacheResponseStatus.SUCCESS -> null
+                    else -> throw MemcacheException(status)
+                }
+            } finally {
+                response.release()
             }
         }
     }

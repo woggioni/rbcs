@@ -36,13 +36,17 @@ class GbcsUrlStreamHandlerFactory : URLStreamHandlerProvider() {
     private class JpmsHandler : URLStreamHandler() {
 
         override fun openConnection(u: URL): URLConnection {
+            val moduleName = u.host
             val thisModule = javaClass.module
-            val sourceModule = Optional.ofNullable(thisModule)
-                .map { obj: Module -> obj.layer }
-                .flatMap { layer: ModuleLayer ->
-                    val moduleName = u.host
-                    layer.findModule(moduleName)
-                }.orElse(thisModule)
+            val sourceModule =
+                thisModule
+                ?.let(Module::getLayer)
+                ?.let { layer: ModuleLayer ->
+                    layer.findModule(moduleName).orElse(null)
+                } ?: if(thisModule.layer == null) {
+                    thisModule
+                } else throw ModuleNotFoundException("Module '$moduleName' not found")
+
             return JpmsResourceURLConnection(u, sourceModule)
         }
     }
@@ -53,7 +57,9 @@ class GbcsUrlStreamHandlerFactory : URLStreamHandlerProvider() {
 
         @Throws(IOException::class)
         override fun getInputStream(): InputStream {
-            return module.getResourceAsStream(getURL().path)
+            val resource = getURL().path
+            return module.getResourceAsStream(resource)
+                ?: throw ResourceNotFoundException("Resource '$resource' not found in module '${module.name}'")
         }
     }
 

@@ -2,6 +2,7 @@ package net.woggioni.gbcs.cli.impl.commands
 
 import net.woggioni.gbcs.api.Configuration
 import net.woggioni.gbcs.cli.impl.GbcsCommand
+import net.woggioni.gbcs.cli.impl.converters.DurationConverter
 import net.woggioni.gbcs.common.contextLogger
 import net.woggioni.gbcs.common.debug
 import net.woggioni.gbcs.common.info
@@ -13,6 +14,7 @@ import picocli.CommandLine
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 
 @CommandLine.Command(
     name = "server",
@@ -36,15 +38,19 @@ class ServerCommand(app : Application) : GbcsCommand() {
     }
 
     @CommandLine.Option(
+        names = ["-t", "--timeout"],
+        description = ["Exit after the specified time"],
+        paramLabel = "TIMEOUT",
+        converter = [DurationConverter::class]
+    )
+    private var timeout: Duration? = null
+
+    @CommandLine.Option(
         names = ["-c", "--config-file"],
         description = ["Read the application configuration from this file"],
         paramLabel = "CONFIG_FILE"
     )
     private var configurationFile: Path = findConfigurationFile(app, "gbcs-server.xml")
-
-    val configuration : Configuration by lazy {
-        GradleBuildCacheServer.loadConfiguration(configurationFile)
-    }
 
     override fun run() {
         if (!Files.exists(configurationFile)) {
@@ -61,7 +67,11 @@ class ServerCommand(app : Application) : GbcsCommand() {
             }
         }
         val server = GradleBuildCacheServer(configuration)
-        server.run().use {
+        server.run().use { server ->
+            timeout?.let {
+                Thread.sleep(it)
+                server.shutdown()
+            }
         }
     }
 }
