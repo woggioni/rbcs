@@ -21,6 +21,9 @@ class InMemoryCacheProvider : CacheProvider<InMemoryCacheConfiguration> {
         val maxAge = el.renderAttribute("max-age")
             ?.let(Duration::parse)
             ?: Duration.ofDays(1)
+        val maxSize = el.renderAttribute("max-size")
+            ?.let(java.lang.Long::decode)
+            ?: 0x1000000
         val enableCompression = el.renderAttribute("enable-compression")
             ?.let(String::toBoolean)
             ?: true
@@ -31,6 +34,7 @@ class InMemoryCacheProvider : CacheProvider<InMemoryCacheConfiguration> {
 
         return InMemoryCacheConfiguration(
             maxAge,
+            maxSize,
             digestAlgorithm,
             enableCompression,
             compressionLevel
@@ -43,6 +47,7 @@ class InMemoryCacheProvider : CacheProvider<InMemoryCacheConfiguration> {
             val prefix = doc.lookupPrefix(GBCS.GBCS_NAMESPACE_URI)
             attr("xs:type", "${prefix}:inMemoryCacheType", GBCS.XML_SCHEMA_NAMESPACE_URI)
             attr("max-age", maxAge.toString())
+            attr("max-size", maxSize.toString())
             digestAlgorithm?.let { digestAlgorithm ->
                 attr("digest", digestAlgorithm)
             }

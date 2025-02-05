@@ -24,6 +24,7 @@ import io.netty.handler.codec.memcache.binary.FullBinaryMemcacheRequest
 import io.netty.handler.codec.memcache.binary.FullBinaryMemcacheResponse
 import io.netty.util.concurrent.GenericFutureListener
 import net.woggioni.gbcs.common.ByteBufInputStream
+import net.woggioni.gbcs.common.ByteBufOutputStream
 import net.woggioni.gbcs.common.GBCS.digest
 import net.woggioni.gbcs.common.HostAndPort
 import net.woggioni.gbcs.common.contextLogger
@@ -136,6 +137,7 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
                                 response.completeExceptionally(ex)
                             }
                         })
+                    request.touch()
                     channel.writeAndFlush(request)
                 } else {
                     response.completeExceptionally(channelFuture.cause())
@@ -162,29 +164,35 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
             }
         }
         return sendRequest(request).thenApply { response ->
-            when (val status = response.status()) {
-                BinaryMemcacheResponseStatus.SUCCESS -> {
-                    val compressionMode = cfg.compressionMode
-                    val content = response.content().retain()
-                    response.release()
-                    if (compressionMode != null) {
-                        when (compressionMode) {
-                            MemcacheCacheConfiguration.CompressionMode.GZIP -> {
-                                GZIPInputStream(ByteBufInputStream(content))
-                            }
+            try {
+                when (val status = response.status()) {
+                    BinaryMemcacheResponseStatus.SUCCESS -> {
+                        val compressionMode = cfg.compressionMode
+                        val content = response.content().retain()
+                        content.touch()
+                        if (compressionMode != null) {
+                            when (compressionMode) {
+                                MemcacheCacheConfiguration.CompressionMode.GZIP -> {
+                                    GZIPInputStream(ByteBufInputStream(content))
+                                }
 
-                            MemcacheCacheConfiguration.CompressionMode.DEFLATE -> {
-                                InflaterInputStream(ByteBufInputStream(content))
+                                MemcacheCacheConfiguration.CompressionMode.DEFLATE -> {
+                                    InflaterInputStream(ByteBufInputStream(content))
+                                }
                             }
-                        }
-                    } else {
-                        ByteBufInputStream(content)
-                    }.let(Channels::newChannel)
+                        } else {
+                            ByteBufInputStream(content)
+                        }.let(Channels::newChannel)
+                    }
+
+                    BinaryMemcacheResponseStatus.KEY_ENOENT -> {
+                        null
+                    }
+
+                    else -> throw MemcacheException(status)
                 }
-                BinaryMemcacheResponseStatus.KEY_ENOENT -> {
-                    null
-                }
-                else -> throw MemcacheException(status)
+            } finally {
+                response.release()
             }
         }
     }
@@ -199,16 +207,18 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
             extras.writeInt(0)
             extras.writeInt(encodeExpiry(expiry))
             val compressionMode = cfg.compressionMode
+            content.retain()
             val payload = if (compressionMode != null) {
-                val inputStream = ByteBufInputStream(Unpooled.wrappedBuffer(content))
-                val baos = ByteArrayOutputStream()
+                val inputStream = ByteBufInputStream(content)
+                val buf = content.alloc().buffer()
+                buf.retain()
                 val outputStream = when (compressionMode) {
                     MemcacheCacheConfiguration.CompressionMode.GZIP -> {
-                        GZIPOutputStream(baos)
+                        GZIPOutputStream(ByteBufOutputStream(buf))
                     }
 
                     MemcacheCacheConfiguration.CompressionMode.DEFLATE -> {
-                        DeflaterOutputStream(baos, Deflater(Deflater.DEFAULT_COMPRESSION, false))
+                        DeflaterOutputStream(ByteBufOutputStream(buf), Deflater(Deflater.DEFAULT_COMPRESSION, false))
                     }
                 }
                 inputStream.use { i ->
@@ -216,7 +226,7 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
                         JWO.copy(i, o)
                     }
                 }
-                Unpooled.wrappedBuffer(baos.toByteArray())
+                buf
             } else {
                 content
             }

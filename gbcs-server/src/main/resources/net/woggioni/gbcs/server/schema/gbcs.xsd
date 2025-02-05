@@ -52,6 +52,7 @@
         <xs:complexContent>
             <xs:extension base="gbcs:cacheType">
                 <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
+                <xs:attribute name="max-size" type="xs:token" default="0x1000000"/>
                 <xs:attribute name="digest" type="xs:token" default="MD5"/>
                 <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
                 <xs:attribute name="compression-level" type="xs:byte" default="-1"/>

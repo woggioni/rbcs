@@ -107,7 +107,7 @@ class ServerHandler(private val cache: Cache, private val serverPrefix: Path) :
                 log.debug(ctx) {
                     "Added value for key '$key' to build cache"
                 }
-                cache.put(key, msg.content().retain()).thenRun {
+                cache.put(key, msg.content()).thenRun {
                     val response = DefaultFullHttpResponse(
                         msg.protocolVersion(), HttpResponseStatus.CREATED,
                         Unpooled.copiedBuffer(key.toByteArray())
