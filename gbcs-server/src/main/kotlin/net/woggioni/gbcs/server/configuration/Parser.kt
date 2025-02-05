@@ -44,6 +44,7 @@ object Parser {
         val serverPath = root.renderAttribute("path")
         var incomingConnectionsBacklogSize = 1024
         var authentication: Authentication? = null
+        var useNativeTransport = false
         for (child in root.asIterable()) {
             val tagName = child.localName
             when (tagName) {
@@ -136,7 +137,7 @@ object Parser {
                 }
 
                 "event-executor" -> {
-                    val useVirtualThread = root.renderAttribute("use-virtual-threads")
+                    val useVirtualThread = child.renderAttribute("use-virtual-threads")
                         ?.let(String::toBoolean) ?: true
                     eventExecutor = Configuration.EventExecutor(useVirtualThread)
                 }
@@ -180,6 +181,10 @@ object Parser {
                     }
                     tls = Tls(keyStore, trustStore)
                 }
+                "transport" -> {
+                    useNativeTransport = child.renderAttribute("use-native-transport")
+                        ?.let(String::toBoolean) ?: false
+                }
             }
         }
         return Configuration.of(
@@ -194,6 +199,7 @@ object Parser {
             cache!!,
             authentication,
             tls,
+            useNativeTransport
         )
     }
 

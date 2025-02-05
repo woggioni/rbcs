@@ -27,6 +27,7 @@ public class Configuration {
     Cache cache;
     Authentication authentication;
     Tls tls;
+    boolean useNativeTransport;
 
     @Value
     public static class EventExecutor {
@@ -151,7 +152,8 @@ public class Configuration {
             Map<String, Group> groups,
             Cache cache,
             Authentication authentication,
-            Tls tls
+            Tls tls,
+            boolean useNativeTransport
     ) {
         return new Configuration(
                 host,
@@ -164,7 +166,8 @@ public class Configuration {
                 groups,
                 cache,
                 authentication,
-                tls
+                tls,
+                useNativeTransport
         );
     }
 }

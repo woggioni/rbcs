@@ -10,6 +10,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
 import io.netty.channel.ChannelPromise
+import io.netty.channel.MultithreadEventLoopGroup
+import io.netty.channel.epoll.EpollEventLoopGroup
+import io.netty.channel.epoll.EpollServerSocketChannel
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.compression.CompressionOptions
@@ -49,6 +52,7 @@ import net.woggioni.gbcs.server.exception.ExceptionHandler
 import net.woggioni.gbcs.server.handler.ServerHandler
 import net.woggioni.gbcs.server.throttling.ThrottlingHandler
 import net.woggioni.jwo.JWO
+import net.woggioni.jwo.OS
 import net.woggioni.jwo.Tuple2
 import java.io.OutputStream
 import java.net.InetSocketAddress
@@ -399,10 +403,23 @@ class GradleBuildCacheServer(private val cfg: Configuration) {
     }
 
     fun run(): ServerHandle {
-        // Create the multithreaded event loops for the server
-        val bossGroup = NioEventLoopGroup(1)
-        val serverSocketChannel = NioServerSocketChannel::class.java
-        val workerGroup = NioEventLoopGroup(0)
+        val bossGroup : MultithreadEventLoopGroup
+        val workerGroup : MultithreadEventLoopGroup
+        val serverSocketChannel : Class<*>
+        if(cfg.isUseNativeTransport) {
+            if(OS.isLinux) {
+                bossGroup = EpollEventLoopGroup(1)
+                serverSocketChannel = EpollServerSocketChannel::class.java
+                workerGroup = EpollEventLoopGroup(0)
+            } else {
+                throw java.lang.IllegalArgumentException("Native transport is not supported on ${OS.current.name}")
+            }
+        } else {
+            bossGroup = NioEventLoopGroup(1)
+            serverSocketChannel = NioServerSocketChannel::class.java
+            workerGroup = NioEventLoopGroup(0)
+        }
+
         val eventExecutorGroup = run {
             val threadFactory = if (cfg.eventExecutor.isUseVirtualThreads) {
                 Thread.ofVirtual().factory()

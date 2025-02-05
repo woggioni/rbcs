@@ -44,7 +44,11 @@ object Serializer {
                     attr("max-request-size", connection.maxRequestSize.toString())
                 }
             }
+            node("transport") {
+                attr("use-native-transport", conf.isUseNativeTransport.toString())
+            }
             node("event-executor") {
+                attr("use-virtual-threads", conf.eventExecutor.isUseVirtualThreads.toString())
                 attr("use-virtual-threads", conf.eventExecutor.isUseVirtualThreads.toString())
             }
             val cache = conf.cache

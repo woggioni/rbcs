@@ -32,6 +32,13 @@ configurations {
         canBeResolved = true
         visible = true
     }
+
+    nativeLibraries {
+        transitive = false
+        canBeConsumed = false
+        canBeResolved = true
+        visible = false
+    }
 }
 
 envelopeJar {
@@ -53,6 +60,8 @@ dependencies {
 //    runtimeOnly catalog.slf4j.jdk14
     runtimeOnly catalog.logback.classic
 //    runtimeOnly catalog.slf4j.simple
+
+    nativeLibraries group: 'io.netty', name: 'netty-transport-native-epoll', version: catalog.versions.netty.get(), classifier: 'linux-x86_64'
 }
 
 Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', EnvelopeJarTask.class) {
@@ -67,6 +76,9 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', E
 //    systemProperties['org.slf4j.simpleLogger.log.com.google.code.yanf4j'] = 'warn'
 //    systemProperties['org.slf4j.simpleLogger.log.net.rubyeye.xmemcached'] = 'warn'
 //    systemProperties['org.slf4j.simpleLogger.dateTimeFormat'] = 'yyyy-MM-dd\'T\'HH:mm:ss.SSSZ'
+    from {
+        configurations.nativeLibraries.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
 
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {

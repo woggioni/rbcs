@@ -10,6 +10,7 @@
             write-idle-timeout="PT11M"
             idle-timeout="PT30M"
             max-request-size="101325"/>
+    <transport use-native-transport="true"/>
     <event-executor use-virtual-threads="false"/>
     <cache xs:type="gbcs:fileSystemCacheType" path="/tmp/gbcs" max-age="P7D"/>
     <authentication>

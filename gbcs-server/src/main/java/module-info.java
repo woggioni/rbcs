@@ -18,6 +18,7 @@ module net.woggioni.gbcs.server {
     requires net.woggioni.jwo;
     requires net.woggioni.gbcs.common;
     requires net.woggioni.gbcs.api;
+    requires io.netty.transport.classes.epoll;
 
     exports net.woggioni.gbcs.server;
 

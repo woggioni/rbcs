@@ -51,10 +51,12 @@ class NoAuthServerTest : AbstractServerTest() {
                 maxAge = Duration.ofSeconds(3600 * 24),
                 compressionEnabled = true,
                 digestAlgorithm = "MD5",
-                compressionLevel = Deflater.DEFAULT_COMPRESSION
+                compressionLevel = Deflater.DEFAULT_COMPRESSION,
+                maxSize = 0x1000000
             ),
             null,
             null,
+            false,
         )
         Xml.write(Serializer.serialize(cfg), System.out)
     }
