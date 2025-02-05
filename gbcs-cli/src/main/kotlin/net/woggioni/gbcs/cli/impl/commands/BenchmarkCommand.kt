@@ -81,6 +81,8 @@ class BenchmarkCommand : GbcsCommand() {
                             semaphore.release()
                             completionCounter.incrementAndGet()
                         }
+                    } else {
+                        Thread.sleep(0)
                     }
                 }
 
@@ -103,23 +105,27 @@ class BenchmarkCommand : GbcsCommand() {
                 val completionCounter = AtomicLong(0)
                 val semaphore = Semaphore(profile.maxConnections * 3)
                 val start = Instant.now()
-                entries.forEach { entry ->
-                    semaphore.acquire()
-
-                    val future = client.get(entry.first).thenApply {
-                        if (it == null) {
-                            log.error {
-                                "Missing entry for key '${entry.first}'"
-                            }
-                        } else if (!entry.second.contentEquals(it)) {
-                            log.error {
-                                "Retrieved a value different from what was inserted for key '${entry.first}'"
+                val it = entries.iterator()
+                while (completionCounter.get() < entries.size) {
+                    if (it.hasNext()) {
+                        val entry = it.next()
+                        val future = client.get(entry.first).thenApply {
+                            if (it == null) {
+                                log.error {
+                                    "Missing entry for key '${entry.first}'"
+                                }
+                            } else if (!entry.second.contentEquals(it)) {
+                                log.error {
+                                    "Retrieved a value different from what was inserted for key '${entry.first}'"
+                                }
                             }
                         }
-                    }
-                    future.whenComplete { _, _ ->
-                        completionCounter.incrementAndGet()
-                        semaphore.release()
+                        future.whenComplete { _, _ ->
+                            completionCounter.incrementAndGet()
+                            semaphore.release()
+                        }
+                    } else {
+                        Thread.sleep(0)
                     }
                 }
                 val end = Instant.now()
