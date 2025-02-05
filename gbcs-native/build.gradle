@@ -1,0 +1,56 @@
+plugins {
+    id 'java-library'
+    alias catalog.plugins.sambal
+    alias catalog.plugins.graalvm.native.image
+}
+
+
+import net.woggioni.gradle.graalvm.*
+
+Property<String> mainModuleName = objects.property(String.class)
+mainModuleName.set('net.woggioni.gbcs.cli')
+Property<String> mainClassName = objects.property(String.class)
+mainClassName.set('net.woggioni.gbcs.graal.NativeServer')
+
+tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
+    options.javaModuleMainClass = mainClassName
+}
+
+configurations {
+    release {
+        transitive = false
+        canBeConsumed = true
+        canBeResolved = true
+        visible = true
+    }
+}
+
+dependencies {
+    implementation catalog.jwo
+    implementation catalog.netty.transport
+    implementation project(':gbcs-server')
+    implementation project(':gbcs-server-memcache')
+
+//    runtimeOnly catalog.slf4j.jdk14
+    runtimeOnly catalog.logback.classic
+//    runtimeOnly catalog.slf4j.simple
+}
+
+tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask.class) {
+    mainClass = 'net.woggioni.gbcs.graal.ConfigureNativeServer'
+//    mainModule = mainModuleName
+    systemProperty('logback.configurationFile', 'classpath:net/woggioni/gbcs/graal/logback.xml')
+    systemProperty('io.netty.leakDetectionLevel', 'DISABLED')
+    modularity.inferModulePath = false
+    mergeConfiguration = true
+    enabled = false
+}
+
+tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
+    mainClass = mainClassName
+//    mainModule = mainModuleName
+    useMusl = true
+    buildStaticImage = true
+    linkAtBuildTime = false
+}
+

@@ -1,0 +1,40 @@
+{
+  "resources":{
+  "includes":[{
+    "pattern":"\\QMETA-INF/services/ch.qos.logback.classic.spi.Configurator\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/java.lang.System$LoggerFinder\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/java.net.spi.URLStreamHandlerProvider\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/java.nio.channels.spi.SelectorProvider\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/java.time.zone.ZoneRulesProvider\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/javax.xml.parsers.DocumentBuilderFactory\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/javax.xml.parsers.SAXParserFactory\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/net.woggioni.gbcs.api.CacheProvider\\E"
+  }, {
+    "pattern":"\\QMETA-INF/services/org.slf4j.spi.SLF4JServiceProvider\\E"
+  }, {
+    "pattern":"\\Qclasspath:net/woggioni/gbcs/graal/logback.xml\\E"
+  }, {
+    "pattern":"\\Qlogback-test.scmo\\E"
+  }, {
+    "pattern":"\\Qlogback.scmo\\E"
+  }, {
+    "pattern":"\\Qnet/woggioni/gbcs/graal/logback.xml\\E"
+  }, {
+    "pattern":"\\Qnet/woggioni/gbcs/server/memcache/schema/gbcs-memcache.xsd\\E"
+  }, {
+    "pattern":"\\Qnet/woggioni/gbcs/server/schema/gbcs.xsd\\E"
+  }]},
+  "bundles":[{
+    "name":"com.sun.org.apache.xerces.internal.impl.xpath.regex.message",
+    "locales":[""]
+  }, {
+    "name": "com.sun.org.apache.xerces.internal.impl.msg.XMLSchemaMessages"
+  }]
+}

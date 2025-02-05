@@ -1,5 +1,10 @@
 pluginManagement {
     repositories {
+        mavenLocal {
+            content {
+                includeGroup 'net.woggioni.gradle'
+            }
+        }
         maven {
             url = getProperty('gitea.maven.url')
         }
@@ -32,3 +37,4 @@ include 'gbcs-cli'
 include 'docker'
 include 'gbcs-client'
 include 'gbcs-server'
+include 'gbcs-native'
