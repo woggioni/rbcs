@@ -1,0 +1,68 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    alias catalog.plugins.kotlin.jvm
+}
+
+configurations {
+    bundle {
+        canBeResolved = true
+        canBeConsumed = false
+        visible = false
+        transitive = false
+
+        resolutionStrategy {
+            dependencies {
+                exclude group: 'org.slf4j', module: 'slf4j-api'
+                exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib'
+                exclude group: 'org.jetbrains', module: 'annotations'
+            }
+        }
+    }
+
+    release {
+        transitive = false
+        canBeConsumed = true
+        canBeResolved = true
+        visible = true
+    }
+}
+
+dependencies {
+    implementation project(':rbcs-common')
+    implementation project(':rbcs-api')
+    implementation catalog.jwo
+    implementation catalog.slf4j.api
+    implementation catalog.netty.common
+    implementation catalog.netty.codec.memcache
+
+    bundle catalog.netty.codec.memcache
+
+    testRuntimeOnly catalog.logback.classic
+}
+
+tasks.named(JavaPlugin.TEST_TASK_NAME, Test) {
+    systemProperty("io.netty.leakDetectionLevel", "PARANOID")
+}
+
+Provider<Tar> bundleTask = tasks.register("bundle", Tar) {
+    from(tasks.named(JavaPlugin.JAR_TASK_NAME))
+    from(configurations.bundle)
+    group = BasePlugin.BUILD_GROUP
+}
+
+tasks.named(BasePlugin.ASSEMBLE_TASK_NAME) {
+    dependsOn(bundleTask)
+}
+
+artifacts {
+    release(bundleTask)
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifact bundleTask
+        }
+    }
+}

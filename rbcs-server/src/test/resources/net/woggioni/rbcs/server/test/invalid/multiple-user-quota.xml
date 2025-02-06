@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rbcs:server xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:rbcs="urn:net.woggioni.rbcs.server"
+             xs:schemaLocation="urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs.xsd">
+    <bind host="127.0.0.1" port="11443"/>
+    <cache xs:type="rbcs:fileSystemCacheType" path="/tmp/rbcs" max-age="P7D"/>
+    <authorization>
+        <users>
+            <user name="user1" password="password1">
+                <quota calls="10" period="PT20S"/>
+                <quota calls="20" period="PT20S"/>
+            </user>
+        </users>
+    </authorization>
+</rbcs:server>

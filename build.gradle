@@ -15,7 +15,7 @@ allprojects { subproject ->
             version = project.currentTag.map { it[0] }.get()
         } else {
             version = project.gitRevision.map { gitRevision ->
-                "${getProperty('gbcs.version')}.${gitRevision[0..10]}"
+                "${getProperty('rbcs.version')}.${gitRevision[0..10]}"
             }.get()
         }
 

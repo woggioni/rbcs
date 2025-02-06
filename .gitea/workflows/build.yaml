@@ -31,7 +31,7 @@ jobs:
           username: woggioni
           password: ${{ secrets.PUBLISHER_TOKEN }}
       -
-        name: Build gbcs Docker image
+        name: Build rbcs Docker image
         uses: docker/build-push-action@v5.3.0
         with:
           context: "docker/build/docker"
@@ -39,12 +39,12 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/gbcs:latest
-            gitea.woggioni.net/woggioni/gbcs:${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:latest
+            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}
           target: release
-          cache-from: type=registry,ref=gitea.woggioni.net/woggioni/gbcs:buildx
+          cache-from: type=registry,ref=gitea.woggioni.net/woggioni/rbcs:buildx
       -
-        name: Build gbcs memcache Docker image
+        name: Build rbcs memcache Docker image
         uses: docker/build-push-action@v5.3.0
         with:
           context: "docker/build/docker"
@@ -52,11 +52,11 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/gbcs:memcache
-            gitea.woggioni.net/woggioni/gbcs:memcache-${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:memcache
+            gitea.woggioni.net/woggioni/rbcs:memcache-${{ steps.retrieve-version.outputs.VERSION }}
           target: release-memcache
-          cache-from: type=registry,ref=gitea.woggioni.net/woggioni/gbcs:buildx
-          cache-to: type=registry,mode=max,compression=zstd,image-manifest=true,oci-mediatypes=true,ref=gitea.woggioni.net/woggioni/gbcs:buildx
+          cache-from: type=registry,ref=gitea.woggioni.net/woggioni/rbcs:buildx
+          cache-to: type=registry,mode=max,compression=zstd,image-manifest=true,oci-mediatypes=true,ref=gitea.woggioni.net/woggioni/rbcs:buildx
       - name: Publish artifacts
         env:
           PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}

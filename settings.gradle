@@ -23,12 +23,12 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'gbcs'
+rootProject.name = 'rbcs'
 
-include 'gbcs-api'
-include 'gbcs-common'
-include 'gbcs-server-memcache'
-include 'gbcs-cli'
+include 'rbcs-api'
+include 'rbcs-common'
+include 'rbcs-server-memcache'
+include 'rbcs-cli'
 include 'docker'
-include 'gbcs-client'
-include 'gbcs-server'
+include 'rbcs-client'
+include 'rbcs-server'

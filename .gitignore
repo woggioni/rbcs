@@ -4,4 +4,4 @@
 # Ignore Gradle build output directory
 build
 
-gbcs-cli/native-image/*.json
+rbcs-cli/native-image/*.json

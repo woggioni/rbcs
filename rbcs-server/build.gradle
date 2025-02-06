@@ -1,0 +1,38 @@
+plugins {
+    id 'java-library'
+    alias catalog.plugins.kotlin.jvm
+    id 'jacoco'
+    id 'maven-publish'
+}
+
+dependencies {
+    implementation catalog.jwo
+    implementation catalog.slf4j.api
+    implementation catalog.netty.codec.http
+
+    api project(':rbcs-common')
+    api project(':rbcs-api')
+
+//    runtimeOnly catalog.slf4j.jdk14
+    testRuntimeOnly catalog.logback.classic
+
+    testImplementation catalog.bcprov.jdk18on
+    testImplementation catalog.bcpkix.jdk18on
+
+    testRuntimeOnly project(":rbcs-server-memcache")
+}
+
+test {
+    systemProperty("io.netty.leakDetectionLevel", "PARANOID")
+    systemProperty("jdk.httpclient.redirects.retrylimit", "1")
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components["java"])
+        }
+    }
+}
+
+

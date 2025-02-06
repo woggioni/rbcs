@@ -4,13 +4,13 @@ USER luser
 WORKDIR /home/luser
 
 FROM base-release AS release
-ADD gbcs-cli-envelope-*.jar gbcs.jar
-ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "/home/luser/gbcs.jar", "server"]
+ADD rbcs-cli-envelope-*.jar rbcs.jar
+ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "/home/luser/rbcs.jar", "server"]
 
 FROM base-release AS release-memcache
-ADD --chown=luser:luser gbcs-cli-envelope-*.jar gbcs.jar
+ADD --chown=luser:luser rbcs-cli-envelope-*.jar rbcs.jar
 RUN mkdir plugins
 WORKDIR /home/luser/plugins
-RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/gbcs-server-memcache*.tar
+RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-server-memcache*.tar
 WORKDIR /home/luser
-ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "/home/luser/gbcs.jar", "server"]
+ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "/home/luser/rbcs.jar", "server"]

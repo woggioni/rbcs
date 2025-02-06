@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xs:schema targetNamespace="urn:net.woggioni.rbcs.server.memcache"
+           xmlns:rbcs-memcache="urn:net.woggioni.rbcs.server.memcache"
+           xmlns:rbcs="urn:net.woggioni.rbcs.server"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+    <xs:import schemaLocation="jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs.xsd" namespace="urn:net.woggioni.rbcs.server"/>
+
+    <xs:complexType name="memcacheServerType">
+        <xs:attribute name="host" type="xs:token" use="required"/>
+        <xs:attribute name="port" type="xs:positiveInteger" use="required"/>
+        <xs:attribute name="connection-timeout" type="xs:duration"/>
+        <xs:attribute name="max-connections" type="xs:positiveInteger" default="1"/>
+    </xs:complexType>
+
+    <xs:complexType name="memcacheCacheType">
+        <xs:complexContent>
+            <xs:extension base="rbcs:cacheType">
+                <xs:sequence maxOccurs="unbounded">
+                    <xs:element name="server" type="rbcs-memcache:memcacheServerType"/>
+                </xs:sequence>
+                <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
+                <xs:attribute name="max-size" type="xs:unsignedInt" default="1048576"/>
+                <xs:attribute name="digest" type="xs:token" />
+                <xs:attribute name="compression-mode" type="rbcs-memcache:compressionType"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:simpleType name="compressionType">
+        <xs:restriction base="xs:token">
+            <xs:enumeration value="deflate"/>
+            <xs:enumeration value="gzip"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

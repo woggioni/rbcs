@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xs:schema targetNamespace="urn:net.woggioni.rbcs.server"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:rbcs="urn:net.woggioni.rbcs.server"
+           elementFormDefault="unqualified">
+    <xs:element name="server" type="rbcs:serverType"/>
+
+    <xs:complexType name="serverType">
+        <xs:sequence minOccurs="0">
+            <xs:element name="bind" type="rbcs:bindType" maxOccurs="1"/>
+            <xs:element name="connection" type="rbcs:connectionType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="event-executor" type="rbcs:eventExecutorType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="cache" type="rbcs:cacheType" maxOccurs="1"/>
+            <xs:element name="authorization" type="rbcs:authorizationType" minOccurs="0">
+                <xs:key name="userId">
+                    <xs:selector xpath="users/user"/>
+                    <xs:field xpath="@name"/>
+                </xs:key>
+                <xs:keyref name="userRef" refer="rbcs:userId">
+                    <xs:selector xpath="groups/group/users/user"/>
+                    <xs:field xpath="@ref"/>
+                </xs:keyref>
+            </xs:element>
+            <xs:element name="authentication" type="rbcs:authenticationType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="tls" type="rbcs:tlsType" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attribute name="path" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="bindType">
+        <xs:attribute name="host" type="xs:token" use="required"/>
+        <xs:attribute name="port" type="xs:unsignedShort" use="required"/>
+        <xs:attribute name="incoming-connections-backlog-size" type="xs:unsignedInt" use="optional" default="1024"/>
+    </xs:complexType>
+
+    <xs:complexType name="connectionType">
+        <xs:attribute name="read-timeout" type="xs:duration" use="optional" default="PT0S"/>
+        <xs:attribute name="write-timeout" type="xs:duration" use="optional" default="PT0S"/>
+        <xs:attribute name="idle-timeout" type="xs:duration" use="optional" default="PT30S"/>
+        <xs:attribute name="read-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
+        <xs:attribute name="write-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
+        <xs:attribute name="max-request-size" type="xs:unsignedInt" use="optional" default="67108864"/>
+    </xs:complexType>
+
+    <xs:complexType name="eventExecutorType">
+        <xs:attribute name="use-virtual-threads" type="xs:boolean" use="optional" default="true"/>
+    </xs:complexType>
+
+    <xs:complexType name="cacheType" abstract="true"/>
+
+    <xs:complexType name="inMemoryCacheType">
+        <xs:complexContent>
+            <xs:extension base="rbcs:cacheType">
+                <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
+                <xs:attribute name="max-size" type="xs:token" default="0x1000000"/>
+                <xs:attribute name="digest" type="xs:token" default="MD5"/>
+                <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
+                <xs:attribute name="compression-level" type="xs:byte" default="-1"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="fileSystemCacheType">
+        <xs:complexContent>
+            <xs:extension base="rbcs:cacheType">
+                <xs:attribute name="path" type="xs:string" use="required"/>
+                <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
+                <xs:attribute name="digest" type="xs:token" default="MD5"/>
+                <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
+                <xs:attribute name="compression-level" type="xs:byte" default="-1"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="tlsCertificateAuthorizationType">
+        <xs:sequence>
+            <xs:element name="group-extractor" type="rbcs:X500NameExtractorType" minOccurs="0"/>
+            <xs:element name="user-extractor" type="rbcs:X500NameExtractorType" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="X500NameExtractorType">
+        <xs:attribute name="attribute-name" type="xs:token"/>
+        <xs:attribute name="pattern" type="xs:token"/>
+    </xs:complexType>
+
+    <xs:complexType name="authorizationType">
+        <xs:all>
+            <xs:element name="users" type="rbcs:usersType"/>
+            <xs:element name="groups" type="rbcs:groupsType">
+                <xs:unique name="groupKey">
+                    <xs:selector xpath="group"/>
+                    <xs:field xpath="@name"/>
+                </xs:unique>
+            </xs:element>
+        </xs:all>
+    </xs:complexType>
+
+    <xs:complexType name="authenticationType">
+        <xs:choice>
+            <xs:element name="basic"/>
+            <xs:element name="client-certificate" type="rbcs:tlsCertificateAuthorizationType"/>
+            <xs:element name="none"/>
+        </xs:choice>
+    </xs:complexType>
+
+    <xs:complexType name="quotaType">
+        <xs:attribute name="calls" type="xs:positiveInteger" use="required"/>
+        <xs:attribute name="period" type="xs:duration" use="required"/>
+        <xs:attribute name="max-available-calls" type="xs:positiveInteger" use="optional"/>
+        <xs:attribute name="initial-available-calls" type="xs:unsignedInt" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="anonymousUserType">
+        <xs:sequence>
+            <xs:element name="quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="userType">
+        <xs:sequence>
+            <xs:element name="quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attribute name="name" type="xs:token" use="required"/>
+        <xs:attribute name="password" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="usersType">
+        <xs:sequence>
+            <xs:element name="user" type="rbcs:userType" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="anonymous" type="rbcs:anonymousUserType" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="groupsType">
+        <xs:sequence>
+            <xs:element name="group" type="rbcs:groupType" maxOccurs="unbounded" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="groupType">
+        <xs:sequence>
+            <xs:element name="users" type="rbcs:userRefsType" maxOccurs="1" minOccurs="0">
+                <xs:unique name="userRefWriterKey">
+                    <xs:selector xpath="user"/>
+                    <xs:field xpath="@ref"/>
+                </xs:unique>
+            </xs:element>
+            <xs:element name="roles" type="rbcs:rolesType" maxOccurs="1" minOccurs="0"/>
+            <xs:element name="user-quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="group-quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attribute name="name" type="xs:token"/>
+    </xs:complexType>
+
+    <xs:simpleType name="role" final="restriction" >
+        <xs:restriction base="xs:token">
+            <xs:enumeration value="READER" />
+            <xs:enumeration value="WRITER" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="rolesType">
+        <xs:sequence>
+            <xs:choice maxOccurs="unbounded">
+                <xs:element name="writer"/>
+                <xs:element name="reader"/>
+            </xs:choice>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="userRefsType">
+        <xs:sequence>
+                <xs:element name="user" type="rbcs:userRefType" maxOccurs="unbounded" minOccurs="0"/>
+                <xs:element name="anonymous" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="userRefType">
+        <xs:attribute name="ref" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="tlsType">
+        <xs:all>
+            <xs:element name="keystore" type="rbcs:keyStoreType" />
+            <xs:element name="truststore" type="rbcs:trustStoreType" minOccurs="0"/>
+        </xs:all>
+    </xs:complexType>
+
+    <xs:complexType name="keyStoreType">
+        <xs:attribute name="file" type="xs:string" use="required"/>
+        <xs:attribute name="password" type="xs:string"/>
+        <xs:attribute name="key-alias" type="xs:string" use="required"/>
+        <xs:attribute name="key-password" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="trustStoreType">
+        <xs:attribute name="file" type="xs:string" use="required"/>
+        <xs:attribute name="password" type="xs:string"/>
+        <xs:attribute name="check-certificate-status" type="xs:boolean"/>
+        <xs:attribute name="require-client-certificate" type="xs:boolean" use="optional" default="false"/>
+    </xs:complexType>
+
+    <xs:complexType name="propertiesType">
+        <xs:sequence>
+            <xs:element maxOccurs="unbounded" minOccurs="0" name="property" type="rbcs:propertyType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="propertyType">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="key" type="xs:string" use="required"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="hostAndPortType">
+        <xs:attribute name="host" type="xs:string" use="required"/>
+        <xs:attribute name="port" type="xs:unsignedShort" use="required"/>
+    </xs:complexType>
+
+
+</xs:schema>

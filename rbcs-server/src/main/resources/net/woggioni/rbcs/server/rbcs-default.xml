@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rbcs:server
+             xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:rbcs="urn:net.woggioni.rbcs.server"
+             xs:schemaLocation="urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs.xsd">
+    <bind host="127.0.0.1" port="8080" incoming-connections-backlog-size="1024"/>
+    <connection
+            max-request-size="67108864"
+            idle-timeout="PT30S"
+            read-timeout="PT10S"
+            write-timeout="PT10S"
+            read-idle-timeout="PT60S"
+            write-idle-timeout="PT60S"/>
+    <event-executor use-virtual-threads="true"/>
+    <cache xs:type="rbcs:fileSystemCacheType" path="/tmp/rbcs" max-age="P7D"/>
+    <authentication>
+        <none/>
+    </authentication>
+</rbcs:server>

@@ -1,2 +1,0 @@
-net.woggioni.gbcs.server.cache.FileSystemCacheProvider
-net.woggioni.gbcs.server.cache.InMemoryCacheProvider

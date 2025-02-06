@@ -1,0 +1,21 @@
+
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    alias catalog.plugins.kotlin.jvm
+}
+
+dependencies {
+    implementation project(':rbcs-api')
+    implementation catalog.slf4j.api
+    implementation catalog.jwo
+    implementation catalog.netty.buffer
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components["java"])
+        }
+    }
+}

@@ -18,8 +18,8 @@ configurations {
 }
 
 dependencies {
-    docker project(path: ':gbcs-cli', configuration: 'release')
-    docker project(path: ':gbcs-server-memcache', configuration: 'release')
+    docker project(path: ':rbcs-cli', configuration: 'release')
+    docker project(path: ':rbcs-server-memcache', configuration: 'release')
 }
 
 Provider<Task> cleanTaskProvider = tasks.named(BasePlugin.CLEAN_TASK_NAME) {}
@@ -35,21 +35,21 @@ Provider<Copy> prepareDockerBuild = tasks.register('prepareDockerBuild', Copy) {
 Provider<DockerBuildImage> dockerBuild = tasks.register('dockerBuildImage', DockerBuildImage) {
     group = 'docker'
     dependsOn prepareDockerBuild
-    images.add('gitea.woggioni.net/woggioni/gbcs:latest')
-    images.add("gitea.woggioni.net/woggioni/gbcs:${version}")
+    images.add('gitea.woggioni.net/woggioni/rbcs:latest')
+    images.add("gitea.woggioni.net/woggioni/rbcs:${version}")
 }
 
 Provider<DockerTagImage> dockerTag = tasks.register('dockerTagImage', DockerTagImage) {
     group = 'docker'
-    repository = 'gitea.woggioni.net/woggioni/gbcs'
-    imageId = 'gitea.woggioni.net/woggioni/gbcs:latest'
+    repository = 'gitea.woggioni.net/woggioni/rbcs'
+    imageId = 'gitea.woggioni.net/woggioni/rbcs:latest'
     tag = version
 }
 
 Provider<DockerTagImage> dockerTagMemcache = tasks.register('dockerTagMemcacheImage', DockerTagImage) {
     group = 'docker'
-    repository = 'gitea.woggioni.net/woggioni/gbcs'
-    imageId = 'gitea.woggioni.net/woggioni/gbcs:memcache'
+    repository = 'gitea.woggioni.net/woggioni/rbcs'
+    imageId = 'gitea.woggioni.net/woggioni/rbcs:memcache'
     tag = "${version}-memcache"
 }
 

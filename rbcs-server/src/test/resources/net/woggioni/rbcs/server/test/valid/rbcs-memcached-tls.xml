@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rbcs:server xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:rbcs="urn:net.woggioni.rbcs.server"
+             xmlns:rbcs-memcache="urn:net.woggioni.rbcs.server.memcache"
+             xs:schemaLocation="urn:net.woggioni.rbcs.server.memcache jpms://net.woggioni.rbcs.server.memcache/net/woggioni/rbcs/server/memcache/schema/rbcs-memcache.xsd urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs.xsd"
+>
+    <bind host="0.0.0.0" port="8443" incoming-connections-backlog-size="4096"/>
+    <connection
+            max-request-size="67108864"
+            idle-timeout="PT30S"
+            read-idle-timeout="PT60S"
+            write-idle-timeout="PT60S"
+            read-timeout="PT5M"
+            write-timeout="PT5M"/>
+    <event-executor use-virtual-threads="true"/>
+    <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" max-size="16777216" compression-mode="deflate">
+        <server host="memcached" port="11211"/>
+    </cache>
+    <authorization>
+        <users>
+            <user name="woggioni">
+                <quota calls="1000" period="PT1S"/>
+            </user>
+            <user name="gitea">
+                <quota calls="10" period="PT1S" initial-available-calls="100" max-available-calls="100"/>
+            </user>
+            <anonymous>
+                <quota calls="2" period="PT5S"/>
+            </anonymous>
+        </users>
+        <groups>
+            <group name="writers">
+                <users>
+                    <user ref="woggioni"/>
+                    <user ref="gitea"/>
+                </users>
+                <roles>
+                    <reader/>
+                    <writer/>
+                </roles>
+            </group>
+        </groups>
+    </authorization>
+    <authentication>
+        <client-certificate>
+            <user-extractor attribute-name="CN" pattern="(.*)"/>
+        </client-certificate>
+    </authentication>
+    <tls>
+        <keystore file="/home/luser/ssl/rbcs.woggioni.net.pfx" key-alias="rbcs.woggioni.net" password="KEYSTORE_PASSWOR" key-password="KEY_PASSWORD"/>
+        <truststore file="/home/luser/ssl/woggioni.net.pfx" check-certificate-status="false" password="TRUSTSTORE_PASSWORD"/>
+    </tls>
+</rbcs:server>

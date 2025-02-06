@@ -1,0 +1,101 @@
+plugins {
+    id 'java-library'
+    alias catalog.plugins.kotlin.jvm
+    alias catalog.plugins.envelope
+    alias catalog.plugins.sambal
+    alias catalog.plugins.graalvm.native.image
+    alias catalog.plugins.graalvm.jlink
+    alias catalog.plugins.jpms.check
+    id 'maven-publish'
+}
+
+import net.woggioni.gradle.envelope.EnvelopeJarTask
+import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
+import net.woggioni.gradle.graalvm.NativeImagePlugin
+import net.woggioni.gradle.graalvm.NativeImageTask
+import net.woggioni.gradle.graalvm.JlinkPlugin
+import net.woggioni.gradle.graalvm.JlinkTask
+
+Property<String> mainModuleName = objects.property(String.class)
+mainModuleName.set('net.woggioni.rbcs.cli')
+Property<String> mainClassName = objects.property(String.class)
+mainClassName.set('net.woggioni.rbcs.cli.RemoteBuildCacheServerCli')
+
+tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
+    options.javaModuleMainClass = mainClassName
+}
+
+configurations {
+    release {
+        transitive = false
+        canBeConsumed = true
+        canBeResolved = true
+        visible = true
+    }
+}
+
+envelopeJar {
+    mainModule = mainModuleName
+    mainClass = mainClassName
+
+    extraClasspath = ["plugins"]
+}
+
+dependencies {
+    implementation catalog.jwo
+    implementation catalog.slf4j.api
+    implementation catalog.netty.codec.http
+    implementation catalog.picocli
+
+    implementation project(':rbcs-client')
+    implementation project(':rbcs-server')
+
+//    runtimeOnly catalog.slf4j.jdk14
+    runtimeOnly catalog.logback.classic
+//    runtimeOnly catalog.slf4j.simple
+}
+
+Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', EnvelopeJarTask.class) {
+//    systemProperties['java.util.logging.config.class'] = 'net.woggioni.rbcs.LoggingConfig'
+//    systemProperties['log.config.source'] = 'net/woggioni/rbcs/cli/logging.properties'
+//    systemProperties['java.util.logging.config.file'] = 'classpath:net/woggioni/rbcs/cli/logging.properties'
+    systemProperties['logback.configurationFile'] = 'classpath:net/woggioni/rbcs/cli/logback.xml'
+    systemProperties['io.netty.leakDetectionLevel'] = 'DISABLED'
+
+//    systemProperties['org.slf4j.simpleLogger.showDateTime'] = 'true'
+//    systemProperties['org.slf4j.simpleLogger.defaultLogLevel'] = 'debug'
+//    systemProperties['org.slf4j.simpleLogger.log.com.google.code.yanf4j'] = 'warn'
+//    systemProperties['org.slf4j.simpleLogger.log.net.rubyeye.xmemcached'] = 'warn'
+//    systemProperties['org.slf4j.simpleLogger.dateTimeFormat'] = 'yyyy-MM-dd\'T\'HH:mm:ss.SSSZ'
+}
+
+tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
+    mainClass = mainClassName
+    mainModule = mainModuleName
+}
+
+tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
+    mainClass = mainClassName
+    mainModule = mainModuleName
+    useMusl = true
+    buildStaticImage = true
+}
+
+tasks.named(JlinkPlugin.JLINK_TASK_NAME, JlinkTask) {
+    mainClass = mainClassName
+    mainModule = 'net.woggioni.rbcs.cli'
+}
+
+artifacts {
+    release(envelopeJarTaskProvider)
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifact envelopeJar
+        }
+    }
+}
+
+
