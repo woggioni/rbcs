@@ -76,7 +76,7 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
             override fun channelCreated(ch: Channel) {
                 val pipeline: ChannelPipeline = ch.pipeline()
                 pipeline.addLast(BinaryMemcacheClientCodec())
-                pipeline.addLast(BinaryMemcacheObjectAggregator(Integer.MAX_VALUE))
+                pipeline.addLast(BinaryMemcacheObjectAggregator(cfg.maxSize))
             }
         }
         return FixedChannelPool(bootstrap, channelPoolHandler, server.maxConnections)
