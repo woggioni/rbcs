@@ -45,8 +45,8 @@ import java.time.Duration
 import java.util.Base64
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 import io.netty.util.concurrent.Future as NettyFuture
-
 
 class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoCloseable {
     private val group: NioEventLoopGroup
@@ -206,6 +206,7 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                 retryPolicy.initialDelayMillis.toDouble(),
                 retryPolicy.exp,
                 outcomeHandler,
+                Random.Default,
                 operation
             )
         } else {

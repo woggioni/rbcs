@@ -12,6 +12,24 @@ object RBCS {
     const val RBCS_PREFIX: String = "rbcs"
     const val XML_SCHEMA_NAMESPACE_URI = "http://www.w3.org/2001/XMLSchema-instance"
 
+    fun ByteArray.toInt(index : Int = 0) : Long {
+        if(index + 4 > size) throw IllegalArgumentException("Not enough bytes to decode a 32 bits integer")
+        var value : Long = 0
+        for (b in index until index + 4) {
+            value = (value shl 8) + (get(b).toInt() and 0xFF)
+        }
+        return value
+    }
+
+    fun ByteArray.toLong(index : Int = 0) : Long {
+        if(index + 8 > size) throw IllegalArgumentException("Not enough bytes to decode a 64 bits long integer")
+        var value : Long = 0
+        for (b in index until index + 8) {
+            value = (value shl 8) + (get(b).toInt() and 0xFF)
+        }
+        return value
+    }
+
     fun digest(
         data: ByteArray,
         md: MessageDigest = MessageDigest.getInstance("MD5")

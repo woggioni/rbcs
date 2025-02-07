@@ -3,6 +3,8 @@ package net.woggioni.rbcs.client
 import io.netty.util.concurrent.EventExecutorGroup
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import kotlin.math.pow
+import kotlin.random.Random
 
 sealed class OperationOutcome<T> {
     class Success<T>(val result: T) : OperationOutcome<T>()
@@ -24,8 +26,10 @@ fun <T> executeWithRetry(
     initialDelay: Double,
     exp: Double,
     outcomeHandler: OutcomeHandler<T>,
+    randomizer : Random?,
     cb: () -> CompletableFuture<T>
 ): CompletableFuture<T> {
+
     val finalResult = cb()
     var future = finalResult
     var shortCircuit = false
@@ -46,7 +50,7 @@ fun <T> executeWithRetry(
                     is OutcomeHandlerResult.Retry -> {
                         val res = CompletableFuture<T>()
                         val delay = run {
-                            val scheduledDelay = (initialDelay * Math.pow(exp, i.toDouble())).toLong()
+                            val scheduledDelay = (initialDelay * exp.pow(i.toDouble()) * (1.0 + (randomizer?.nextDouble(-0.5, 0.5) ?: 0.0))).toLong()
                             outcomeHandlerResult.suggestedDelayMillis?.coerceAtMost(scheduledDelay) ?: scheduledDelay
                         }
                         eventExecutorGroup.schedule({

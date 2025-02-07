@@ -19,10 +19,13 @@ import java.util.concurrent.TimeUnit
 
 
 @Sharable
-class ThrottlingHandler(cfg: Configuration) :
-    ChannelInboundHandlerAdapter() {
+class ThrottlingHandler(cfg: Configuration) : ChannelInboundHandlerAdapter() {
 
-    private val log = contextLogger()
+    private companion object {
+        @JvmStatic
+        private val log = contextLogger()
+    }
+
     private val bucketManager = BucketManager.from(cfg)
 
     private val connectionConfiguration = cfg.connection
@@ -60,7 +63,7 @@ class ThrottlingHandler(cfg: Configuration) :
         }
     }
 
-    private fun handleBuckets(buckets : List<Bucket>, ctx : ChannelHandlerContext, msg : Any, delayResponse : Boolean) {
+    private fun handleBuckets(buckets: List<Bucket>, ctx: ChannelHandlerContext, msg: Any, delayResponse: Boolean) {
         var nextAttempt = -1L
         for (bucket in buckets) {
             val bucketNextAttempt = bucket.removeTokensWithEstimate(1)
@@ -68,17 +71,17 @@ class ThrottlingHandler(cfg: Configuration) :
                 nextAttempt = bucketNextAttempt
             }
         }
-        if(nextAttempt < 0) {
+        if (nextAttempt < 0) {
             super.channelRead(ctx, msg)
-            return
-        }
-        val waitDuration = Duration.of(LongMath.ceilDiv(nextAttempt, 100_000_000L) * 100L, ChronoUnit.MILLIS)
-        if (delayResponse && waitDuration < waitThreshold) {
-            ctx.executor().schedule({
-                handleBuckets(buckets, ctx, msg, false)
-            }, waitDuration.toMillis(), TimeUnit.MILLISECONDS)
         } else {
-            sendThrottledResponse(ctx, waitDuration)
+            val waitDuration = Duration.of(LongMath.ceilDiv(nextAttempt, 100_000_000L) * 100L, ChronoUnit.MILLIS)
+            if (delayResponse && waitDuration < waitThreshold) {
+                ctx.executor().schedule({
+                    handleBuckets(buckets, ctx, msg, false)
+                }, waitDuration.toMillis(), TimeUnit.MILLISECONDS)
+            } else {
+                sendThrottledResponse(ctx, waitDuration)
+            }
         }
     }
 

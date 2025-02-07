@@ -17,6 +17,8 @@ import net.woggioni.rbcs.api.exception.CacheException
 import net.woggioni.rbcs.api.exception.ContentTooLargeException
 import net.woggioni.rbcs.common.contextLogger
 import net.woggioni.rbcs.common.debug
+import java.net.SocketException
+import javax.net.ssl.SSLException
 import javax.net.ssl.SSLPeerUnverifiedException
 
 @ChannelHandler.Sharable
@@ -50,7 +52,12 @@ class ExceptionHandler : ChannelDuplexHandler() {
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
         when (cause) {
             is DecoderException -> {
-                log.error(cause.message, cause)
+                log.debug(cause.message, cause)
+                ctx.close()
+            }
+
+            is SocketException -> {
+                log.debug(cause.message, cause)
                 ctx.close()
             }
 
@@ -59,10 +66,16 @@ class ExceptionHandler : ChannelDuplexHandler() {
                     .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
             }
 
+            is SSLException -> {
+                log.debug(cause.message, cause)
+                ctx.close()
+            }
+
             is ContentTooLargeException -> {
                 ctx.writeAndFlush(TOO_BIG.retainedDuplicate())
                     .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
             }
+
             is ReadTimeoutException -> {
                 log.debug {
                     val channelId = ctx.channel().id().asShortText()
@@ -70,6 +83,7 @@ class ExceptionHandler : ChannelDuplexHandler() {
                 }
                 ctx.close()
             }
+
             is WriteTimeoutException -> {
                 log.debug {
                     val channelId = ctx.channel().id().asShortText()
@@ -77,11 +91,13 @@ class ExceptionHandler : ChannelDuplexHandler() {
                 }
                 ctx.close()
             }
+
             is CacheException -> {
                 log.error(cause.message, cause)
                 ctx.writeAndFlush(NOT_AVAILABLE.retainedDuplicate())
                     .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
             }
+
             else -> {
                 log.error(cause.message, cause)
                 ctx.writeAndFlush(SERVER_ERROR.retainedDuplicate())
