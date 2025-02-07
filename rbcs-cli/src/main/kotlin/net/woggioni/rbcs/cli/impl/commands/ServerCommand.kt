@@ -59,6 +59,9 @@ class ServerCommand(app : Application) : RbcsCommand() {
             createDefaultConfigurationFile(configurationFile)
         }
 
+        log.debug {
+            "Using configuration file '$configurationFile'"
+        }
         val configuration = RemoteBuildCacheServer.loadConfiguration(configurationFile)
         log.debug {
             ByteArrayOutputStream().also {

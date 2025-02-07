@@ -27,8 +27,6 @@ object Parser {
         val root = document.documentElement
         val anonymousUser = User("", null, emptySet(), null)
         var connection: Configuration.Connection = Configuration.Connection(
-            Duration.of(10, ChronoUnit.SECONDS),
-            Duration.of(10, ChronoUnit.SECONDS),
             Duration.of(60, ChronoUnit.SECONDS),
             Duration.of(30, ChronoUnit.SECONDS),
             Duration.of(30, ChronoUnit.SECONDS),
@@ -113,10 +111,6 @@ object Parser {
                 }
 
                 "connection" -> {
-                    val writeTimeout = child.renderAttribute("write-timeout")
-                        ?.let(Duration::parse) ?: Duration.of(0, ChronoUnit.SECONDS)
-                    val readTimeout = child.renderAttribute("read-timeout")
-                        ?.let(Duration::parse) ?: Duration.of(0, ChronoUnit.SECONDS)
                     val idleTimeout = child.renderAttribute("idle-timeout")
                         ?.let(Duration::parse) ?: Duration.of(30, ChronoUnit.SECONDS)
                     val readIdleTimeout = child.renderAttribute("read-idle-timeout")
@@ -126,8 +120,6 @@ object Parser {
                     val maxRequestSize = child.renderAttribute("max-request-size")
                         ?.let(Integer::decode) ?: 0x4000000
                     connection = Configuration.Connection(
-                        readTimeout,
-                        writeTimeout,
                         idleTimeout,
                         readIdleTimeout,
                         writeIdleTimeout,

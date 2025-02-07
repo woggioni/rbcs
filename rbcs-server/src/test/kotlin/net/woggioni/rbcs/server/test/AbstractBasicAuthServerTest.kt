@@ -38,8 +38,6 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
             serverPath,
             Configuration.EventExecutor(false),
             Configuration.Connection(
-                Duration.of(10, ChronoUnit.SECONDS),
-                Duration.of(10, ChronoUnit.SECONDS),
                 Duration.of(60, ChronoUnit.SECONDS),
                 Duration.of(30, ChronoUnit.SECONDS),
                 Duration.of(30, ChronoUnit.SECONDS),

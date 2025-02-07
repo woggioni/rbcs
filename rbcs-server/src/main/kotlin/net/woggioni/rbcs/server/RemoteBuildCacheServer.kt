@@ -314,19 +314,6 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             }
             val pipeline = ch.pipeline()
             cfg.connection.also { conn ->
-                val readTimeout = conn.readTimeout.toMillis()
-                val writeTimeout = conn.writeTimeout.toMillis()
-                if (readTimeout > 0 || writeTimeout > 0) {
-                    pipeline.addLast(
-                        IdleStateHandler(
-                            false,
-                            readTimeout,
-                            writeTimeout,
-                            0,
-                            TimeUnit.MILLISECONDS
-                        )
-                    )
-                }
                 val readIdleTimeout = conn.readIdleTimeout.toMillis()
                 val writeIdleTimeout = conn.writeIdleTimeout.toMillis()
                 val idleTimeout = conn.idleTimeout.toMillis()

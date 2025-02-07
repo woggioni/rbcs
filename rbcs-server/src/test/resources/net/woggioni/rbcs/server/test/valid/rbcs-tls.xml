@@ -4,8 +4,6 @@
              xs:schemaLocation="urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs.xsd">
     <bind host="127.0.0.1" port="11443" incoming-connections-backlog-size="180"/>
     <connection
-            write-timeout="PT25M"
-            read-timeout="PT20M"
             read-idle-timeout="PT10M"
             write-idle-timeout="PT11M"
             idle-timeout="PT30M"

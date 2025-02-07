@@ -9,9 +9,7 @@
             max-request-size="67108864"
             idle-timeout="PT30S"
             read-idle-timeout="PT60S"
-            write-idle-timeout="PT60S"
-            read-timeout="PT5M"
-            write-timeout="PT5M"/>
+            write-idle-timeout="PT60S"/>
     <event-executor use-virtual-threads="true"/>
     <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" chunk-size="123">
         <server host="memcached" port="11211"/>

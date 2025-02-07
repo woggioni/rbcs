@@ -36,8 +36,6 @@ object Serializer {
             }
             node("connection") {
                 conf.connection.let { connection ->
-                    attr("read-timeout", connection.readTimeout.toString())
-                    attr("write-timeout", connection.writeTimeout.toString())
                     attr("idle-timeout", connection.idleTimeout.toString())
                     attr("read-idle-timeout", connection.readIdleTimeout.toString())
                     attr("write-idle-timeout", connection.writeIdleTimeout.toString())

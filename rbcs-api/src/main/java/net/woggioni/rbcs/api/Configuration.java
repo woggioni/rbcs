@@ -35,8 +35,6 @@ public class Configuration {
 
     @Value
     public static class Connection {
-        Duration readTimeout;
-        Duration writeTimeout;
         Duration idleTimeout;
         Duration readIdleTimeout;
         Duration writeIdleTimeout;

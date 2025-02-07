@@ -3,14 +3,27 @@
            xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:rbcs="urn:net.woggioni.rbcs.server"
            elementFormDefault="unqualified">
-    <xs:element name="server" type="rbcs:serverType"/>
+    <xs:element name="server" type="rbcs:serverType">
+        <xs:annotation>
+            <xs:documentation>
+                Root element containing the server configuration
+            </xs:documentation>
+        </xs:annotation>
+    </xs:element>
 
     <xs:complexType name="serverType">
         <xs:sequence minOccurs="0">
             <xs:element name="bind" type="rbcs:bindType" maxOccurs="1"/>
             <xs:element name="connection" type="rbcs:connectionType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="event-executor" type="rbcs:eventExecutorType" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="cache" type="rbcs:cacheType" maxOccurs="1"/>
+            <xs:element name="cache" type="rbcs:cacheType" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Cache storage backend implementation to use, more implementations can be added through
+                        the use of plugins
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
             <xs:element name="authorization" type="rbcs:authorizationType" minOccurs="0">
                 <xs:key name="userId">
                     <xs:selector xpath="users/user"/>
@@ -21,75 +34,279 @@
                     <xs:field xpath="@ref"/>
                 </xs:keyref>
             </xs:element>
-            <xs:element name="authentication" type="rbcs:authenticationType" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="tls" type="rbcs:tlsType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="authentication" type="rbcs:authenticationType" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Mechanism to use to assign a username to a specific client
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="tls" type="rbcs:tlsType" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Use TLS to encrypt all the communications
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:sequence>
-        <xs:attribute name="path" type="xs:string" use="optional"/>
+        <xs:attribute name="path" type="xs:string" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    URI path prefix, if your rbcs is hosted at "http://www.example.com"
+                    and this parameter is set to "cache", then all the requests will need to be sent at
+                    "http://www.example.com/cache/KEY", where "KEY" is the cache entry KEY
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="bindType">
-        <xs:attribute name="host" type="xs:token" use="required"/>
-        <xs:attribute name="port" type="xs:unsignedShort" use="required"/>
-        <xs:attribute name="incoming-connections-backlog-size" type="xs:unsignedInt" use="optional" default="1024"/>
+        <xs:attribute name="host" type="xs:token" use="required">
+            <xs:annotation>
+                <xs:documentation>Server bind address</xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="port" type="xs:unsignedShort" use="required">
+            <xs:annotation>
+                <xs:documentation>Server port number</xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="incoming-connections-backlog-size" type="xs:unsignedInt" use="optional" default="1024">
+            <xs:annotation>
+                <xs:documentation>
+                    The maximum queue length for incoming connection indications (a request to connect) is set to
+                    the backlog parameter. If a connection indication arrives when the queue is full,
+                    the connection is refused.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="connectionType">
-        <xs:attribute name="read-timeout" type="xs:duration" use="optional" default="PT0S"/>
-        <xs:attribute name="write-timeout" type="xs:duration" use="optional" default="PT0S"/>
-        <xs:attribute name="idle-timeout" type="xs:duration" use="optional" default="PT30S"/>
-        <xs:attribute name="read-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
-        <xs:attribute name="write-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
-        <xs:attribute name="max-request-size" type="rbcs:byteSizeType" use="optional" default="0x4000000"/>
+        <xs:attribute name="idle-timeout" type="xs:duration" use="optional" default="PT30S">
+            <xs:annotation>
+                <xs:documentation>
+                    The server will close the connection with the client
+                    when neither a read nor a write was performed for the specified period of time.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="read-idle-timeout" type="xs:duration" use="optional" default="PT60S">
+            <xs:annotation>
+                <xs:documentation>
+                    The server will close the connection with the client
+                    when no read was performed for the specified period of time.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="write-idle-timeout" type="xs:duration" use="optional" default="PT60S">
+            <xs:annotation>
+                <xs:documentation>
+                    The server will close the connection with the client
+                    when no write was performed for the specified period of time.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="max-request-size" type="rbcs:byteSizeType" use="optional" default="0x4000000">
+            <xs:annotation>
+                <xs:documentation>
+                    The maximum request body size the server will accept from a client
+                    (if exceeded the server returns 413 HTTP status code)
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="eventExecutorType">
-        <xs:attribute name="use-virtual-threads" type="xs:boolean" use="optional" default="true"/>
+        <xs:attribute name="use-virtual-threads" type="xs:boolean" use="optional" default="true">
+            <xs:annotation>
+                <xs:documentation>
+                    Whether or not to use virtual threads for the execution of the core server handler
+                    (not for the I/O operations)
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="cacheType" abstract="true"/>
 
     <xs:complexType name="inMemoryCacheType">
+        <xs:annotation>
+            <xs:documentation>
+                A simple cache implementation that uses a java.util.ConcurrentHashMap as a storage backend
+            </xs:documentation>
+        </xs:annotation>
         <xs:complexContent>
             <xs:extension base="rbcs:cacheType">
-                <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
-                <xs:attribute name="max-size" type="rbcs:byteSizeType" default="0x1000000"/>
-                <xs:attribute name="digest" type="xs:token" default="MD5"/>
-                <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
-                <xs:attribute name="compression-level" type="rbcs:compressionLevelType" default="-1"/>
-                <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000"/>
+                <xs:attribute name="max-age" type="xs:duration" default="P1D">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Values will be removed from the cache after this amount of time
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="max-size" type="rbcs:byteSizeType" default="0x1000000">
+                    <xs:annotation>
+                        <xs:documentation>
+                            The maximum allowed total size of the cache in bytes, old values will be purged from the cache
+                            when the insertion of a new value causes this limit to be exceeded
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="digest" type="xs:token" default="MD5">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Hashing algorithm to apply to the key. If omitted, no hashing is performed.
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="enable-compression" type="xs:boolean" default="true">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Enable deflate compression for stored cache elements
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="compression-level" type="rbcs:compressionLevelType" default="-1">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Deflate compression level to use for cache compression,
+                            use -1 to use the default compression level of java.util.zip.Deflater
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Maximum byte size of socket write calls
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
 
     <xs:complexType name="fileSystemCacheType">
+        <xs:annotation>
+            <xs:documentation>
+                A simple cache implementation that stores data in a folder on the filesystem
+            </xs:documentation>
+        </xs:annotation>
         <xs:complexContent>
             <xs:extension base="rbcs:cacheType">
-                <xs:attribute name="path" type="xs:string" use="optional"/>
-                <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
-                <xs:attribute name="digest" type="xs:token" default="MD5"/>
-                <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
-                <xs:attribute name="compression-level" type="rbcs:compressionLevelType" default="-1"/>
-                <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000"/>
+                <xs:attribute name="path" type="xs:string" use="optional">
+                    <xs:annotation>
+                        <xs:documentation>
+                            File system path that will be used to store the cache data files
+                            (it will be created if it doesn't already exist)
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="max-age" type="xs:duration" default="P1D">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Values will be removed from the cache after this amount of time
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="digest" type="xs:token" default="MD5">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Hashing algorithm to apply to the key. If omitted, no hashing is performed.
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="enable-compression" type="xs:boolean" default="true">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Enable deflate compression for stored cache elements
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="compression-level" type="rbcs:compressionLevelType" default="-1">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Deflate compression level to use for cache compression,
+                            use -1 to use the default compression level of java.util.zip.Deflater
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Maximum byte size of a cache value that will be stored in memory
+                            (reduce it to reduce memory consumption, increase it for increased throughput)
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
 
     <xs:complexType name="tlsCertificateAuthorizationType">
         <xs:sequence>
-            <xs:element name="group-extractor" type="rbcs:X500NameExtractorType" minOccurs="0"/>
-            <xs:element name="user-extractor" type="rbcs:X500NameExtractorType" minOccurs="0"/>
+            <xs:element name="group-extractor" type="rbcs:X500NameExtractorType" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        A regex based extractor that will be used to determine which group the client belongs to,
+                        based on the X.500 name of the subject field in the client's TLS certificate.
+                        When this is set RBAC works even if the user isn't listed in the &lt;users/&gt; section as
+                        the client will be assigned role solely based on the group he is found to belong to.
+                        Note that this does not allow for a client to be part of multiple groups.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="user-extractor" type="rbcs:X500NameExtractorType" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        A regex based extractor that will be used to assign a user to a connected client,
+                        based on the X.500 name of the subject field in the client's TLS certificate.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="X500NameExtractorType">
-        <xs:attribute name="attribute-name" type="xs:token"/>
-        <xs:attribute name="pattern" type="xs:token"/>
+        <xs:annotation>
+            <xs:documentation>
+                Extract informations from a client TLS certificates using
+                regular expressions applied to the X.500 name "Subject" field
+            </xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="attribute-name" type="xs:token">
+            <xs:annotation>
+                <xs:documentation>
+                    X.500 name attribute to apply the regex
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="pattern" type="xs:token">
+            <xs:annotation>
+                <xs:documentation>
+                    Regex that wil be applied to the attribute value,
+                    use regex groups to extract relevant data
+                    (note that only the first group that appears in the regex is used)
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="authorizationType">
         <xs:all>
-            <xs:element name="users" type="rbcs:usersType"/>
+            <xs:element name="users" type="rbcs:usersType">
+                <xs:annotation>
+                    <xs:documentation>
+                        List of users registered in the application
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
             <xs:element name="groups" type="rbcs:groupsType">
+                <xs:annotation>
+                    <xs:documentation>
+                        List of user groups registered in the application
+                    </xs:documentation>
+                </xs:annotation>
                 <xs:unique name="groupKey">
                     <xs:selector xpath="group"/>
                     <xs:field xpath="@name"/>
@@ -99,48 +316,150 @@
     </xs:complexType>
 
     <xs:complexType name="authenticationType">
+        <xs:annotation>
+            <xs:documentation>
+                Authentication mechanism to assign usernames and groups to clients
+            </xs:documentation>
+        </xs:annotation>
         <xs:choice>
-            <xs:element name="basic"/>
-            <xs:element name="client-certificate" type="rbcs:tlsCertificateAuthorizationType"/>
-            <xs:element name="none"/>
+            <xs:element name="basic">
+                <xs:annotation>
+                    <xs:documentation>
+                        Enable HTTP basic authentication
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="client-certificate" type="rbcs:tlsCertificateAuthorizationType">
+                <xs:annotation>
+                    <xs:documentation>
+                        Enable TLS certificate authentication
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="none">
+                <xs:annotation>
+                    <xs:documentation>
+                        Disable authentication altogether
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:choice>
     </xs:complexType>
 
     <xs:complexType name="quotaType">
-        <xs:attribute name="calls" type="xs:positiveInteger" use="required"/>
-        <xs:attribute name="period" type="xs:duration" use="required"/>
-        <xs:attribute name="max-available-calls" type="xs:positiveInteger" use="optional"/>
-        <xs:attribute name="initial-available-calls" type="xs:unsignedInt" use="optional"/>
+        <xs:annotation>
+            <xs:documentation>
+                Defines a quota for a user or a group
+            </xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="calls" type="xs:positiveInteger" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Maximum number of allowed calls in a given period
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="period" type="xs:duration" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    The period length
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="max-available-calls" type="xs:positiveInteger" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Maximum number of available calls that can be accumulated
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="initial-available-calls" type="xs:unsignedInt" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Number of available calls for users at their first call
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="anonymousUserType">
+        <xs:annotation>
+            <xs:documentation>
+                Placeholder for a client that is not authenticated
+            </xs:documentation>
+        </xs:annotation>
         <xs:sequence>
-            <xs:element name="quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Calls quota for the user
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="userType">
+        <xs:annotation>
+            <xs:documentation>
+                An authenticated user
+            </xs:documentation>
+        </xs:annotation>
         <xs:sequence>
-            <xs:element name="quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Calls quota for the user
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:sequence>
-        <xs:attribute name="name" type="xs:token" use="required"/>
-        <xs:attribute name="password" type="xs:string" use="optional"/>
+        <xs:attribute name="name" type="xs:token" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    User's name
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="password" type="xs:string" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    User's password used in HTTP basic authentication
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="usersType">
-        <xs:sequence>
+        <xs:annotation>
+            <xs:documentation>
+                List of registered users, add an &lt;anonymous&gt; tag to enable authenticated user access
+                when authentication is enabled
+            </xs:documentation>
+        </xs:annotation>
+    <xs:sequence>
             <xs:element name="user" type="rbcs:userType" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="anonymous" type="rbcs:anonymousUserType" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="groupsType">
+        <xs:annotation>
+            <xs:documentation>
+                List of registered user groups
+            </xs:documentation>
+        </xs:annotation>
         <xs:sequence>
             <xs:element name="group" type="rbcs:groupType" maxOccurs="unbounded" minOccurs="0"/>
         </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="groupType">
+        <xs:annotation>
+            <xs:documentation>
+                The definition of a user group, with the list of its member users
+            </xs:documentation>
+        </xs:annotation>
         <xs:sequence>
             <xs:element name="users" type="rbcs:userRefsType" maxOccurs="1" minOccurs="0">
                 <xs:unique name="userRefWriterKey">
@@ -148,11 +467,35 @@
                     <xs:field xpath="@ref"/>
                 </xs:unique>
             </xs:element>
-            <xs:element name="roles" type="rbcs:rolesType" maxOccurs="1" minOccurs="0"/>
-            <xs:element name="user-quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="group-quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="roles" type="rbcs:rolesType" maxOccurs="1" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        The list of application roles awarded to all the members of this group
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="user-quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        The call quota for each user in this group
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="group-quota" type="rbcs:quotaType" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        The cumulative call quota for all users in this group
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:sequence>
-        <xs:attribute name="name" type="xs:token"/>
+        <xs:attribute name="name" type="xs:token">
+            <xs:annotation>
+                <xs:documentation>
+                    The group's name
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:simpleType name="role" final="restriction" >
@@ -172,6 +515,11 @@
     </xs:complexType>
 
     <xs:complexType name="userRefsType">
+        <xs:annotation>
+            <xs:documentation>
+                A list of references to users in the &lt;users&gt; section
+            </xs:documentation>
+        </xs:annotation>
         <xs:sequence>
                 <xs:element name="user" type="rbcs:userRefType" maxOccurs="unbounded" minOccurs="0"/>
                 <xs:element name="anonymous" minOccurs="0" maxOccurs="1"/>
@@ -179,28 +527,106 @@
     </xs:complexType>
 
     <xs:complexType name="userRefType">
-        <xs:attribute name="ref" type="xs:string" use="required"/>
+        <xs:annotation>
+            <xs:documentation>
+                A reference to a user in the &lt;users&gt; section
+            </xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="ref" type="xs:string" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Name of the referenced user
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="tlsType">
+        <xs:annotation>
+            <xs:documentation>
+                Enable TLS protocol
+            </xs:documentation>
+        </xs:annotation>
         <xs:all>
-            <xs:element name="keystore" type="rbcs:keyStoreType" />
-            <xs:element name="truststore" type="rbcs:trustStoreType" minOccurs="0"/>
+            <xs:element name="keystore" type="rbcs:keyStoreType" >
+                <xs:annotation>
+                    <xs:documentation>
+                        Path to the keystore file that contains the server's key and certificate
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="truststore" type="rbcs:trustStoreType" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Path to the truststore file that contains the trusted CAs
+                        for TLS client certificate verification
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:all>
     </xs:complexType>
 
     <xs:complexType name="keyStoreType">
-        <xs:attribute name="file" type="xs:string" use="required"/>
-        <xs:attribute name="password" type="xs:string"/>
-        <xs:attribute name="key-alias" type="xs:string" use="required"/>
-        <xs:attribute name="key-password" type="xs:string"/>
+        <xs:attribute name="file" type="xs:string" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    System path to the keystore file
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="password" type="xs:string">
+            <xs:annotation>
+                <xs:documentation>
+                    Password to open they keystore file
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="key-alias" type="xs:string" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Alias of the keystore entry containing the private key
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="key-password" type="xs:string">
+            <xs:annotation>
+                <xs:documentation>
+                    Private key entry's encryption password
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="trustStoreType">
-        <xs:attribute name="file" type="xs:string" use="required"/>
-        <xs:attribute name="password" type="xs:string"/>
-        <xs:attribute name="check-certificate-status" type="xs:boolean"/>
-        <xs:attribute name="require-client-certificate" type="xs:boolean" use="optional" default="false"/>
+        <xs:attribute name="file" type="xs:string" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Path to the trustore file
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="password" type="xs:string">
+            <xs:annotation>
+                <xs:documentation>
+                    Trustore file password
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="check-certificate-status" type="xs:boolean">
+            <xs:annotation>
+                <xs:documentation>
+                    Whether or not check the certificate validity using CRL/OCSP
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="require-client-certificate" type="xs:boolean" use="optional" default="false">
+            <xs:annotation>
+                <xs:documentation>
+                    If true, the server requires a TLS client certificate from the client and simply refuses to connect
+                    when a client certificate isn't provided
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="propertiesType">
