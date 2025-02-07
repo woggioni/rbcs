@@ -44,7 +44,6 @@ envelopeJar {
 dependencies {
     implementation catalog.jwo
     implementation catalog.slf4j.api
-    implementation catalog.netty.codec.http
     implementation catalog.picocli
 
     implementation project(':rbcs-client')

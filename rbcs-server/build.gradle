@@ -9,6 +9,9 @@ dependencies {
     implementation catalog.jwo
     implementation catalog.slf4j.api
     implementation catalog.netty.codec.http
+    implementation catalog.netty.handler
+    implementation catalog.netty.buffer
+    implementation catalog.netty.transport
 
     api project(':rbcs-common')
     api project(':rbcs-api')
@@ -34,5 +37,6 @@ publishing {
         }
     }
 }
+
 
 

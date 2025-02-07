@@ -6,9 +6,11 @@ plugins {
 dependencies {
     implementation project(':rbcs-api')
     implementation project(':rbcs-common')
-    implementation catalog.picocli
     implementation catalog.slf4j.api
     implementation catalog.netty.buffer
+    implementation catalog.netty.handler
+    implementation catalog.netty.transport
+    implementation catalog.netty.common
     implementation catalog.netty.codec.http
 
     testRuntimeOnly catalog.logback.classic

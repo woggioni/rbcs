@@ -1,12 +1,11 @@
 package net.woggioni.rbcs.server.cache
 
 import io.netty.buffer.ByteBuf
+import net.woggioni.jwo.JWO
 import net.woggioni.rbcs.api.Cache
 import net.woggioni.rbcs.common.ByteBufInputStream
 import net.woggioni.rbcs.common.RBCS.digestString
 import net.woggioni.rbcs.common.contextLogger
-import net.woggioni.jwo.JWO
-import net.woggioni.jwo.LockFile
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.nio.file.Files
@@ -18,7 +17,6 @@ import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.atomic.AtomicReference
 import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.Inflater
@@ -41,7 +39,10 @@ class FileSystemCache(
         Files.createDirectories(root)
     }
 
-    private var nextGc = AtomicReference(Instant.now().plus(maxAge))
+    @Volatile
+    private var running = true
+
+    private var nextGc = Instant.now()
 
     override fun get(key: String) = (digestAlgorithm
         ?.let(MessageDigest::getInstance)
@@ -67,8 +68,6 @@ class FileSystemCache(
                         FileChannel.open(file, StandardOpenOption.READ)
                     }
                 }
-            }.also {
-                gc()
             }.let {
                 CompletableFuture.completedFuture(it)
             }
@@ -98,33 +97,51 @@ class FileSystemCache(
                 Files.delete(tmpFile)
                 throw t
             }
-        }.also {
-            gc()
         }
         return CompletableFuture.completedFuture(null)
     }
 
+    private val garbageCollector = Thread.ofVirtual().name("file-system-cache-gc").start {
+        while (running) {
+            gc()
+        }
+    }
+
     private fun gc() {
         val now = Instant.now()
-        val oldValue = nextGc.getAndSet(now.plus(maxAge))
-        if (oldValue < now) {
-            actualGc(now)
+        if (nextGc < now) {
+            val oldestEntry = actualGc(now)
+            nextGc = (oldestEntry ?: now).plus(maxAge)
         }
+        Thread.sleep(minOf(Duration.between(now, nextGc), Duration.ofSeconds(1)))
     }
 
-    @Synchronized
-    private fun actualGc(now: Instant) {
-        Files.list(root).filter {
-            val creationTimeStamp = Files.readAttributes(it, BasicFileAttributes::class.java)
-                .creationTime()
-                .toInstant()
-            now > creationTimeStamp.plus(maxAge)
-        }.forEach { file ->
-            LockFile.acquire(file, false).use {
-                Files.delete(file)
+    /**
+     * Returns the creation timestamp of the oldest cache entry (if any)
+     */
+    private fun actualGc(now: Instant) : Instant? {
+        var result :Instant? = null
+        Files.list(root)
+            .filter { path ->
+                JWO.splitExtension(path)
+                    .map { it._2 }
+                    .map { it != ".tmp" }
+                    .orElse(true)
             }
-        }
+            .filter {
+                val creationTimeStamp = Files.readAttributes(it, BasicFileAttributes::class.java)
+                    .creationTime()
+                    .toInstant()
+                if(result == null || creationTimeStamp < result) {
+                    result = creationTimeStamp
+                }
+                now > creationTimeStamp.plus(maxAge)
+            }.forEach(Files::delete)
+        return result
     }
 
-    override fun close() {}
+    override fun close() {
+        running = false
+        garbageCollector.join()
+    }
 }

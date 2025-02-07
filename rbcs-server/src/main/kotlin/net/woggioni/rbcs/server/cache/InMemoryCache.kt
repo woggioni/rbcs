@@ -1,12 +1,12 @@
 package net.woggioni.rbcs.server.cache
 
 import io.netty.buffer.ByteBuf
+import net.woggioni.jwo.JWO
 import net.woggioni.rbcs.api.Cache
 import net.woggioni.rbcs.common.ByteBufInputStream
 import net.woggioni.rbcs.common.ByteBufOutputStream
 import net.woggioni.rbcs.common.RBCS.digestString
 import net.woggioni.rbcs.common.contextLogger
-import net.woggioni.jwo.JWO
 import java.nio.channels.Channels
 import java.security.MessageDigest
 import java.time.Duration
@@ -42,9 +42,11 @@ class InMemoryCache(
 
     private val removalQueue = PriorityBlockingQueue<RemovalQueueElement>()
 
+    @Volatile
     private var running = true
-    private val garbageCollector = Thread {
-        while(true) {
+
+    private val garbageCollector = Thread.ofVirtual().name("in-memory-cache-gc").start {
+        while(running) {
             val el = removalQueue.take()
             val buf = el.value
             val now = Instant.now()
@@ -62,8 +64,6 @@ class InMemoryCache(
                 Thread.sleep(minOf(Duration.between(now, el.expiry), Duration.ofSeconds(1)))
             }
         }
-    }.apply {
-        start()
     }
 
     private fun removeEldest() : Long {

@@ -30,11 +30,13 @@ import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.AttributeKey
 import io.netty.util.concurrent.DefaultEventExecutorGroup
 import io.netty.util.concurrent.EventExecutorGroup
+import net.woggioni.jwo.JWO
+import net.woggioni.jwo.Tuple2
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.exception.ConfigurationException
-import net.woggioni.rbcs.common.RBCS.toUrl
 import net.woggioni.rbcs.common.PasswordSecurity.decodePasswordHash
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
+import net.woggioni.rbcs.common.RBCS.toUrl
 import net.woggioni.rbcs.common.Xml
 import net.woggioni.rbcs.common.contextLogger
 import net.woggioni.rbcs.common.debug
@@ -48,8 +50,6 @@ import net.woggioni.rbcs.server.configuration.Serializer
 import net.woggioni.rbcs.server.exception.ExceptionHandler
 import net.woggioni.rbcs.server.handler.ServerHandler
 import net.woggioni.rbcs.server.throttling.ThrottlingHandler
-import net.woggioni.jwo.JWO
-import net.woggioni.jwo.Tuple2
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.nio.file.Files
@@ -59,6 +59,7 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.util.Arrays
 import java.util.Base64
+import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -128,11 +129,12 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                     val clientCertificate = peerCertificates.first() as X509Certificate
                     val user = userExtractor?.extract(clientCertificate)
                     val group = groupExtractor?.extract(clientCertificate)
-                    val allGroups = ((user?.groups ?: emptySet()).asSequence() + sequenceOf(group).filterNotNull()).toSet()
+                    val allGroups =
+                        ((user?.groups ?: emptySet()).asSequence() + sequenceOf(group).filterNotNull()).toSet()
                     AuthenticationResult(user, allGroups)
-                } ?: anonymousUserGroups?.let{ AuthenticationResult(null, it) }
+                } ?: anonymousUserGroups?.let { AuthenticationResult(null, it) }
             } catch (es: SSLPeerUnverifiedException) {
-                anonymousUserGroups?.let{ AuthenticationResult(null, it) }
+                anonymousUserGroups?.let { AuthenticationResult(null, it) }
             }
         }
     }
@@ -191,7 +193,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
     private class ServerInitializer(
         private val cfg: Configuration,
         private val eventExecutorGroup: EventExecutorGroup
-    ) : ChannelInitializer<Channel>() {
+    ) : ChannelInitializer<Channel>(), AutoCloseable {
 
         companion object {
             private fun createSslCtx(tls: Configuration.Tls): SslContext {
@@ -213,7 +215,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                             trustManager(
                                 ClientCertificateValidator.getTrustManager(ts, trustStore.isCheckCertificateStatus)
                             )
-                            if(trustStore.isRequireClientCertificate) ClientAuth.REQUIRE
+                            if (trustStore.isRequireClientCertificate) ClientAuth.REQUIRE
                             else ClientAuth.OPTIONAL
                         } ?: ClientAuth.NONE
                         clientAuth(clientAuth)
@@ -245,10 +247,11 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
 
         private val log = contextLogger()
 
+        private val cache  = cfg.cache.materialize()
+
         private val serverHandler = let {
-            val cacheImplementation = cfg.cache.materialize()
             val prefix = Path.of("/").resolve(Path.of(cfg.serverPath ?: "/"))
-            ServerHandler(cacheImplementation, prefix)
+            ServerHandler(cache, prefix)
         }
 
         private val exceptionHandler = ExceptionHandler()
@@ -311,7 +314,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             cfg.connection.also { conn ->
                 val readTimeout = conn.readTimeout.toMillis()
                 val writeTimeout = conn.writeTimeout.toMillis()
-                if(readTimeout > 0 || writeTimeout > 0) {
+                if (readTimeout > 0 || writeTimeout > 0) {
                     pipeline.addLast(
                         IdleStateHandler(
                             false,
@@ -325,7 +328,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 val readIdleTimeout = conn.readIdleTimeout.toMillis()
                 val writeIdleTimeout = conn.writeIdleTimeout.toMillis()
                 val idleTimeout = conn.idleTimeout.toMillis()
-                if(readIdleTimeout > 0 || writeIdleTimeout > 0 || idleTimeout > 0) {
+                if (readIdleTimeout > 0 || writeIdleTimeout > 0 || idleTimeout > 0) {
                     pipeline.addLast(
                         IdleStateHandler(
                             true,
@@ -340,16 +343,19 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             pipeline.addLast(object : ChannelInboundHandlerAdapter() {
                 override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
                     if (evt is IdleStateEvent) {
-                        when(evt.state()) {
+                        when (evt.state()) {
                             IdleState.READER_IDLE -> log.debug {
                                 "Read timeout reached on channel ${ch.id().asShortText()}, closing the connection"
                             }
+
                             IdleState.WRITER_IDLE -> log.debug {
                                 "Write timeout reached on channel ${ch.id().asShortText()}, closing the connection"
                             }
+
                             IdleState.ALL_IDLE -> log.debug {
                                 "Idle timeout reached on channel ${ch.id().asShortText()}, closing the connection"
                             }
+
                             null -> throw IllegalStateException("This should never happen")
                         }
                         ctx.close()
@@ -370,26 +376,41 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             pipeline.addLast(eventExecutorGroup, serverHandler)
             pipeline.addLast(exceptionHandler)
         }
+
+        override fun close() {
+            cache.close()
+        }
     }
 
     class ServerHandle(
         httpChannelFuture: ChannelFuture,
-        private val executorGroups: Iterable<EventExecutorGroup>
+        private val executorGroups: Iterable<EventExecutorGroup>,
+        private val serverInitializer: AutoCloseable
     ) : AutoCloseable {
         private val httpChannel: Channel = httpChannelFuture.channel()
         private val closeFuture: ChannelFuture = httpChannel.closeFuture()
         private val log = contextLogger()
 
-        fun shutdown(): ChannelFuture {
+        fun shutdown(): Future<Void> {
             return httpChannel.close()
         }
 
         override fun close() {
             try {
                 closeFuture.sync()
-            } finally {
-                executorGroups.forEach {
+            } catch (ex: Throwable) {
+                log.error(ex.message, ex)
+            }
+            try {
+                serverInitializer.close()
+            } catch (ex: Throwable) {
+                log.error(ex.message, ex)
+            }
+            executorGroups.forEach {
+                try {
                     it.shutdownGracefully().sync()
+                } catch (ex: Throwable) {
+                    log.error(ex.message, ex)
                 }
             }
             log.info {
@@ -411,11 +432,12 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             }
             DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors(), threadFactory)
         }
+        val serverInitializer = ServerInitializer(cfg, eventExecutorGroup)
         val bootstrap = ServerBootstrap().apply {
             // Configure the server
             group(bossGroup, workerGroup)
             channel(serverSocketChannel)
-            childHandler(ServerInitializer(cfg, eventExecutorGroup))
+            childHandler(serverInitializer)
             option(ChannelOption.SO_BACKLOG, cfg.incomingConnectionsBacklogSize)
             childOption(ChannelOption.SO_KEEPALIVE, true)
         }
@@ -427,6 +449,6 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
         log.info {
             "RemoteBuildCacheServer is listening on ${cfg.host}:${cfg.port}"
         }
-        return ServerHandle(httpChannel, setOf(bossGroup, workerGroup, eventExecutorGroup))
+        return ServerHandle(httpChannel, setOf(bossGroup, workerGroup, eventExecutorGroup), serverInitializer)
     }
 }
