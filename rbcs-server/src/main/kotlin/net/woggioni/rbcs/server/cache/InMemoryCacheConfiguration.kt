@@ -10,13 +10,15 @@ data class InMemoryCacheConfiguration(
     val digestAlgorithm : String?,
     val compressionEnabled: Boolean,
     val compressionLevel: Int,
+    val chunkSize : Int
 ) : Configuration.Cache {
     override fun materialize() = InMemoryCache(
         maxAge,
         maxSize,
         digestAlgorithm,
         compressionEnabled,
-        compressionLevel
+        compressionLevel,
+        chunkSize
     )
 
     override fun getNamespaceURI() = RBCS.RBCS_NAMESPACE_URI

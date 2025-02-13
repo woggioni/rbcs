@@ -10,14 +10,10 @@ data class MemcacheCacheConfiguration(
     val maxSize: Int = 0x100000,
     val digestAlgorithm: String? = null,
     val compressionMode: CompressionMode? = null,
+    val chunkSize : Int
 ) : Configuration.Cache {
 
     enum class CompressionMode {
-        /**
-         * Gzip mode
-         */
-        GZIP,
-
         /**
          * Deflate mode
          */

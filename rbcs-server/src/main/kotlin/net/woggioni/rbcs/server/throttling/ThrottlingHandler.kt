@@ -1,10 +1,11 @@
 package net.woggioni.rbcs.server.throttling
 
-import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.handler.codec.http.DefaultFullHttpResponse
+import io.netty.handler.codec.http.HttpContent
 import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpVersion
 import net.woggioni.rbcs.api.Configuration
@@ -18,7 +19,6 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
 
-@Sharable
 class ThrottlingHandler(cfg: Configuration) : ChannelInboundHandlerAdapter() {
 
     private companion object {
@@ -29,6 +29,8 @@ class ThrottlingHandler(cfg: Configuration) : ChannelInboundHandlerAdapter() {
     private val bucketManager = BucketManager.from(cfg)
 
     private val connectionConfiguration = cfg.connection
+
+    private var queuedContent : MutableList<HttpContent>? = null
 
     /**
      * If the suggested waiting time from the bucket is lower than this
@@ -41,25 +43,34 @@ class ThrottlingHandler(cfg: Configuration) : ChannelInboundHandlerAdapter() {
         connectionConfiguration.writeIdleTimeout
     ).dividedBy(2)
 
+
+
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-        val buckets = mutableListOf<Bucket>()
-        val user = ctx.channel().attr(RemoteBuildCacheServer.userAttribute).get()
-        if (user != null) {
-            bucketManager.getBucketByUser(user)?.let(buckets::addAll)
-        }
-        val groups = ctx.channel().attr(RemoteBuildCacheServer.groupAttribute).get() ?: emptySet()
-        if (groups.isNotEmpty()) {
-            groups.forEach { group ->
-                bucketManager.getBucketByGroup(group)?.let(buckets::add)
+        if(msg is HttpRequest) {
+            val buckets = mutableListOf<Bucket>()
+            val user = ctx.channel().attr(RemoteBuildCacheServer.userAttribute).get()
+            if (user != null) {
+                bucketManager.getBucketByUser(user)?.let(buckets::addAll)
             }
-        }
-        if (user == null && groups.isEmpty()) {
-            bucketManager.getBucketByAddress(ctx.channel().remoteAddress() as InetSocketAddress)?.let(buckets::add)
-        }
-        if (buckets.isEmpty()) {
-            return super.channelRead(ctx, msg)
+            val groups = ctx.channel().attr(RemoteBuildCacheServer.groupAttribute).get() ?: emptySet()
+            if (groups.isNotEmpty()) {
+                groups.forEach { group ->
+                    bucketManager.getBucketByGroup(group)?.let(buckets::add)
+                }
+            }
+            if (user == null && groups.isEmpty()) {
+                bucketManager.getBucketByAddress(ctx.channel().remoteAddress() as InetSocketAddress)?.let(buckets::add)
+            }
+            if (buckets.isEmpty()) {
+                super.channelRead(ctx, msg)
+            } else {
+                handleBuckets(buckets, ctx, msg, true)
+            }
+            ctx.channel().id()
+        } else if(msg is HttpContent) {
+            queuedContent?.add(msg) ?: super.channelRead(ctx, msg)
         } else {
-            handleBuckets(buckets, ctx, msg, true)
+            super.channelRead(ctx, msg)
         }
     }
 
@@ -73,9 +84,16 @@ class ThrottlingHandler(cfg: Configuration) : ChannelInboundHandlerAdapter() {
         }
         if (nextAttempt < 0) {
             super.channelRead(ctx, msg)
+            queuedContent?.let {
+                for(content in it) {
+                    super.channelRead(ctx, content)
+                }
+                queuedContent = null
+            }
         } else {
             val waitDuration = Duration.of(LongMath.ceilDiv(nextAttempt, 100_000_000L) * 100L, ChronoUnit.MILLIS)
             if (delayResponse && waitDuration < waitThreshold) {
+                this.queuedContent = mutableListOf()
                 ctx.executor().schedule({
                     handleBuckets(buckets, ctx, msg, false)
                 }, waitDuration.toMillis(), TimeUnit.MILLISECONDS)

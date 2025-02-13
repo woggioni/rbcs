@@ -20,7 +20,8 @@
                     <xs:element name="server" type="rbcs-memcache:memcacheServerType"/>
                 </xs:sequence>
                 <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
-                <xs:attribute name="max-size" type="xs:unsignedInt" default="1048576"/>
+                <xs:attribute name="max-size" type="rbcs:byteSize" default="1048576"/>
+                <xs:attribute name="chunk-size" type="rbcs:byteSize" default="0x4000"/>
                 <xs:attribute name="digest" type="xs:token" />
                 <xs:attribute name="compression-mode" type="rbcs-memcache:compressionType"/>
             </xs:extension>
@@ -30,7 +31,6 @@
     <xs:simpleType name="compressionType">
         <xs:restriction base="xs:token">
             <xs:enumeration value="deflate"/>
-            <xs:enumeration value="gzip"/>
         </xs:restriction>
     </xs:simpleType>
 

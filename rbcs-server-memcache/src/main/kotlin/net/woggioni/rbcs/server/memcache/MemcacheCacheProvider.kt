@@ -29,12 +29,14 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
             ?.let(Duration::parse)
             ?: Duration.ofDays(1)
         val maxSize = el.renderAttribute("max-size")
-            ?.let(String::toInt)
+            ?.let(Integer::decode)
             ?: 0x100000
+        val chunkSize = el.renderAttribute("chunk-size")
+            ?.let(Integer::decode)
+            ?: 0x4000
         val compressionMode = el.renderAttribute("compression-mode")
             ?.let {
                 when (it) {
-                    "gzip" -> MemcacheCacheConfiguration.CompressionMode.GZIP
                     "deflate" -> MemcacheCacheConfiguration.CompressionMode.DEFLATE
                     else -> MemcacheCacheConfiguration.CompressionMode.DEFLATE
                 }
@@ -63,6 +65,7 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
             maxSize,
             digestAlgorithm,
             compressionMode,
+            chunkSize
         )
     }
 
@@ -70,7 +73,6 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
         val result = doc.createElement("cache")
         Xml.of(doc, result) {
             attr("xmlns:${xmlNamespacePrefix}", xmlNamespace, namespaceURI = "http://www.w3.org/2000/xmlns/")
-
             attr("xs:type", "${xmlNamespacePrefix}:$xmlType", RBCS.XML_SCHEMA_NAMESPACE_URI)
             for (server in servers) {
                 node("server") {
@@ -84,13 +86,13 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
             }
             attr("max-age", maxAge.toString())
             attr("max-size", maxSize.toString())
+            attr("chunk-size", chunkSize.toString())
             digestAlgorithm?.let { digestAlgorithm ->
                 attr("digest", digestAlgorithm)
             }
             compressionMode?.let { compressionMode ->
                 attr(
                     "compression-mode", when (compressionMode) {
-                        MemcacheCacheConfiguration.CompressionMode.GZIP -> "gzip"
                         MemcacheCacheConfiguration.CompressionMode.DEFLATE -> "deflate"
                     }
                 )

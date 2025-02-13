@@ -3,7 +3,6 @@ package net.woggioni.rbcs.server.memcache.client
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
-import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelOption
@@ -14,36 +13,23 @@ import io.netty.channel.pool.AbstractChannelPoolHandler
 import io.netty.channel.pool.ChannelPool
 import io.netty.channel.pool.FixedChannelPool
 import io.netty.channel.socket.nio.NioSocketChannel
-import io.netty.handler.codec.DecoderException
+import io.netty.handler.codec.memcache.DefaultLastMemcacheContent
+import io.netty.handler.codec.memcache.DefaultMemcacheContent
+import io.netty.handler.codec.memcache.LastMemcacheContent
+import io.netty.handler.codec.memcache.MemcacheContent
+import io.netty.handler.codec.memcache.MemcacheObject
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec
-import io.netty.handler.codec.memcache.binary.BinaryMemcacheObjectAggregator
-import io.netty.handler.codec.memcache.binary.BinaryMemcacheOpcodes
-import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseStatus
-import io.netty.handler.codec.memcache.binary.DefaultFullBinaryMemcacheRequest
-import io.netty.handler.codec.memcache.binary.FullBinaryMemcacheRequest
-import io.netty.handler.codec.memcache.binary.FullBinaryMemcacheResponse
+import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponse
+import io.netty.handler.logging.LoggingHandler
 import io.netty.util.concurrent.GenericFutureListener
-import net.woggioni.rbcs.common.ByteBufInputStream
-import net.woggioni.rbcs.common.ByteBufOutputStream
-import net.woggioni.rbcs.common.RBCS.digest
 import net.woggioni.rbcs.common.HostAndPort
 import net.woggioni.rbcs.common.contextLogger
+import net.woggioni.rbcs.common.debug
 import net.woggioni.rbcs.server.memcache.MemcacheCacheConfiguration
-import net.woggioni.rbcs.server.memcache.MemcacheException
-import net.woggioni.jwo.JWO
 import java.net.InetSocketAddress
-import java.nio.channels.Channels
-import java.nio.channels.ReadableByteChannel
-import java.security.MessageDigest
-import java.time.Duration
-import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import java.util.zip.Deflater
-import java.util.zip.DeflaterOutputStream
-import java.util.zip.GZIPInputStream
-import java.util.zip.GZIPOutputStream
-import java.util.zip.InflaterInputStream
+import java.util.concurrent.atomic.AtomicLong
 import io.netty.util.concurrent.Future as NettyFuture
 
 
@@ -61,6 +47,8 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
         group = NioEventLoopGroup()
     }
 
+    private val counter = AtomicLong(0)
+
     private fun newConnectionPool(server: MemcacheCacheConfiguration.Server): FixedChannelPool {
         val bootstrap = Bootstrap().apply {
             group(group)
@@ -76,18 +64,15 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
             override fun channelCreated(ch: Channel) {
                 val pipeline: ChannelPipeline = ch.pipeline()
                 pipeline.addLast(BinaryMemcacheClientCodec())
-                pipeline.addLast(BinaryMemcacheObjectAggregator(cfg.maxSize))
+                pipeline.addLast(LoggingHandler())
             }
         }
         return FixedChannelPool(bootstrap, channelPoolHandler, server.maxConnections)
     }
 
-
-    private fun sendRequest(request: FullBinaryMemcacheRequest): CompletableFuture<FullBinaryMemcacheResponse> {
-
+    fun sendRequest(key: ByteBuf, responseHandle: MemcacheResponseHandle): CompletableFuture<MemcacheRequestHandle> {
         val server = cfg.servers.let { servers ->
             if (servers.size > 1) {
-                val key = request.key().duplicate()
                 var checksum = 0
                 while (key.readableBytes() > 4) {
                     val byte = key.readInt()
@@ -103,7 +88,7 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
             }
         }
 
-        val response = CompletableFuture<FullBinaryMemcacheResponse>()
+        val response = CompletableFuture<MemcacheRequestHandle>()
         // Custom handler for processing responses
         val pool = connectionPool.computeIfAbsent(server.endpoint) {
             newConnectionPool(server)
@@ -113,31 +98,73 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
                 if (channelFuture.isSuccess) {
                     val channel = channelFuture.now
                     val pipeline = channel.pipeline()
-                    channel.pipeline()
-                        .addLast("client-handler", object : SimpleChannelInboundHandler<FullBinaryMemcacheResponse>() {
-                            override fun channelRead0(
-                                ctx: ChannelHandlerContext,
-                                msg: FullBinaryMemcacheResponse
-                            ) {
-                                pipeline.removeLast()
-                                pool.release(channel)
-                                msg.touch("The method's caller must remember to release this")
-                                response.complete(msg.retain())
-                            }
+                    val handler = object : SimpleChannelInboundHandler<MemcacheObject>() {
+                        override fun channelRead0(
+                            ctx: ChannelHandlerContext,
+                            msg: MemcacheObject
+                        ) {
+                            when (msg) {
+                                is BinaryMemcacheResponse -> responseHandle.handleEvent(
+                                    StreamingResponseEvent.ResponseReceived(
+                                        msg
+                                    )
+                                )
 
-                            override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-                                val ex = when (cause) {
-                                    is DecoderException -> cause.cause!!
-                                    else -> cause
+                                is LastMemcacheContent -> {
+                                    responseHandle.handleEvent(
+                                        StreamingResponseEvent.LastContentReceived(
+                                            msg
+                                        )
+                                    )
+                                    pipeline.removeLast()
+                                    pool.release(channel)
                                 }
-                                ctx.close()
-                                pipeline.removeLast()
-                                pool.release(channel)
-                                response.completeExceptionally(ex)
+
+                                is MemcacheContent -> responseHandle.handleEvent(
+                                    StreamingResponseEvent.ContentReceived(
+                                        msg
+                                    )
+                                )
                             }
-                        })
-                    request.touch()
-                    channel.writeAndFlush(request)
+                        }
+
+                        override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+                            responseHandle.handleEvent(StreamingResponseEvent.ExceptionCaught(cause))
+                            ctx.close()
+                            pipeline.removeLast()
+                            pool.release(channel)
+                        }
+                    }
+                    channel.pipeline()
+                        .addLast("client-handler", handler)
+                    response.complete(object : MemcacheRequestHandle {
+                        override fun handleEvent(evt: StreamingRequestEvent) {
+                            when (evt) {
+                                is StreamingRequestEvent.SendRequest -> {
+                                    channel.writeAndFlush(evt.request)
+                                }
+
+                                is StreamingRequestEvent.SendLastChunk -> {
+                                    channel.writeAndFlush(DefaultLastMemcacheContent(evt.chunk))
+                                    val value = counter.incrementAndGet()
+                                    log.debug {
+                                        "Finished request counter: $value"
+                                    }
+                                }
+
+                                is StreamingRequestEvent.SendChunk -> {
+                                    channel.writeAndFlush(DefaultMemcacheContent(evt.chunk))
+                                }
+
+                                is StreamingRequestEvent.ExceptionCaught -> {
+                                    responseHandle.handleEvent(StreamingResponseEvent.ExceptionCaught(evt.exception))
+                                    channel.close()
+                                    pipeline.removeLast()
+                                    pool.release(channel)
+                                }
+                            }
+                        }
+                    })
                 } else {
                     response.completeExceptionally(channelFuture.cause())
                 }
@@ -145,107 +172,6 @@ class MemcacheClient(private val cfg: MemcacheCacheConfiguration) : AutoCloseabl
         })
         return response
     }
-
-    private fun encodeExpiry(expiry: Duration): Int {
-        val expirySeconds = expiry.toSeconds()
-        return expirySeconds.toInt().takeIf { it.toLong() == expirySeconds }
-            ?: Instant.ofEpochSecond(expirySeconds).epochSecond.toInt()
-    }
-
-    fun get(key: String): CompletableFuture<ReadableByteChannel?> {
-        val request = (cfg.digestAlgorithm
-            ?.let(MessageDigest::getInstance)
-            ?.let { md ->
-                digest(key.toByteArray(), md)
-            } ?: key.toByteArray(Charsets.UTF_8)).let { digest ->
-            DefaultFullBinaryMemcacheRequest(Unpooled.wrappedBuffer(digest), null).apply {
-                setOpcode(BinaryMemcacheOpcodes.GET)
-            }
-        }
-        return sendRequest(request).thenApply { response ->
-            try {
-                when (val status = response.status()) {
-                    BinaryMemcacheResponseStatus.SUCCESS -> {
-                        val compressionMode = cfg.compressionMode
-                        val content = response.content().retain()
-                        content.touch()
-                        if (compressionMode != null) {
-                            when (compressionMode) {
-                                MemcacheCacheConfiguration.CompressionMode.GZIP -> {
-                                    GZIPInputStream(ByteBufInputStream(content))
-                                }
-
-                                MemcacheCacheConfiguration.CompressionMode.DEFLATE -> {
-                                    InflaterInputStream(ByteBufInputStream(content))
-                                }
-                            }
-                        } else {
-                            ByteBufInputStream(content)
-                        }.let(Channels::newChannel)
-                    }
-
-                    BinaryMemcacheResponseStatus.KEY_ENOENT -> {
-                        null
-                    }
-
-                    else -> throw MemcacheException(status)
-                }
-            } finally {
-                response.release()
-            }
-        }
-    }
-
-    fun put(key: String, content: ByteBuf, expiry: Duration, cas: Long? = null): CompletableFuture<Void> {
-        val request = (cfg.digestAlgorithm
-            ?.let(MessageDigest::getInstance)
-            ?.let { md ->
-                digest(key.toByteArray(), md)
-            } ?: key.toByteArray(Charsets.UTF_8)).let { digest ->
-            val extras = Unpooled.buffer(8, 8)
-            extras.writeInt(0)
-            extras.writeInt(encodeExpiry(expiry))
-            val compressionMode = cfg.compressionMode
-            content.retain()
-            val payload = if (compressionMode != null) {
-                val inputStream = ByteBufInputStream(content)
-                val buf = content.alloc().buffer()
-                buf.retain()
-                val outputStream = when (compressionMode) {
-                    MemcacheCacheConfiguration.CompressionMode.GZIP -> {
-                        GZIPOutputStream(ByteBufOutputStream(buf))
-                    }
-
-                    MemcacheCacheConfiguration.CompressionMode.DEFLATE -> {
-                        DeflaterOutputStream(ByteBufOutputStream(buf), Deflater(Deflater.DEFAULT_COMPRESSION, false))
-                    }
-                }
-                inputStream.use { i ->
-                    outputStream.use { o ->
-                        JWO.copy(i, o)
-                    }
-                }
-                buf
-            } else {
-                content
-            }
-            DefaultFullBinaryMemcacheRequest(Unpooled.wrappedBuffer(digest), extras, payload).apply {
-                setOpcode(BinaryMemcacheOpcodes.SET)
-                cas?.let(this::setCas)
-            }
-        }
-        return sendRequest(request).thenApply { response ->
-            try {
-                when (val status = response.status()) {
-                    BinaryMemcacheResponseStatus.SUCCESS -> null
-                    else -> throw MemcacheException(status)
-                }
-            } finally {
-                response.release()
-            }
-        }
-    }
-
 
     fun shutDown(): NettyFuture<*> {
         return group.shutdownGracefully()

@@ -52,7 +52,8 @@ class NoAuthServerTest : AbstractServerTest() {
                 compressionEnabled = true,
                 digestAlgorithm = "MD5",
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
-                maxSize = 0x1000000
+                maxSize = 0x1000000,
+                chunkSize = 0x1000
             ),
             null,
             null,
@@ -80,7 +81,7 @@ class NoAuthServerTest : AbstractServerTest() {
     @Test
     @Order(1)
     fun putWithNoAuthorizationHeader() {
-        val client: HttpClient = HttpClient.newHttpClient()
+        val client: HttpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
         val (key, value) = keyValuePair
 
         val requestBuilder = newRequestBuilder(key)

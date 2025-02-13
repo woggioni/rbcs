@@ -47,11 +47,13 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
             ),
             users.asSequence().map { it.name to it}.toMap(),
             sequenceOf(writersGroup, readersGroup).map { it.name to it}.toMap(),
-            FileSystemCacheConfiguration(this.cacheDir,
+            FileSystemCacheConfiguration(
+                this.cacheDir,
                 maxAge = Duration.ofSeconds(3600 * 24),
                 digestAlgorithm = "MD5",
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
-                compressionEnabled = false
+                compressionEnabled = false,
+                chunkSize = 0x1000
             ),
             Configuration.BasicAuthentication(),
             null,

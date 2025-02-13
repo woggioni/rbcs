@@ -124,7 +124,7 @@ object Parser {
                     val writeIdleTimeout = child.renderAttribute("write-idle-timeout")
                         ?.let(Duration::parse) ?: Duration.of(60, ChronoUnit.SECONDS)
                     val maxRequestSize = child.renderAttribute("max-request-size")
-                        ?.let(String::toInt) ?: 67108864
+                        ?.let(Integer::decode) ?: 0x4000000
                     connection = Configuration.Connection(
                         readTimeout,
                         writeTimeout,

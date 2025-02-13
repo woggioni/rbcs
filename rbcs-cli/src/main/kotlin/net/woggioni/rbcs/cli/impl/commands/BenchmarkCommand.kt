@@ -6,6 +6,8 @@ import net.woggioni.rbcs.common.contextLogger
 import net.woggioni.rbcs.common.error
 import net.woggioni.rbcs.common.info
 import net.woggioni.jwo.JWO
+import net.woggioni.jwo.LongMath
+import net.woggioni.rbcs.common.debug
 import picocli.CommandLine
 import java.security.SecureRandom
 import java.time.Duration
@@ -46,6 +48,7 @@ class BenchmarkCommand : RbcsCommand() {
             clientCommand.configuration.profiles[profileName]
                 ?: throw IllegalArgumentException("Profile $profileName does not exist in configuration")
         }
+        val progressThreshold = LongMath.ceilDiv(numberOfEntries.toLong(), 20)
         RemoteBuildCacheClient(profile).use { client ->
 
             val entryGenerator = sequence {
@@ -79,7 +82,12 @@ class BenchmarkCommand : RbcsCommand() {
                                 completionQueue.put(result)
                             }
                             semaphore.release()
-                            completionCounter.incrementAndGet()
+                            val completed = completionCounter.incrementAndGet()
+                            if(completed.mod(progressThreshold) == 0L) {
+                                log.debug {
+                                    "Inserted $completed / $numberOfEntries"
+                                }
+                            }
                         }
                     } else {
                         Thread.sleep(0)
@@ -121,7 +129,12 @@ class BenchmarkCommand : RbcsCommand() {
                             }
                         }
                         future.whenComplete { _, _ ->
-                            completionCounter.incrementAndGet()
+                            val completed = completionCounter.incrementAndGet()
+                            if(completed.mod(progressThreshold) == 0L) {
+                                log.debug {
+                                    "Retrieved $completed / ${entries.size}"
+                                }
+                            }
                             semaphore.release()
                         }
                     } else {

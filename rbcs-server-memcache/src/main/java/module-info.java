@@ -11,6 +11,7 @@ module net.woggioni.rbcs.server.memcache {
     requires io.netty.codec.memcache;
     requires io.netty.common;
     requires io.netty.buffer;
+    requires io.netty.handler;
     requires org.slf4j;
 
     provides CacheProvider with net.woggioni.rbcs.server.memcache.MemcacheCacheProvider;

@@ -16,7 +16,6 @@ import io.netty.handler.codec.compression.CompressionOptions
 import io.netty.handler.codec.http.DefaultHttpContent
 import io.netty.handler.codec.http.HttpContentCompressor
 import io.netty.handler.codec.http.HttpHeaderNames
-import io.netty.handler.codec.http.HttpObjectAggregator
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpServerCodec
 import io.netty.handler.ssl.ClientAuth
@@ -249,13 +248,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
 
         private val cache  = cfg.cache.materialize()
 
-        private val serverHandler = let {
-            val prefix = Path.of("/").resolve(Path.of(cfg.serverPath ?: "/"))
-            ServerHandler(cache, prefix)
-        }
-
         private val exceptionHandler = ExceptionHandler()
-        private val throttlingHandler = ThrottlingHandler(cfg)
 
         private val authenticator = when (val auth = cfg.authentication) {
             is Configuration.BasicAuthentication -> NettyHttpBasicAuthenticator(cfg.users, RoleAuthorizer())
@@ -368,11 +361,15 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             pipeline.addLast(HttpServerCodec())
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
-            pipeline.addLast(HttpObjectAggregator(cfg.connection.maxRequestSize))
             authenticator?.let {
                 pipeline.addLast(it)
             }
-            pipeline.addLast(throttlingHandler)
+            pipeline.addLast(ThrottlingHandler(cfg))
+
+            val serverHandler = let {
+                val prefix = Path.of("/").resolve(Path.of(cfg.serverPath ?: "/"))
+                ServerHandler(cache, prefix)
+            }
             pipeline.addLast(eventExecutorGroup, serverHandler)
             pipeline.addLast(exceptionHandler)
         }

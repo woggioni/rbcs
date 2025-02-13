@@ -86,7 +86,7 @@ class BasicAuthServerTest : AbstractBasicAuthServerTest() {
     @Test
     @Order(4)
     fun putAsAWriterUser() {
-        val client: HttpClient = HttpClient.newHttpClient()
+        val client: HttpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
 
         val (key, value) = keyValuePair
         val user = cfg.users.values.find {

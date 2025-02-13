@@ -12,13 +12,15 @@ data class FileSystemCacheConfiguration(
     val digestAlgorithm : String?,
     val compressionEnabled: Boolean,
     val compressionLevel: Int,
+    val chunkSize: Int,
 ) : Configuration.Cache {
     override fun materialize() = FileSystemCache(
         root ?: Application.builder("rbcs").build().computeCacheDirectory(),
         maxAge,
         digestAlgorithm,
         compressionEnabled,
-        compressionLevel
+        compressionLevel,
+        chunkSize,
     )
 
     override fun getNamespaceURI() = RBCS.RBCS_NAMESPACE_URI

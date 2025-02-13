@@ -156,7 +156,8 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
                 maxAge = Duration.ofSeconds(3600 * 24),
                 compressionEnabled = true,
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
-                digestAlgorithm = "MD5"
+                digestAlgorithm = "MD5",
+                chunkSize = 0x1000
             ),
 //            InMemoryCacheConfiguration(
 //                maxAge = Duration.ofSeconds(3600 * 24),

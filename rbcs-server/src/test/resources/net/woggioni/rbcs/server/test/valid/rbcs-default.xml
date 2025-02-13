@@ -11,7 +11,7 @@
             idle-timeout="PT30M"
             max-request-size="101325"/>
     <event-executor use-virtual-threads="false"/>
-    <cache xs:type="rbcs:fileSystemCacheType" path="/tmp/rbcs" max-age="P7D"/>
+    <cache xs:type="rbcs:fileSystemCacheType" path="/tmp/rbcs" max-age="P7D" chunk-size="0xa910"/>
     <authentication>
         <none/>
     </authentication>
