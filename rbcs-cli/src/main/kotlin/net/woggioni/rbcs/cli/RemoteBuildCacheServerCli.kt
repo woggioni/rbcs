@@ -1,5 +1,6 @@
 package net.woggioni.rbcs.cli
 
+import net.woggioni.jwo.Application
 import net.woggioni.rbcs.cli.impl.AbstractVersionProvider
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.cli.impl.commands.BenchmarkCommand
@@ -11,7 +12,6 @@ import net.woggioni.rbcs.cli.impl.commands.PutCommand
 import net.woggioni.rbcs.cli.impl.commands.ServerCommand
 import net.woggioni.rbcs.common.RbcsUrlStreamHandlerFactory
 import net.woggioni.rbcs.common.contextLogger
-import net.woggioni.jwo.Application
 import picocli.CommandLine
 import picocli.CommandLine.Model.CommandSpec
 

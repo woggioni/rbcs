@@ -1,6 +1,5 @@
 package net.woggioni.rbcs.client.impl
 
-import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.exception.ConfigurationException
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
 import net.woggioni.rbcs.common.Xml.Companion.asIterable

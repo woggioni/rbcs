@@ -1,9 +1,9 @@
 package net.woggioni.rbcs.cli.impl.commands
 
+import net.woggioni.jwo.UncloseableOutputStream
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.cli.impl.converters.OutputStreamConverter
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
-import net.woggioni.jwo.UncloseableOutputStream
 import picocli.CommandLine
 import java.io.OutputStream
 import java.io.OutputStreamWriter

@@ -8,12 +8,11 @@ import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpVersion
-import net.woggioni.rbcs.api.Configuration
-import net.woggioni.rbcs.common.contextLogger
-import net.woggioni.rbcs.server.RemoteBuildCacheServer
 import net.woggioni.jwo.Bucket
 import net.woggioni.jwo.LongMath
+import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.common.createLogger
+import net.woggioni.rbcs.server.RemoteBuildCacheServer
 import java.net.InetSocketAddress
 import java.time.Duration
 import java.time.temporal.ChronoUnit

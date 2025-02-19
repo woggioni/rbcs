@@ -2,11 +2,9 @@ package net.woggioni.rbcs.server.cache
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.DefaultFileRegion
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.stream.ChunkedNioFile
-import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.api.message.CacheMessage
 import net.woggioni.rbcs.api.message.CacheMessage.CacheContent
 import net.woggioni.rbcs.api.message.CacheMessage.CacheGetRequest

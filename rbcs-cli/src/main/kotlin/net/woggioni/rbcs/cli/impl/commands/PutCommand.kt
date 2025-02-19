@@ -6,16 +6,12 @@ import net.woggioni.jwo.NullOutputStream
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
-import net.woggioni.rbcs.common.contextLogger
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import java.security.DigestInputStream
-import java.security.MessageDigest
 import java.util.UUID
-import kotlin.io.encoding.decodingWith
 
 @CommandLine.Command(
     name = "put",

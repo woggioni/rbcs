@@ -2,7 +2,6 @@ package net.woggioni.rbcs.cli.impl.commands
 
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
-import net.woggioni.rbcs.common.contextLogger
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
 import java.security.SecureRandom

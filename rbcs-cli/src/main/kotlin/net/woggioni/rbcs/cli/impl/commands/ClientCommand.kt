@@ -1,8 +1,8 @@
 package net.woggioni.rbcs.cli.impl.commands
 
+import net.woggioni.jwo.Application
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
-import net.woggioni.jwo.Application
 import picocli.CommandLine
 import java.nio.file.Path
 

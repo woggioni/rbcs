@@ -2,8 +2,8 @@ package net.woggioni.rbcs.server.memcache
 
 import net.woggioni.rbcs.api.CacheProvider
 import net.woggioni.rbcs.api.exception.ConfigurationException
-import net.woggioni.rbcs.common.RBCS
 import net.woggioni.rbcs.common.HostAndPort
+import net.woggioni.rbcs.common.RBCS
 import net.woggioni.rbcs.common.Xml
 import net.woggioni.rbcs.common.Xml.Companion.asIterable
 import net.woggioni.rbcs.common.Xml.Companion.renderAttribute

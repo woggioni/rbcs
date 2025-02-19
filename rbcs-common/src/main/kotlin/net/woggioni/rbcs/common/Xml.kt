@@ -1,7 +1,6 @@
 package net.woggioni.rbcs.common
 
 import net.woggioni.jwo.JWO
-import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 import org.w3c.dom.Document
 import org.w3c.dom.Element

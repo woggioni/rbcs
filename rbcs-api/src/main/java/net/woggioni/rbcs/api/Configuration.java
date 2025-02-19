@@ -1,7 +1,6 @@
 package net.woggioni.rbcs.api;
 
 
-import io.netty.channel.ChannelInboundHandler;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
@@ -11,7 +10,6 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Value
