@@ -28,12 +28,12 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
         val maxAge = el.renderAttribute("max-age")
             ?.let(Duration::parse)
             ?: Duration.ofDays(1)
-        val maxSize = el.renderAttribute("max-size")
-            ?.let(Integer::decode)
-            ?: 0x100000
         val chunkSize = el.renderAttribute("chunk-size")
             ?.let(Integer::decode)
-            ?: 0x4000
+            ?: 0x10000
+        val compressionLevel = el.renderAttribute("compression-level")
+            ?.let(Integer::decode)
+            ?: -1
         val compressionMode = el.renderAttribute("compression-mode")
             ?.let {
                 when (it) {
@@ -41,7 +41,6 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
                     else -> MemcacheCacheConfiguration.CompressionMode.DEFLATE
                 }
             }
-            ?: MemcacheCacheConfiguration.CompressionMode.DEFLATE
         val digestAlgorithm = el.renderAttribute("digest")
         for (child in el.asIterable()) {
             when (child.nodeName) {
@@ -62,9 +61,9 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
         return MemcacheCacheConfiguration(
             servers,
             maxAge,
-            maxSize,
             digestAlgorithm,
             compressionMode,
+            compressionLevel,
             chunkSize
         )
     }
@@ -85,7 +84,6 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
                 }
             }
             attr("max-age", maxAge.toString())
-            attr("max-size", maxSize.toString())
             attr("chunk-size", chunkSize.toString())
             digestAlgorithm?.let { digestAlgorithm ->
                 attr("digest", digestAlgorithm)
@@ -97,6 +95,7 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
                     }
                 )
             }
+            attr("compression-level", compressionLevel.toString())
         }
         result
     }

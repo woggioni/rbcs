@@ -37,7 +37,7 @@ import net.woggioni.rbcs.common.PasswordSecurity.decodePasswordHash
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
 import net.woggioni.rbcs.common.RBCS.toUrl
 import net.woggioni.rbcs.common.Xml
-import net.woggioni.rbcs.common.contextLogger
+import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
 import net.woggioni.rbcs.common.info
 import net.woggioni.rbcs.server.auth.AbstractNettyHttpAuthenticator
@@ -47,7 +47,10 @@ import net.woggioni.rbcs.server.auth.RoleAuthorizer
 import net.woggioni.rbcs.server.configuration.Parser
 import net.woggioni.rbcs.server.configuration.Serializer
 import net.woggioni.rbcs.server.exception.ExceptionHandler
+import net.woggioni.rbcs.server.handler.MaxRequestSizeHandler
 import net.woggioni.rbcs.server.handler.ServerHandler
+import net.woggioni.rbcs.server.handler.TraceHandler
+import net.woggioni.rbcs.server.throttling.BucketManager
 import net.woggioni.rbcs.server.throttling.ThrottlingHandler
 import java.io.OutputStream
 import java.net.InetSocketAddress
@@ -56,19 +59,23 @@ import java.nio.file.Path
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import java.time.Duration
+import java.time.Instant
 import java.util.Arrays
 import java.util.Base64
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import javax.naming.ldap.LdapName
 import javax.net.ssl.SSLPeerUnverifiedException
 
 class RemoteBuildCacheServer(private val cfg: Configuration) {
-    private val log = contextLogger()
 
     companion object {
+        private val log = createLogger<RemoteBuildCacheServer>()
 
         val userAttribute: AttributeKey<Configuration.User> = AttributeKey.valueOf("user")
         val groupAttribute: AttributeKey<Set<Configuration.Group>> = AttributeKey.valueOf("group")
@@ -142,7 +149,9 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
     private class NettyHttpBasicAuthenticator(
         private val users: Map<String, Configuration.User>, authorizer: Authorizer
     ) : AbstractNettyHttpAuthenticator(authorizer) {
-        private val log = contextLogger()
+        companion object {
+            private val log = createLogger<NettyHttpBasicAuthenticator>()
+        }
 
         override fun authenticate(ctx: ChannelHandlerContext, req: HttpRequest): AuthenticationResult? {
             val authorizationHeader = req.headers()[HttpHeaderNames.AUTHORIZATION] ?: let {
@@ -242,13 +251,13 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 }
                 return keystore
             }
+
+            private val log = createLogger<ServerInitializer>()
         }
 
-        private val log = contextLogger()
+        private val cacheHandlerFactory = cfg.cache.materialize()
 
-        private val cache  = cfg.cache.materialize()
-
-        private val exceptionHandler = ExceptionHandler()
+        private val bucketManager = BucketManager.from(cfg)
 
         private val authenticator = when (val auth = cfg.authentication) {
             is Configuration.BasicAuthentication -> NettyHttpBasicAuthenticator(cfg.users, RoleAuthorizer())
@@ -359,59 +368,94 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 pipeline.addLast(SSL_HANDLER_NAME, it)
             }
             pipeline.addLast(HttpServerCodec())
+            pipeline.addLast(MaxRequestSizeHandler.NAME, MaxRequestSizeHandler(cfg.connection.maxRequestSize))
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
             authenticator?.let {
                 pipeline.addLast(it)
             }
-            pipeline.addLast(ThrottlingHandler(cfg))
+            pipeline.addLast(ThrottlingHandler(bucketManager, cfg.connection))
 
             val serverHandler = let {
                 val prefix = Path.of("/").resolve(Path.of(cfg.serverPath ?: "/"))
-                ServerHandler(cache, prefix)
+                ServerHandler(prefix)
             }
-            pipeline.addLast(eventExecutorGroup, serverHandler)
-            pipeline.addLast(exceptionHandler)
+            pipeline.addLast(eventExecutorGroup, ServerHandler.NAME, serverHandler)
+            pipeline.addLast(cacheHandlerFactory.newHandler())
+            pipeline.addLast(TraceHandler)
+            pipeline.addLast(ExceptionHandler)
         }
 
         override fun close() {
-            cache.close()
+            cacheHandlerFactory.close()
         }
     }
 
     class ServerHandle(
-        httpChannelFuture: ChannelFuture,
+        closeFuture: ChannelFuture,
+        private val bossGroup: EventExecutorGroup,
         private val executorGroups: Iterable<EventExecutorGroup>,
-        private val serverInitializer: AutoCloseable
-    ) : AutoCloseable {
-        private val httpChannel: Channel = httpChannelFuture.channel()
-        private val closeFuture: ChannelFuture = httpChannel.closeFuture()
-        private val log = contextLogger()
+        private val serverInitializer: AutoCloseable,
+    ) : Future<Void> by from(closeFuture, executorGroups, serverInitializer) {
 
-        fun shutdown(): Future<Void> {
-            return httpChannel.close()
-        }
+        companion object {
+            private val log = createLogger<ServerHandle>()
 
-        override fun close() {
-            try {
-                closeFuture.sync()
-            } catch (ex: Throwable) {
-                log.error(ex.message, ex)
-            }
-            try {
-                serverInitializer.close()
-            } catch (ex: Throwable) {
-                log.error(ex.message, ex)
-            }
-            executorGroups.forEach {
-                try {
-                    it.shutdownGracefully().sync()
-                } catch (ex: Throwable) {
-                    log.error(ex.message, ex)
+            private fun from(
+                closeFuture: ChannelFuture,
+                executorGroups: Iterable<EventExecutorGroup>,
+                serverInitializer: AutoCloseable
+            ): CompletableFuture<Void> {
+                val result = CompletableFuture<Void>()
+                closeFuture.addListener {
+                    val errors = mutableListOf<Throwable>()
+                    val deadline = Instant.now().plusSeconds(20)
+
+
+                    for (executorGroup in executorGroups) {
+                        val future = executorGroup.terminationFuture()
+                        try {
+                            val now = Instant.now()
+                            if (now > deadline) {
+                                future.get(0, TimeUnit.SECONDS)
+                            } else {
+                                future.get(Duration.between(now, deadline).toMillis(), TimeUnit.MILLISECONDS)
+                            }
+                        }
+                        catch (te: TimeoutException) {
+                            errors.addLast(te)
+                            log.warn("Timeout while waiting for shutdown of $executorGroup", te)
+                        } catch (ex: Throwable) {
+                            log.warn(ex.message, ex)
+                            errors.addLast(ex)
+                        }
+                    }
+                    try {
+                        serverInitializer.close()
+                    } catch (ex: Throwable) {
+                        log.error(ex.message, ex)
+                        errors.addLast(ex)
+                    }
+                    if(errors.isEmpty()) {
+                        result.complete(null)
+                    } else {
+                        result.completeExceptionally(errors.first())
+                    }
+                }
+
+                return result.thenAccept {
+                    log.info {
+                        "RemoteBuildCacheServer has been gracefully shut down"
+                    }
                 }
             }
-            log.info {
-                "RemoteBuildCacheServer has been gracefully shut down"
+        }
+
+
+        fun sendShutdownSignal() {
+            bossGroup.shutdownGracefully()
+            executorGroups.map {
+                it.shutdownGracefully()
             }
         }
     }
@@ -442,10 +486,16 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
 
         // Bind and start to accept incoming connections.
         val bindAddress = InetSocketAddress(cfg.host, cfg.port)
-        val httpChannel = bootstrap.bind(bindAddress).sync()
+        val httpChannel = bootstrap.bind(bindAddress).sync().channel()
         log.info {
             "RemoteBuildCacheServer is listening on ${cfg.host}:${cfg.port}"
         }
-        return ServerHandle(httpChannel, setOf(bossGroup, workerGroup, eventExecutorGroup), serverInitializer)
+
+        return ServerHandle(
+            httpChannel.closeFuture(),
+            bossGroup,
+            setOf(workerGroup, eventExecutorGroup),
+            serverInitializer
+        )
     }
 }

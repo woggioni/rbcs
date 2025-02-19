@@ -154,7 +154,7 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
             sequenceOf(writersGroup, readersGroup).map { it.name to it }.toMap(),
             FileSystemCacheConfiguration(this.cacheDir,
                 maxAge = Duration.ofSeconds(3600 * 24),
-                compressionEnabled = true,
+                compressionEnabled = false,
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
                 digestAlgorithm = "MD5",
                 chunkSize = 0x1000

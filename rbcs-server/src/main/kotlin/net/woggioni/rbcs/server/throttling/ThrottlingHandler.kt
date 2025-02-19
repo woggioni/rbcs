@@ -13,22 +13,19 @@ import net.woggioni.rbcs.common.contextLogger
 import net.woggioni.rbcs.server.RemoteBuildCacheServer
 import net.woggioni.jwo.Bucket
 import net.woggioni.jwo.LongMath
+import net.woggioni.rbcs.common.createLogger
 import java.net.InetSocketAddress
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
 
-class ThrottlingHandler(cfg: Configuration) : ChannelInboundHandlerAdapter() {
+class ThrottlingHandler(private val bucketManager : BucketManager,
+                        private val connectionConfiguration : Configuration.Connection) : ChannelInboundHandlerAdapter() {
 
     private companion object {
-        @JvmStatic
-        private val log = contextLogger()
+        private val log = createLogger<ThrottlingHandler>()
     }
-
-    private val bucketManager = BucketManager.from(cfg)
-
-    private val connectionConfiguration = cfg.connection
 
     private var queuedContent : MutableList<HttpContent>? = null
 
@@ -98,6 +95,7 @@ class ThrottlingHandler(cfg: Configuration) : ChannelInboundHandlerAdapter() {
                     handleBuckets(buckets, ctx, msg, false)
                 }, waitDuration.toMillis(), TimeUnit.MILLISECONDS)
             } else {
+                this.queuedContent = null
                 sendThrottledResponse(ctx, waitDuration)
             }
         }

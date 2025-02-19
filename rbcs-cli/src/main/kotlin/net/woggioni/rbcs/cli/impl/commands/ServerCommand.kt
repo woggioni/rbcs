@@ -1,19 +1,20 @@
 package net.woggioni.rbcs.cli.impl.commands
 
+import net.woggioni.jwo.Application
+import net.woggioni.jwo.JWO
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.cli.impl.converters.DurationConverter
-import net.woggioni.rbcs.common.contextLogger
+import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
 import net.woggioni.rbcs.common.info
 import net.woggioni.rbcs.server.RemoteBuildCacheServer
 import net.woggioni.rbcs.server.RemoteBuildCacheServer.Companion.DEFAULT_CONFIGURATION_URL
-import net.woggioni.jwo.Application
-import net.woggioni.jwo.JWO
 import picocli.CommandLine
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 @CommandLine.Command(
     name = "server",
@@ -21,8 +22,9 @@ import java.time.Duration
     showDefaultValues = true
 )
 class ServerCommand(app : Application) : RbcsCommand() {
-
-    private val log = contextLogger()
+    companion object {
+        private val log = createLogger<ServerCommand>()
+    }
 
     private fun createDefaultConfigurationFile(configurationFile: Path) {
         log.info {
@@ -66,11 +68,20 @@ class ServerCommand(app : Application) : RbcsCommand() {
             }
         }
         val server = RemoteBuildCacheServer(configuration)
-        server.run().use { server ->
-            timeout?.let {
-                Thread.sleep(it)
-                server.shutdown()
+        val handle = server.run()
+        val shutdownHook = Thread.ofPlatform().unstarted {
+            handle.sendShutdownSignal()
+            try {
+                handle.get(60, TimeUnit.SECONDS)
+            } catch (ex : Throwable) {
+                log.warn(ex.message, ex)
             }
         }
+        Runtime.getRuntime().addShutdownHook(shutdownHook)
+        if(timeout != null) {
+            Thread.sleep(timeout)
+            handle.sendShutdownSignal()
+        }
+        handle.get()
     }
 }

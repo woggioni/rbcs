@@ -1,0 +1,33 @@
+plugins {
+    alias(catalog.plugins.kotlin.jvm)
+    alias(catalog.plugins.gradle.docker)
+    id 'war'
+}
+
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+
+dependencies {
+    compileOnly catalog.jakarta.servlet.api
+    compileOnly catalog.jakarta.enterprise.cdi.api
+
+    implementation catalog.jwo
+    implementation catalog.jakarta.el
+    implementation catalog.jakarta.cdi.el.api
+    implementation catalog.weld.servlet.core
+    implementation catalog.weld.web
+}
+
+Provider<Copy> prepareDockerBuild = tasks.register('prepareDockerBuild', Copy) {
+    group = 'docker'
+    into project.layout.buildDirectory.file('docker')
+    from(tasks.war)
+    from(file('Dockerfile'))
+}
+
+Provider<DockerBuildImage> dockerBuild = tasks.register('dockerBuildImage', DockerBuildImage) {
+    group = 'docker'
+    dependsOn(prepareDockerBuild)
+    images.add('gitea.woggioni.net/woggioni/rbcs/servlet:latest')
+    images.add("gitea.woggioni.net/woggioni/rbcs/servlet:${version}")
+}
+

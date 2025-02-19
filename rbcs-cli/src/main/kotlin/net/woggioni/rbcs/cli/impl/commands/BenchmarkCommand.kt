@@ -1,17 +1,20 @@
 package net.woggioni.rbcs.cli.impl.commands
 
-import net.woggioni.rbcs.cli.impl.RbcsCommand
-import net.woggioni.rbcs.client.RemoteBuildCacheClient
-import net.woggioni.rbcs.common.contextLogger
-import net.woggioni.rbcs.common.error
-import net.woggioni.rbcs.common.info
 import net.woggioni.jwo.JWO
 import net.woggioni.jwo.LongMath
+import net.woggioni.rbcs.api.CacheValueMetadata
+import net.woggioni.rbcs.cli.impl.RbcsCommand
+import net.woggioni.rbcs.cli.impl.converters.ByteSizeConverter
+import net.woggioni.rbcs.client.RemoteBuildCacheClient
+import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
+import net.woggioni.rbcs.common.error
+import net.woggioni.rbcs.common.info
 import picocli.CommandLine
 import java.security.SecureRandom
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicLong
@@ -23,7 +26,9 @@ import kotlin.random.Random
     showDefaultValues = true
 )
 class BenchmarkCommand : RbcsCommand() {
-    private val log = contextLogger()
+    companion object{
+        private val log = createLogger<BenchmarkCommand>()
+    }
 
     @CommandLine.Spec
     private lateinit var spec: CommandLine.Model.CommandSpec
@@ -38,9 +43,16 @@ class BenchmarkCommand : RbcsCommand() {
     @CommandLine.Option(
         names = ["-s", "--size"],
         description = ["Size of a cache value in bytes"],
-        paramLabel = "SIZE"
+        paramLabel = "SIZE",
+        converter = [ByteSizeConverter::class]
     )
     private var size = 0x1000
+
+    @CommandLine.Option(
+        names = ["-r", "--random"],
+        description = ["Insert completely random byte values"]
+    )
+    private var randomValues = false
 
     override fun run() {
         val clientCommand = spec.parent().userObject() as ClientCommand
@@ -55,8 +67,12 @@ class BenchmarkCommand : RbcsCommand() {
                 val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
                 while (true) {
                     val key = JWO.bytesToHex(random.nextBytes(16))
-                    val content = random.nextInt().toByte()
-                    val value = ByteArray(size, { _ -> content })
+                    val value = if(randomValues) {
+                        random.nextBytes(size)
+                    } else {
+                        val byteValue = random.nextInt().toByte()
+                        ByteArray(size) {_ -> byteValue}
+                    }
                     yield(key to value)
                 }
             }
@@ -68,13 +84,13 @@ class BenchmarkCommand : RbcsCommand() {
                 val completionCounter = AtomicLong(0)
                 val completionQueue = LinkedBlockingQueue<Pair<String, ByteArray>>(numberOfEntries)
                 val start = Instant.now()
-                val semaphore = Semaphore(profile.maxConnections * 3)
+                val semaphore = Semaphore(profile.maxConnections * 5)
                 val iterator = entryGenerator.take(numberOfEntries).iterator()
                 while (completionCounter.get() < numberOfEntries) {
                     if (iterator.hasNext()) {
                         val entry = iterator.next()
                         semaphore.acquire()
-                        val future = client.put(entry.first, entry.second).thenApply { entry }
+                        val future = client.put(entry.first, entry.second, CacheValueMetadata(null, null)).thenApply { entry }
                         future.whenComplete { result, ex ->
                             if (ex != null) {
                                 log.error(ex.message, ex)
@@ -90,7 +106,7 @@ class BenchmarkCommand : RbcsCommand() {
                             }
                         }
                     } else {
-                        Thread.sleep(0)
+                        Thread.sleep(Duration.of(500, ChronoUnit.MILLIS))
                     }
                 }
 
@@ -111,12 +127,13 @@ class BenchmarkCommand : RbcsCommand() {
             }
             if (entries.isNotEmpty()) {
                 val completionCounter = AtomicLong(0)
-                val semaphore = Semaphore(profile.maxConnections * 3)
+                val semaphore = Semaphore(profile.maxConnections * 5)
                 val start = Instant.now()
                 val it = entries.iterator()
                 while (completionCounter.get() < entries.size) {
                     if (it.hasNext()) {
                         val entry = it.next()
+                        semaphore.acquire()
                         val future = client.get(entry.first).thenApply {
                             if (it == null) {
                                 log.error {
@@ -138,7 +155,7 @@ class BenchmarkCommand : RbcsCommand() {
                             semaphore.release()
                         }
                     } else {
-                        Thread.sleep(0)
+                        Thread.sleep(Duration.of(500, ChronoUnit.MILLIS))
                     }
                 }
                 val end = Instant.now()

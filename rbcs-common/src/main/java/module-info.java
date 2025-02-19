@@ -5,6 +5,7 @@ module net.woggioni.rbcs.common {
     requires kotlin.stdlib;
     requires net.woggioni.jwo;
     requires io.netty.buffer;
+    requires io.netty.transport;
 
     provides java.net.spi.URLStreamHandlerProvider with net.woggioni.rbcs.common.RbcsUrlStreamHandlerFactory;
     exports net.woggioni.rbcs.common;

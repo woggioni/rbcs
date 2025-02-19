@@ -19,12 +19,22 @@
                 <xs:element name="basic-auth" type="rbcs-client:basicAuthType"/>
                 <xs:element name="tls-client-auth" type="rbcs-client:tlsClientAuthType"/>
             </xs:choice>
+            <xs:element name="connection" type="rbcs-client:connectionType" minOccurs="0" />
             <xs:element name="retry-policy" type="rbcs-client:retryType" minOccurs="0"/>
         </xs:sequence>
         <xs:attribute name="name" type="xs:token" use="required"/>
         <xs:attribute name="base-url" type="xs:anyURI" use="required"/>
         <xs:attribute name="max-connections" type="xs:positiveInteger" default="50"/>
         <xs:attribute name="connection-timeout" type="xs:duration"/>
+        <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
+    </xs:complexType>
+
+    <xs:complexType name="connectionType">
+        <xs:attribute name="read-timeout" type="xs:duration" use="optional" default="PT0S"/>
+        <xs:attribute name="write-timeout" type="xs:duration" use="optional" default="PT0S"/>
+        <xs:attribute name="idle-timeout" type="xs:duration" use="optional" default="PT30S"/>
+        <xs:attribute name="read-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
+        <xs:attribute name="write-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
     </xs:complexType>
 
     <xs:complexType name="noAuthType"/>

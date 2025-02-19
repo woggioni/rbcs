@@ -39,7 +39,7 @@
         <xs:attribute name="idle-timeout" type="xs:duration" use="optional" default="PT30S"/>
         <xs:attribute name="read-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
         <xs:attribute name="write-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
-        <xs:attribute name="max-request-size" type="rbcs:byteSize" use="optional" default="0x4000000"/>
+        <xs:attribute name="max-request-size" type="rbcs:byteSizeType" use="optional" default="0x4000000"/>
     </xs:complexType>
 
     <xs:complexType name="eventExecutorType">
@@ -52,11 +52,11 @@
         <xs:complexContent>
             <xs:extension base="rbcs:cacheType">
                 <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
-                <xs:attribute name="max-size" type="rbcs:byteSize" default="0x1000000"/>
+                <xs:attribute name="max-size" type="rbcs:byteSizeType" default="0x1000000"/>
                 <xs:attribute name="digest" type="xs:token" default="MD5"/>
                 <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
-                <xs:attribute name="compression-level" type="xs:byte" default="-1"/>
-                <xs:attribute name="chunk-size" type="rbcs:byteSize" default="0x4000"/>
+                <xs:attribute name="compression-level" type="rbcs:compressionLevelType" default="-1"/>
+                <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
@@ -64,12 +64,12 @@
     <xs:complexType name="fileSystemCacheType">
         <xs:complexContent>
             <xs:extension base="rbcs:cacheType">
-                <xs:attribute name="path" type="xs:string" use="required"/>
+                <xs:attribute name="path" type="xs:string" use="optional"/>
                 <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
                 <xs:attribute name="digest" type="xs:token" default="MD5"/>
                 <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
-                <xs:attribute name="compression-level" type="xs:byte" default="-1"/>
-                <xs:attribute name="chunk-size" type="rbcs:byteSize" default="0x4000"/>
+                <xs:attribute name="compression-level" type="rbcs:compressionLevelType" default="-1"/>
+                <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
@@ -222,9 +222,16 @@
         <xs:attribute name="port" type="xs:unsignedShort" use="required"/>
     </xs:complexType>
 
-    <xs:simpleType name="byteSize">
+    <xs:simpleType name="byteSizeType">
         <xs:restriction base="xs:token">
             <xs:pattern value="(0x[a-f0-9]+|[0-9]+)"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="compressionLevelType">
+        <xs:restriction base="xs:integer">
+            <xs:minInclusive value="-1"/>
+            <xs:maxInclusive value="9"/>
         </xs:restriction>
     </xs:simpleType>
 

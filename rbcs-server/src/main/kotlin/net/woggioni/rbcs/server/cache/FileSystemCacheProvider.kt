@@ -33,7 +33,7 @@ class FileSystemCacheProvider : CacheProvider<FileSystemCacheConfiguration> {
         val digestAlgorithm = el.renderAttribute("digest") ?: "MD5"
         val chunkSize = el.renderAttribute("chunk-size")
             ?.let(Integer::decode)
-            ?: 0x4000
+            ?: 0x10000
 
         return FileSystemCacheConfiguration(
             path,
@@ -50,7 +50,9 @@ class FileSystemCacheProvider : CacheProvider<FileSystemCacheConfiguration> {
         Xml.of(doc, result) {
             val prefix = doc.lookupPrefix(RBCS.RBCS_NAMESPACE_URI)
             attr("xs:type", "${prefix}:fileSystemCacheType", RBCS.XML_SCHEMA_NAMESPACE_URI)
-            attr("path", root.toString())
+            root?.let {
+                attr("path", it.toString())
+            }
             attr("max-age", maxAge.toString())
             digestAlgorithm?.let { digestAlgorithm ->
                 attr("digest", digestAlgorithm)

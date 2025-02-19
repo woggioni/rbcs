@@ -2,7 +2,7 @@ package net.woggioni.rbcs.cli.impl.commands
 
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
-import net.woggioni.rbcs.common.contextLogger
+import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
 import java.nio.file.Files
 import java.nio.file.Path
@@ -13,7 +13,9 @@ import java.nio.file.Path
     showDefaultValues = true
 )
 class GetCommand : RbcsCommand() {
-    private val log = contextLogger()
+    companion object{
+        private val log = createLogger<GetCommand>()
+    }
 
     @CommandLine.Spec
     private lateinit var spec: CommandLine.Model.CommandSpec

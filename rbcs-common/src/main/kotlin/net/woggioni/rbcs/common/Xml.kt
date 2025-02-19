@@ -79,7 +79,7 @@ class Xml(val doc: Document, val element: Element) {
     class ErrorHandler(private val fileURL: URL) : ErrHandler {
 
         companion object {
-            private val log = LoggerFactory.getLogger(ErrorHandler::class.java)
+            private val log = createLogger<ErrorHandler>()
         }
 
          override fun warning(ex: SAXParseException)= err(ex, Level.WARN)

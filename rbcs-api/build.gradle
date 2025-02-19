@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     api catalog.netty.buffer
+    api catalog.netty.handler
 }
 
 publishing {

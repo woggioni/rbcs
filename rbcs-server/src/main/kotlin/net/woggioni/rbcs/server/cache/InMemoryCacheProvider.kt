@@ -33,7 +33,7 @@ class InMemoryCacheProvider : CacheProvider<InMemoryCacheConfiguration> {
         val digestAlgorithm = el.renderAttribute("digest") ?: "MD5"
         val chunkSize = el.renderAttribute("chunk-size")
             ?.let(Integer::decode)
-            ?: 0x4000
+            ?: 0x10000
         return InMemoryCacheConfiguration(
             maxAge,
             maxSize,

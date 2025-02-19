@@ -43,8 +43,9 @@ abstract class AbstractServerTest {
     }
 
     private fun stopServer() {
-        this.serverHandle?.use {
-            it.shutdown()
+        this.serverHandle?.let {
+            it.sendShutdownSignal()
+            it.get()
         }
     }
 }

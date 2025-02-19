@@ -3,6 +3,7 @@ package net.woggioni.rbcs.cli.impl.commands
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
 import net.woggioni.rbcs.common.contextLogger
+import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
 import java.security.SecureRandom
 import kotlin.random.Random
@@ -13,7 +14,9 @@ import kotlin.random.Random
     showDefaultValues = true
 )
 class HealthCheckCommand : RbcsCommand() {
-    private val log = contextLogger()
+    companion object{
+        private val log = createLogger<HealthCheckCommand>()
+    }
 
     @CommandLine.Spec
     private lateinit var spec: CommandLine.Model.CommandSpec
@@ -32,11 +35,12 @@ class HealthCheckCommand : RbcsCommand() {
                 if(value == null) {
                     throw IllegalStateException("Empty response from server")
                 }
+                val offset = value.size - nonce.size
                 for(i in 0 until nonce.size) {
-                    for(j in value.size - nonce.size until nonce.size) {
-                        if(nonce[i] != value[j]) {
-                            throw IllegalStateException("Server nonce does not match")
-                        }
+                    val a = nonce[i]
+                    val b = value[offset + i]
+                    if(a != b) {
+                        throw IllegalStateException("Server nonce does not match")
                     }
                 }
             }.get()

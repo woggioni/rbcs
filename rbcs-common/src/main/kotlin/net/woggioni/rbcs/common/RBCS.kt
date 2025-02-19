@@ -44,4 +44,18 @@ object RBCS {
     ): String {
         return JWO.bytesToHex(digest(data, md))
     }
+
+    fun processCacheKey(key: String, digestAlgorithm: String?) = digestAlgorithm
+        ?.let(MessageDigest::getInstance)
+        ?.let { md ->
+            digest(key.toByteArray(), md)
+        } ?: key.toByteArray(Charsets.UTF_8)
+
+    fun Long.toIntOrNull(): Int? {
+        return if (this >= Int.MIN_VALUE && this <= Int.MAX_VALUE) {
+            toInt()
+        } else {
+            null
+        }
+    }
 }
