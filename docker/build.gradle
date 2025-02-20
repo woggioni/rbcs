@@ -30,6 +30,9 @@ Provider<Copy> prepareDockerBuild = tasks.register('prepareDockerBuild', Copy) {
     into project.layout.buildDirectory.file('docker')
     from(configurations.docker)
     from(file('Dockerfile'))
+    from(rootProject.file('conf')) {
+        include 'logback.xml'
+    }
 }
 
 Provider<DockerBuildImage> dockerBuild = tasks.register('dockerBuildImage', DockerBuildImage) {
@@ -63,5 +66,3 @@ Provider<DockerPushImage> dockerPush = tasks.register('dockerPushImage', DockerP
     }
     images = [dockerTag.flatMap{ it.tag }, dockerTagMemcache.flatMap{ it.tag }]
 }
-
-

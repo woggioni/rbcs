@@ -85,6 +85,14 @@ tasks.named(JlinkPlugin.JLINK_TASK_NAME, JlinkTask) {
     mainModule = 'net.woggioni.rbcs.cli'
 }
 
+tasks.named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME, ProcessResources) {
+    from(rootProject.file('conf')) {
+        into('net/woggioni/rbcs/cli')
+        include 'logback.xml'
+        include 'logging.properties'
+    }
+}
+
 artifacts {
     release(envelopeJarTaskProvider)
 }

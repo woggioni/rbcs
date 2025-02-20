@@ -13,4 +13,5 @@ RUN mkdir plugins
 WORKDIR /home/luser/plugins
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-server-memcache*.tar
 WORKDIR /home/luser
-ENTRYPOINT ["java", "-XX:+UseSerialGC", "-XX:GCTimeRatio=24", "-jar", "/home/luser/rbcs.jar", "server"]
+ADD logback.xml .
+ENTRYPOINT ["java", "-Dlogback.configurationFile=logback.xml", "-XX:+UseSerialGC", "-XX:GCTimeRatio=24", "-jar", "/home/luser/rbcs.jar", "server"]
