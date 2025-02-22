@@ -91,6 +91,7 @@ class InMemoryCacheHandler(
                 val buf = ctx.alloc().heapBuffer()
                 InflaterOutputStream(ByteBufOutputStream(buf)).use {
                     value.content.readBytes(it, value.content.readableBytes())
+                    value.content.release()
                     buf.retain()
                 }
                 ctx.writeAndFlush(LastCacheContent(buf))
