@@ -118,6 +118,56 @@ class NoAuthServerTest : AbstractServerTest() {
 
     @Test
     @Order(4)
+    fun getUnhandledPath() {
+        val client: HttpClient = HttpClient.newHttpClient()
+        val (key, _) = newEntry(random)
+        val requestBuilder = HttpRequest.newBuilder()
+            .uri(URI.create("http://${cfg.host}:${cfg.port}/some/other/path/$key"))
+        val response: HttpResponse<ByteArray> =
+            client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        Assertions.assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.statusCode())
+    }
+
+    @Test
+    @Order(5)
+    fun putUnhandledPath() {
+        val client: HttpClient = HttpClient.newHttpClient()
+        val (key, value) = newEntry(random)
+        val requestBuilder = HttpRequest.newBuilder()
+            .uri(URI.create("http://${cfg.host}:${cfg.port}/some/other/path/$key"))
+            .PUT(HttpRequest.BodyPublishers.ofByteArray(value))
+        val response: HttpResponse<ByteArray> =
+            client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        Assertions.assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.statusCode())
+    }
+
+    @Test
+    @Order(6)
+    fun getRelativeUnhandledPath() {
+        val client: HttpClient = HttpClient.newHttpClient()
+        val (key, _) = newEntry(random)
+        val requestBuilder = HttpRequest.newBuilder()
+            .uri(URI.create("http://${cfg.host}:${cfg.port}/some/nested/path/../../../some/other/path/$key"))
+        val response: HttpResponse<ByteArray> =
+            client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        Assertions.assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.statusCode())
+    }
+
+    @Test
+    @Order(7)
+    fun getRelativePath() {
+        val client: HttpClient = HttpClient.newHttpClient()
+        val (key, value) = keyValuePair
+        val requestBuilder = HttpRequest.newBuilder()
+            .uri(URI.create("http://${cfg.host}:${cfg.port}/some/other/path/../../nested/path/$key"))
+        val response: HttpResponse<ByteArray> =
+            client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        Assertions.assertEquals(HttpResponseStatus.OK.code(), response.statusCode())
+        Assertions.assertArrayEquals(value, response.body())
+    }
+
+    @Test
+    @Order(10)
     fun traceTest() {
         val client: HttpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
         val requestBuilder = newRequestBuilder("").method(

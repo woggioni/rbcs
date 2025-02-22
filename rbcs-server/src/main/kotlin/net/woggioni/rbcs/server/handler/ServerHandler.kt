@@ -135,13 +135,13 @@ class ServerHandler(private val serverPrefix: Path) :
         setRequestMetadata(msg)
         val method = msg.method()
         if (method === HttpMethod.GET) {
-            val path = Path.of(msg.uri())
-            val prefix = path.parent
-            if (serverPrefix == prefix) {
+            val path = Path.of(msg.uri()).normalize()
+            if (path.startsWith(serverPrefix)) {
+                val relativePath = serverPrefix.relativize(path)
+                val key = relativePath.toString()
                 ctx.pipeline().addAfter(NAME, CacheContentHandler.NAME, CacheContentHandler)
-                path.fileName?.toString()
-                    ?.let(::CacheGetRequest)
-                    ?.let(ctx::fireChannelRead)
+                key.let(::CacheGetRequest)
+                    .let(ctx::fireChannelRead)
                     ?: ctx.channel().write(CacheValueNotFoundResponse())
             } else {
                 log.warn(ctx) {
@@ -152,11 +152,10 @@ class ServerHandler(private val serverPrefix: Path) :
                 ctx.writeAndFlush(response)
             }
         } else if (method === HttpMethod.PUT) {
-            val path = Path.of(msg.uri())
-            val prefix = path.parent
-            val key = path.fileName.toString()
-
-            if (serverPrefix == prefix) {
+            val path = Path.of(msg.uri()).normalize()
+            if (path.startsWith(serverPrefix)) {
+                val relativePath = serverPrefix.relativize(path)
+                val key = relativePath.toString()
                 log.debug(ctx) {
                     "Added value for key '$key' to build cache"
                 }
