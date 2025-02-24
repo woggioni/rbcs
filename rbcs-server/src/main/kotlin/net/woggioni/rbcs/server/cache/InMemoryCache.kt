@@ -1,10 +1,12 @@
 package net.woggioni.rbcs.server.cache
 
 import io.netty.buffer.ByteBuf
+import net.woggioni.rbcs.api.AsyncCloseable
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.common.createLogger
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.PriorityBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -26,7 +28,7 @@ class CacheEntry(
 class InMemoryCache(
     private val maxAge: Duration,
     private val maxSize: Long
-) : AutoCloseable {
+) : AsyncCloseable {
 
     companion object {
         private val log = createLogger<InMemoryCache>()
@@ -45,26 +47,35 @@ class InMemoryCache(
     @Volatile
     private var running = true
 
-    private val garbageCollector = Thread.ofVirtual().name("in-memory-cache-gc").start {
-        while (running) {
-            val el = removalQueue.poll(1, TimeUnit.SECONDS) ?: continue
-            val value = el.value
-            val now = Instant.now()
-            if (now > el.expiry) {
-                val removed = map.remove(el.key, value)
-                if (removed) {
-                    updateSizeAfterRemoval(value.content)
-                    //Decrease the reference count for map
-                    value.content.release()
+    private val closeFuture = object : CompletableFuture<Void>() {
+        init {
+            Thread.ofVirtual().name("in-memory-cache-gc").start {
+                try {
+                    while (running) {
+                        val el = removalQueue.poll(1, TimeUnit.SECONDS) ?: continue
+                        val value = el.value
+                        val now = Instant.now()
+                        if (now > el.expiry) {
+                            val removed = map.remove(el.key, value)
+                            if (removed) {
+                                updateSizeAfterRemoval(value.content)
+                                //Decrease the reference count for map
+                                value.content.release()
+                            }
+                        } else {
+                            removalQueue.put(el)
+                            Thread.sleep(minOf(Duration.between(now, el.expiry), Duration.ofSeconds(1)))
+                        }
+                    }
+                    complete(null)
+                } catch (ex: Throwable) {
+                    completeExceptionally(ex)
                 }
-            } else {
-                removalQueue.put(el)
-                Thread.sleep(minOf(Duration.between(now, el.expiry), Duration.ofSeconds(1)))
             }
         }
     }
 
-    private fun removeEldest(): Long {
+    fun removeEldest(): Long {
         while (true) {
             val el = removalQueue.take()
             val value = el.value
@@ -84,9 +95,9 @@ class InMemoryCache(
         }
     }
 
-    override fun close() {
+    override fun asyncClose() : CompletableFuture<Void> {
         running = false
-        garbageCollector.join()
+        return closeFuture
     }
 
     fun get(key: ByteArray) = map[CacheKey(key)]?.run {

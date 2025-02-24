@@ -14,9 +14,7 @@ allprojects { subproject ->
         if(project.currentTag.isPresent()) {
             version = project.currentTag.map { it[0] }.get()
         } else {
-            version = project.gitRevision.map { gitRevision ->
-                "${getProperty('rbcs.version')}.${gitRevision[0..10]}"
-            }.get()
+            version = "${getProperty('rbcs.version')}-SNAPSHOT"
         }
 
     repositories {
@@ -24,7 +22,6 @@ allprojects { subproject ->
             url = getProperty('gitea.maven.url')
             content {
                 includeModule 'net.woggioni', 'jwo'
-                includeModule 'net.woggioni', 'xmemcached'
                 includeGroup 'com.lys'
             }
         }

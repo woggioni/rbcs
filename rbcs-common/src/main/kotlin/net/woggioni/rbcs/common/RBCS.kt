@@ -32,7 +32,7 @@ object RBCS {
 
     fun digest(
         data: ByteArray,
-        md: MessageDigest = MessageDigest.getInstance("MD5")
+        md: MessageDigest
     ): ByteArray {
         md.update(data)
         return md.digest()
@@ -40,7 +40,7 @@ object RBCS {
 
     fun digestString(
         data: ByteArray,
-        md: MessageDigest = MessageDigest.getInstance("MD5")
+        md: MessageDigest
     ): String {
         return JWO.bytesToHex(digest(data, md))
     }

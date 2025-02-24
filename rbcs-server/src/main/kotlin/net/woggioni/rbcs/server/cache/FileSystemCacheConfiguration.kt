@@ -1,5 +1,9 @@
 package net.woggioni.rbcs.server.cache
 
+import io.netty.channel.ChannelFactory
+import io.netty.channel.EventLoopGroup
+import io.netty.channel.socket.DatagramChannel
+import io.netty.channel.socket.SocketChannel
 import net.woggioni.jwo.Application
 import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.Configuration
@@ -19,11 +23,13 @@ data class FileSystemCacheConfiguration(
     override fun materialize() = object : CacheHandlerFactory {
         private val cache = FileSystemCache(root ?: Application.builder("rbcs").build().computeCacheDirectory(), maxAge)
 
-        override fun close() {
-            cache.close()
-        }
+        override fun asyncClose() = cache.asyncClose()
 
-        override fun newHandler() = FileSystemCacheHandler(cache, digestAlgorithm, compressionEnabled, compressionLevel, chunkSize)
+        override fun newHandler(
+            eventLoop: EventLoopGroup,
+            socketChannelFactory: ChannelFactory<SocketChannel>,
+            datagramChannelFactory: ChannelFactory<DatagramChannel>
+        ) = FileSystemCacheHandler(cache, digestAlgorithm, compressionEnabled, compressionLevel, chunkSize)
     }
 
     override fun getNamespaceURI() = RBCS.RBCS_NAMESPACE_URI

@@ -3,6 +3,7 @@ package net.woggioni.rbcs.server
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
+import io.netty.channel.ChannelFactory
 import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.ChannelHandlerContext
@@ -11,7 +12,12 @@ import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
 import io.netty.channel.ChannelPromise
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.DatagramChannel
+import io.netty.channel.socket.ServerSocketChannel
+import io.netty.channel.socket.SocketChannel
+import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.compression.CompressionOptions
 import io.netty.handler.codec.http.DefaultHttpContent
 import io.netty.handler.codec.http.HttpContentCompressor
@@ -31,6 +37,7 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup
 import io.netty.util.concurrent.EventExecutorGroup
 import net.woggioni.jwo.JWO
 import net.woggioni.jwo.Tuple2
+import net.woggioni.rbcs.api.AsyncCloseable
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.exception.ConfigurationException
 import net.woggioni.rbcs.common.PasswordSecurity.decodePasswordHash
@@ -200,8 +207,10 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
 
     private class ServerInitializer(
         private val cfg: Configuration,
+        private val channelFactory : ChannelFactory<SocketChannel>,
+        private val datagramChannelFactory : ChannelFactory<DatagramChannel>,
         private val eventExecutorGroup: EventExecutorGroup
-    ) : ChannelInitializer<Channel>(), AutoCloseable {
+    ) : ChannelInitializer<Channel>(), AsyncCloseable {
 
         companion object {
             private fun createSslCtx(tls: Configuration.Tls): SslContext {
@@ -368,21 +377,20 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 ServerHandler(prefix)
             }
             pipeline.addLast(eventExecutorGroup, ServerHandler.NAME, serverHandler)
-            pipeline.addLast(cacheHandlerFactory.newHandler())
+
+            pipeline.addLast(cacheHandlerFactory.newHandler(ch.eventLoop(), channelFactory, datagramChannelFactory))
             pipeline.addLast(TraceHandler)
             pipeline.addLast(ExceptionHandler)
         }
 
-        override fun close() {
-            cacheHandlerFactory.close()
-        }
+        override fun asyncClose() = cacheHandlerFactory.asyncClose()
     }
 
     class ServerHandle(
         closeFuture: ChannelFuture,
         private val bossGroup: EventExecutorGroup,
         private val executorGroups: Iterable<EventExecutorGroup>,
-        private val serverInitializer: AutoCloseable,
+        private val serverInitializer: AsyncCloseable,
     ) : Future<Void> by from(closeFuture, executorGroups, serverInitializer) {
 
         companion object {
@@ -391,42 +399,53 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             private fun from(
                 closeFuture: ChannelFuture,
                 executorGroups: Iterable<EventExecutorGroup>,
-                serverInitializer: AutoCloseable
+                serverInitializer: AsyncCloseable
             ): CompletableFuture<Void> {
                 val result = CompletableFuture<Void>()
                 closeFuture.addListener {
                     val errors = mutableListOf<Throwable>()
                     val deadline = Instant.now().plusSeconds(20)
-
-
-                    for (executorGroup in executorGroups) {
-                        val future = executorGroup.terminationFuture()
-                        try {
-                            val now = Instant.now()
-                            if (now > deadline) {
-                                future.get(0, TimeUnit.SECONDS)
-                            } else {
-                                future.get(Duration.between(now, deadline).toMillis(), TimeUnit.MILLISECONDS)
-                            }
-                        }
-                        catch (te: TimeoutException) {
-                            errors.addLast(te)
-                            log.warn("Timeout while waiting for shutdown of $executorGroup", te)
-                        } catch (ex: Throwable) {
-                            log.warn(ex.message, ex)
-                            errors.addLast(ex)
-                        }
-                    }
                     try {
                         serverInitializer.close()
                     } catch (ex: Throwable) {
                         log.error(ex.message, ex)
                         errors.addLast(ex)
                     }
-                    if(errors.isEmpty()) {
-                        result.complete(null)
-                    } else {
-                        result.completeExceptionally(errors.first())
+
+                    serverInitializer.asyncClose().whenComplete { _, ex ->
+                        if(ex != null) {
+                            log.error(ex.message, ex)
+                            errors.addLast(ex)
+                        }
+
+                        executorGroups.map {
+                            it.shutdownGracefully()
+                        }
+
+                        for (executorGroup in executorGroups) {
+                            val future = executorGroup.terminationFuture()
+                            try {
+                                val now = Instant.now()
+                                if (now > deadline) {
+                                    future.get(0, TimeUnit.SECONDS)
+                                } else {
+                                    future.get(Duration.between(now, deadline).toMillis(), TimeUnit.MILLISECONDS)
+                                }
+                            }
+                            catch (te: TimeoutException) {
+                                errors.addLast(te)
+                                log.warn("Timeout while waiting for shutdown of $executorGroup", te)
+                            } catch (ex: Throwable) {
+                                log.warn(ex.message, ex)
+                                errors.addLast(ex)
+                            }
+                        }
+
+                        if(errors.isEmpty()) {
+                            result.complete(null)
+                        } else {
+                            result.completeExceptionally(errors.first())
+                        }
                     }
                 }
 
@@ -441,16 +460,15 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
 
         fun sendShutdownSignal() {
             bossGroup.shutdownGracefully()
-            executorGroups.map {
-                it.shutdownGracefully()
-            }
         }
     }
 
     fun run(): ServerHandle {
         // Create the multithreaded event loops for the server
         val bossGroup = NioEventLoopGroup(1)
-        val serverSocketChannel = NioServerSocketChannel::class.java
+        val channelFactory = ChannelFactory<SocketChannel> { NioSocketChannel() }
+        val datagramChannelFactory = ChannelFactory<DatagramChannel> { NioDatagramChannel() }
+        val serverChannelFactory = ChannelFactory<ServerSocketChannel> { NioServerSocketChannel() }
         val workerGroup = NioEventLoopGroup(0)
         val eventExecutorGroup = run {
             val threadFactory = if (cfg.eventExecutor.isUseVirtualThreads) {
@@ -460,11 +478,11 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             }
             DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors(), threadFactory)
         }
-        val serverInitializer = ServerInitializer(cfg, eventExecutorGroup)
+        val serverInitializer = ServerInitializer(cfg, channelFactory, datagramChannelFactory, workerGroup)
         val bootstrap = ServerBootstrap().apply {
             // Configure the server
             group(bossGroup, workerGroup)
-            channel(serverSocketChannel)
+            channelFactory(serverChannelFactory)
             childHandler(serverInitializer)
             option(ChannelOption.SO_BACKLOG, cfg.incomingConnectionsBacklogSize)
             childOption(ChannelOption.SO_KEEPALIVE, true)

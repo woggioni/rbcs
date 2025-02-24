@@ -1,6 +1,7 @@
 package net.woggioni.rbcs.server.cache
 
 import net.woggioni.jwo.JWO
+import net.woggioni.rbcs.api.AsyncCloseable
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.common.createLogger
 import java.io.ByteArrayOutputStream
@@ -18,11 +19,12 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CompletableFuture
 
 class FileSystemCache(
     val root: Path,
     val maxAge: Duration
-) : AutoCloseable {
+) : AsyncCloseable {
 
     class EntryValue(val metadata: CacheValueMetadata, val channel : FileChannel, val offset : Long, val size : Long) : Serializable
 
@@ -112,9 +114,18 @@ class FileSystemCache(
         return FileSink(metadata, file, tmpFile)
     }
 
-    private val garbageCollector = Thread.ofVirtual().name("file-system-cache-gc").start {
-        while (running) {
-            gc()
+    private val closeFuture = object : CompletableFuture<Void>() {
+        init {
+            Thread.ofVirtual().name("file-system-cache-gc").start {
+                try {
+                    while (running) {
+                        gc()
+                    }
+                    complete(null)
+                } catch (ex : Throwable) {
+                    completeExceptionally(ex)
+                }
+            }
         }
     }
 
@@ -151,8 +162,8 @@ class FileSystemCache(
         return result
     }
 
-    override fun close() {
+    override fun asyncClose() : CompletableFuture<Void> {
         running = false
-        garbageCollector.join()
+        return closeFuture
     }
 }

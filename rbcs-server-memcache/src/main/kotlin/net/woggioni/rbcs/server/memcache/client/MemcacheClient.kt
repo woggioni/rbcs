@@ -4,16 +4,17 @@ package net.woggioni.rbcs.server.memcache.client
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
+import io.netty.channel.ChannelFactory
 import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelOption
 import io.netty.channel.ChannelPipeline
+import io.netty.channel.EventLoopGroup
 import io.netty.channel.SimpleChannelInboundHandler
-import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.pool.AbstractChannelPoolHandler
 import io.netty.channel.pool.ChannelPool
 import io.netty.channel.pool.FixedChannelPool
-import io.netty.channel.socket.nio.NioSocketChannel
+import io.netty.channel.socket.SocketChannel
 import io.netty.handler.codec.memcache.LastMemcacheContent
 import io.netty.handler.codec.memcache.MemcacheContent
 import io.netty.handler.codec.memcache.MemcacheObject
@@ -33,23 +34,22 @@ import java.util.concurrent.ConcurrentHashMap
 import io.netty.util.concurrent.Future as NettyFuture
 
 
-class MemcacheClient(private val servers: List<MemcacheCacheConfiguration.Server>, private val chunkSize : Int) : AutoCloseable {
+class MemcacheClient(
+    private val servers: List<MemcacheCacheConfiguration.Server>,
+    private val chunkSize : Int,
+    private val group: EventLoopGroup,
+    private val channelFactory: ChannelFactory<SocketChannel>,
+    private val connectionPool: ConcurrentHashMap<HostAndPort, FixedChannelPool>
+) : AutoCloseable {
 
     private companion object {
         private val log = createLogger<MemcacheCacheHandler>()
     }
 
-    private val group: NioEventLoopGroup
-    private val connectionPool: MutableMap<HostAndPort, ChannelPool> = ConcurrentHashMap()
-
-    init {
-        group = NioEventLoopGroup()
-    }
-
     private fun newConnectionPool(server: MemcacheCacheConfiguration.Server): FixedChannelPool {
         val bootstrap = Bootstrap().apply {
             group(group)
-            channel(NioSocketChannel::class.java)
+            channelFactory(channelFactory)
             option(ChannelOption.SO_KEEPALIVE, true)
             remoteAddress(InetSocketAddress(server.endpoint.host, server.endpoint.port))
             server.connectionTimeoutMillis?.let {

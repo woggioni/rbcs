@@ -153,7 +153,7 @@
                         </xs:documentation>
                     </xs:annotation>
                 </xs:attribute>
-                <xs:attribute name="digest" type="xs:token" default="MD5">
+                <xs:attribute name="digest" type="xs:token">
                     <xs:annotation>
                         <xs:documentation>
                             Hashing algorithm to apply to the key. If omitted, no hashing is performed.
@@ -209,7 +209,7 @@
                         </xs:documentation>
                     </xs:annotation>
                 </xs:attribute>
-                <xs:attribute name="digest" type="xs:token" default="MD5">
+                <xs:attribute name="digest" type="xs:token" default="SHA3-224">
                     <xs:annotation>
                         <xs:documentation>
                             Hashing algorithm to apply to the key. If omitted, no hashing is performed.

@@ -9,21 +9,13 @@ plugins {
     id 'maven-publish'
 }
 
+import net.woggioni.gradle.envelope.EnvelopePlugin
 import net.woggioni.gradle.envelope.EnvelopeJarTask
 import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
 import net.woggioni.gradle.graalvm.NativeImagePlugin
 import net.woggioni.gradle.graalvm.NativeImageTask
 import net.woggioni.gradle.graalvm.JlinkPlugin
 import net.woggioni.gradle.graalvm.JlinkTask
-
-Property<String> mainModuleName = objects.property(String.class)
-mainModuleName.set('net.woggioni.rbcs.cli')
-Property<String> mainClassName = objects.property(String.class)
-mainClassName.set('net.woggioni.rbcs.cli.RemoteBuildCacheServerCli')
-
-tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
-    options.javaModuleMainClass = mainClassName
-}
 
 configurations {
     release {
@@ -32,13 +24,6 @@ configurations {
         canBeResolved = true
         visible = true
     }
-}
-
-envelopeJar {
-    mainModule = mainModuleName
-    mainClass = mainClassName
-
-    extraClasspath = ["plugins"]
 }
 
 dependencies {
@@ -54,18 +39,24 @@ dependencies {
 //    runtimeOnly catalog.slf4j.simple
 }
 
-Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named('envelopeJar', EnvelopeJarTask.class) {
-//    systemProperties['java.util.logging.config.class'] = 'net.woggioni.rbcs.LoggingConfig'
-//    systemProperties['log.config.source'] = 'net/woggioni/rbcs/cli/logging.properties'
-//    systemProperties['java.util.logging.config.file'] = 'classpath:net/woggioni/rbcs/cli/logging.properties'
+
+Property<String> mainModuleName = objects.property(String.class)
+mainModuleName.set('net.woggioni.rbcs.cli')
+Property<String> mainClassName = objects.property(String.class)
+mainClassName.set('net.woggioni.rbcs.cli.RemoteBuildCacheServerCli')
+
+tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
+    options.javaModuleMainClass = mainClassName
+}
+
+Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named(EnvelopePlugin.ENVELOPE_JAR_TASK_NAME, EnvelopeJarTask.class) {
+    mainModule = mainModuleName
+    mainClass = mainClassName
+
+    extraClasspath = ["plugins"]
+
     systemProperties['logback.configurationFile'] = 'classpath:net/woggioni/rbcs/cli/logback.xml'
     systemProperties['io.netty.leakDetectionLevel'] = 'DISABLED'
-
-//    systemProperties['org.slf4j.simpleLogger.showDateTime'] = 'true'
-//    systemProperties['org.slf4j.simpleLogger.defaultLogLevel'] = 'debug'
-//    systemProperties['org.slf4j.simpleLogger.log.com.google.code.yanf4j'] = 'warn'
-//    systemProperties['org.slf4j.simpleLogger.log.net.rubyeye.xmemcached'] = 'warn'
-//    systemProperties['org.slf4j.simpleLogger.dateTimeFormat'] = 'yyyy-MM-dd\'T\'HH:mm:ss.SSSZ'
 }
 
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {

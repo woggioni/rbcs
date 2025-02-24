@@ -84,17 +84,6 @@ public class Configuration {
     }
 
     @Value
-    public static class Throttling {
-        KeyStore keyStore;
-        TrustStore trustStore;
-        boolean verifyClients;
-    }
-
-    public enum ClientCertificate {
-        REQUIRED, OPTIONAL
-    }
-
-    @Value
     public static class Tls {
         KeyStore keyStore;
         TrustStore trustStore;

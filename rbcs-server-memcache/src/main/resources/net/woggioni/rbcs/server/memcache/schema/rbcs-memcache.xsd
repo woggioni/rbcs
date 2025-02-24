@@ -21,7 +21,7 @@
                 </xs:sequence>
                 <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
                 <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000"/>
-                <xs:attribute name="digest" type="xs:token" />
+                <xs:attribute name="digest" type="xs:token"/>
                 <xs:attribute name="compression-mode" type="rbcs-memcache:compressionType"/>
                 <xs:attribute name="compression-level" type="rbcs:compressionLevelType" default="-1"/>
             </xs:extension>

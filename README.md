@@ -66,11 +66,18 @@ buildCache {
         url = 'https://rbcs.example.com/'
         push = true
         allowInsecureProtocol = false
+        // The credentials block is only required if you enable 
+        // HTTP basic authentication on RBCS
+        credentials {
+            username = 'build-cache-user'
+            password = 'some-complicated-password'
+        }
     }
 }
 ```
 
-alternatively you can add this to `${GRADLE_HOME}/init.gradle`
+alternatively you can add this to `${GRADLE_HOME}/init.gradle` to configure the remote cache
+at the system level
 
 ```groovy
 gradle.settingsEvaluated { settings ->
@@ -79,14 +86,51 @@ gradle.settingsEvaluated { settings ->
             url = 'https://rbcs.example.com/'
             push = true
             allowInsecureProtocol = false
+            // The credentials block is only required if you enable 
+            // HTTP basic authentication on RBCS
+            credentials {
+                username = 'build-cache-user'
+                password = 'some-complicated-password'
+            }
         }
     }
 }
 ```
 
+add `org.gradle.caching=true` to your `<project>/gradle.properties` or run gradle with `--build-cache`.
+
+Read [Gradle documentation](https://docs.gradle.org/current/userguide/build_cache.html) for more detailed information.
+
 ### Using RBCS with Maven
 
+1. Create an `extensions.xml` in `<project>/.mvn/extensions.xml` with the following content
+  ```xml
+  <extensions xmlns="http://maven.apache.org/EXTENSIONS/1.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://maven.apache.org/EXTENSIONS/1.1.0 https://maven.apache.org/xsd/core-extensions-1.0.0.xsd">
+      <extension>
+          <groupId>org.apache.maven.extensions</groupId>
+          <artifactId>maven-build-cache-extension</artifactId>
+          <version>1.2.0</version>
+      </extension>
+  </extensions>
+  ```
+2. Copy [maven-build-cache-config.xml](https://maven.apache.org/extensions/maven-build-cache-extension/maven-build-cache-config.xml) into `<project>/.mvn/` folder
+3. Edit the `cache/configuration/remote` element
+  ```xml
+    <remote enabled="true" id="rbcs">
+        <url>https://rbcs.example.com/</url>
+    </remote>
+  ```
+4. Run maven with
+  ```bash
+    mvn -Dmaven.build.cache.enabled=true -Dmaven.build.cache.debugOutput=true -Dmaven.build.cache.remote.save.enabled=true package
+  ```
+
+Alternatively you can set those properties in your `<project>/pom.xml`
+
+
 Read [here](https://maven.apache.org/extensions/maven-build-cache-extension/remote-cache.html)
+for more informations
 
 ## FAQ
 ### Why should I use a build cache?

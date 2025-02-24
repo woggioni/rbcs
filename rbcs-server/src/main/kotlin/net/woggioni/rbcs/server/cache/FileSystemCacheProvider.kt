@@ -30,7 +30,7 @@ class FileSystemCacheProvider : CacheProvider<FileSystemCacheConfiguration> {
         val compressionLevel = el.renderAttribute("compression-level")
             ?.let(String::toInt)
             ?: Deflater.DEFAULT_COMPRESSION
-        val digestAlgorithm = el.renderAttribute("digest") ?: "MD5"
+        val digestAlgorithm = el.renderAttribute("digest")
         val chunkSize = el.renderAttribute("chunk-size")
             ?.let(Integer::decode)
             ?: 0x10000

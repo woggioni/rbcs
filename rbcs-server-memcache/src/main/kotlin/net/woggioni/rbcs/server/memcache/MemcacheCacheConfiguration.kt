@@ -1,10 +1,20 @@
 package net.woggioni.rbcs.server.memcache
 
+import io.netty.channel.ChannelFactory
+import io.netty.channel.ChannelHandler
+import io.netty.channel.EventLoopGroup
+import io.netty.channel.pool.FixedChannelPool
+import io.netty.channel.socket.DatagramChannel
+import io.netty.channel.socket.SocketChannel
 import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.common.HostAndPort
 import net.woggioni.rbcs.server.memcache.client.MemcacheClient
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 data class MemcacheCacheConfiguration(
     val servers: List<Server>,
@@ -12,7 +22,7 @@ data class MemcacheCacheConfiguration(
     val digestAlgorithm: String? = null,
     val compressionMode: CompressionMode? = null,
     val compressionLevel: Int,
-    val chunkSize : Int
+    val chunkSize: Int
 ) : Configuration.Cache {
 
     enum class CompressionMode {
@@ -23,19 +33,58 @@ data class MemcacheCacheConfiguration(
     }
 
     data class Server(
-        val endpoint : HostAndPort,
-        val connectionTimeoutMillis : Int?,
-        val maxConnections : Int
+        val endpoint: HostAndPort,
+        val connectionTimeoutMillis: Int?,
+        val maxConnections: Int
     )
 
-
     override fun materialize() = object : CacheHandlerFactory {
-        private val client = MemcacheClient(this@MemcacheCacheConfiguration.servers, chunkSize)
-        override fun close() {
-            client.close()
+
+        private val connectionPoolMap = ConcurrentHashMap<HostAndPort, FixedChannelPool>()
+
+        override fun newHandler(
+            eventLoop: EventLoopGroup,
+            socketChannelFactory: ChannelFactory<SocketChannel>,
+            datagramChannelFactory: ChannelFactory<DatagramChannel>
+        ): ChannelHandler {
+            return MemcacheCacheHandler(
+                MemcacheClient(
+                    this@MemcacheCacheConfiguration.servers,
+                    chunkSize,
+                    eventLoop,
+                    socketChannelFactory,
+                    connectionPoolMap
+                ),
+                digestAlgorithm,
+                compressionMode != null,
+                compressionLevel,
+                chunkSize,
+                maxAge
+            )
         }
 
-        override fun newHandler() = MemcacheCacheHandler(client, digestAlgorithm, compressionMode != null, compressionLevel, chunkSize, maxAge)
+        override fun asyncClose() = object : CompletableFuture<Void>() {
+            init {
+                val failure = AtomicReference<Throwable>(null)
+                val pools = connectionPoolMap.values.toList()
+                val npools = pools.size
+                val finished = AtomicInteger(0)
+                pools.forEach { pool ->
+                    pool.closeAsync().addListener {
+                        if (!it.isSuccess) {
+                            failure.compareAndSet(null, it.cause())
+                        }
+                        if(finished.incrementAndGet() == npools) {
+                            when(val ex = failure.get()) {
+                                null -> complete(null)
+                                else -> completeExceptionally(ex)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
     override fun getNamespaceURI() = "urn:net.woggioni.rbcs.server.memcache"
