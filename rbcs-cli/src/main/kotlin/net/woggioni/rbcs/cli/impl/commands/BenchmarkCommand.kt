@@ -26,8 +26,123 @@ import kotlin.random.Random
     showDefaultValues = true
 )
 class BenchmarkCommand : RbcsCommand() {
-    companion object{
+    companion object {
         private val log = createLogger<BenchmarkCommand>()
+
+        fun run(profile : RemoteBuildCacheClient.Configuration.Profile,
+                numberOfEntries : Int,
+                entrySize : Int,
+                useRandomValue : Boolean,
+        ) {
+            val progressThreshold = LongMath.ceilDiv(numberOfEntries.toLong(), 20)
+            RemoteBuildCacheClient(profile).use { client ->
+                val entryGenerator = sequence {
+                    val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
+                    while (true) {
+                        val key = JWO.bytesToHex(random.nextBytes(16))
+                        val value = if (useRandomValue) {
+                            random.nextBytes(entrySize)
+                        } else {
+                            val byteValue = random.nextInt().toByte()
+                            ByteArray(entrySize) { _ -> byteValue }
+                        }
+                        yield(key to value)
+                    }
+                }
+
+                log.info {
+                    "Starting insertion"
+                }
+                val entries = let {
+                    val completionCounter = AtomicLong(0)
+                    val completionQueue = LinkedBlockingQueue<Pair<String, ByteArray>>(numberOfEntries)
+                    val start = Instant.now()
+                    val semaphore = Semaphore(profile.maxConnections * 5)
+                    val iterator = entryGenerator.take(numberOfEntries).iterator()
+                    while (completionCounter.get() < numberOfEntries) {
+                        if (iterator.hasNext()) {
+                            val entry = iterator.next()
+                            semaphore.acquire()
+                            val future =
+                                client.put(entry.first, entry.second, CacheValueMetadata(null, null)).thenApply { entry }
+                            future.whenComplete { result, ex ->
+                                if (ex != null) {
+                                    log.error(ex.message, ex)
+                                } else {
+                                    completionQueue.put(result)
+                                }
+                                semaphore.release()
+                                val completed = completionCounter.incrementAndGet()
+                                if (completed.mod(progressThreshold) == 0L) {
+                                    log.debug {
+                                        "Inserted $completed / $numberOfEntries"
+                                    }
+                                }
+                            }
+                        } else {
+                            Thread.sleep(Duration.of(500, ChronoUnit.MILLIS))
+                        }
+                    }
+
+                    val inserted = completionQueue.toList()
+                    val end = Instant.now()
+                    log.info {
+                        val elapsed = Duration.between(start, end).toMillis()
+                        val opsPerSecond = String.format("%.2f", numberOfEntries.toDouble() / elapsed * 1000)
+                        "Insertion rate: $opsPerSecond ops/s"
+                    }
+                    inserted
+                }
+                log.info {
+                    "Inserted ${entries.size} entries"
+                }
+                log.info {
+                    "Starting retrieval"
+                }
+                if (entries.isNotEmpty()) {
+                    val completionCounter = AtomicLong(0)
+                    val semaphore = Semaphore(profile.maxConnections * 5)
+                    val start = Instant.now()
+                    val it = entries.iterator()
+                    while (completionCounter.get() < entries.size) {
+                        if (it.hasNext()) {
+                            val entry = it.next()
+                            semaphore.acquire()
+                            val future = client.get(entry.first).thenApply {
+                                if (it == null) {
+                                    log.error {
+                                        "Missing entry for key '${entry.first}'"
+                                    }
+                                } else if (!entry.second.contentEquals(it)) {
+                                    log.error {
+                                        "Retrieved a value different from what was inserted for key '${entry.first}'"
+                                    }
+                                }
+                            }
+                            future.whenComplete { _, _ ->
+                                val completed = completionCounter.incrementAndGet()
+                                if (completed.mod(progressThreshold) == 0L) {
+                                    log.debug {
+                                        "Retrieved $completed / ${entries.size}"
+                                    }
+                                }
+                                semaphore.release()
+                            }
+                        } else {
+                            Thread.sleep(Duration.of(500, ChronoUnit.MILLIS))
+                        }
+                    }
+                    val end = Instant.now()
+                    log.info {
+                        val elapsed = Duration.between(start, end).toMillis()
+                        val opsPerSecond = String.format("%.2f", entries.size.toDouble() / elapsed * 1000)
+                        "Retrieval rate: $opsPerSecond ops/s"
+                    }
+                } else {
+                    log.error("Skipping retrieval benchmark as it was not possible to insert any entry in the cache")
+                }
+            }
+        }
     }
 
     @CommandLine.Spec
@@ -60,113 +175,11 @@ class BenchmarkCommand : RbcsCommand() {
             clientCommand.configuration.profiles[profileName]
                 ?: throw IllegalArgumentException("Profile $profileName does not exist in configuration")
         }
-        val progressThreshold = LongMath.ceilDiv(numberOfEntries.toLong(), 20)
-        RemoteBuildCacheClient(profile).use { client ->
-
-            val entryGenerator = sequence {
-                val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
-                while (true) {
-                    val key = JWO.bytesToHex(random.nextBytes(16))
-                    val value = if(randomValues) {
-                        random.nextBytes(size)
-                    } else {
-                        val byteValue = random.nextInt().toByte()
-                        ByteArray(size) {_ -> byteValue}
-                    }
-                    yield(key to value)
-                }
-            }
-
-            log.info {
-                "Starting insertion"
-            }
-            val entries = let {
-                val completionCounter = AtomicLong(0)
-                val completionQueue = LinkedBlockingQueue<Pair<String, ByteArray>>(numberOfEntries)
-                val start = Instant.now()
-                val semaphore = Semaphore(profile.maxConnections * 5)
-                val iterator = entryGenerator.take(numberOfEntries).iterator()
-                while (completionCounter.get() < numberOfEntries) {
-                    if (iterator.hasNext()) {
-                        val entry = iterator.next()
-                        semaphore.acquire()
-                        val future = client.put(entry.first, entry.second, CacheValueMetadata(null, null)).thenApply { entry }
-                        future.whenComplete { result, ex ->
-                            if (ex != null) {
-                                log.error(ex.message, ex)
-                            } else {
-                                completionQueue.put(result)
-                            }
-                            semaphore.release()
-                            val completed = completionCounter.incrementAndGet()
-                            if(completed.mod(progressThreshold) == 0L) {
-                                log.debug {
-                                    "Inserted $completed / $numberOfEntries"
-                                }
-                            }
-                        }
-                    } else {
-                        Thread.sleep(Duration.of(500, ChronoUnit.MILLIS))
-                    }
-                }
-
-                val inserted = completionQueue.toList()
-                val end = Instant.now()
-                log.info {
-                    val elapsed = Duration.between(start, end).toMillis()
-                    val opsPerSecond = String.format("%.2f", numberOfEntries.toDouble() / elapsed * 1000)
-                    "Insertion rate: $opsPerSecond ops/s"
-                }
-                inserted
-            }
-            log.info {
-                "Inserted ${entries.size} entries"
-            }
-            log.info {
-                "Starting retrieval"
-            }
-            if (entries.isNotEmpty()) {
-                val completionCounter = AtomicLong(0)
-                val semaphore = Semaphore(profile.maxConnections * 5)
-                val start = Instant.now()
-                val it = entries.iterator()
-                while (completionCounter.get() < entries.size) {
-                    if (it.hasNext()) {
-                        val entry = it.next()
-                        semaphore.acquire()
-                        val future = client.get(entry.first).thenApply {
-                            if (it == null) {
-                                log.error {
-                                    "Missing entry for key '${entry.first}'"
-                                }
-                            } else if (!entry.second.contentEquals(it)) {
-                                log.error {
-                                    "Retrieved a value different from what was inserted for key '${entry.first}'"
-                                }
-                            }
-                        }
-                        future.whenComplete { _, _ ->
-                            val completed = completionCounter.incrementAndGet()
-                            if(completed.mod(progressThreshold) == 0L) {
-                                log.debug {
-                                    "Retrieved $completed / ${entries.size}"
-                                }
-                            }
-                            semaphore.release()
-                        }
-                    } else {
-                        Thread.sleep(Duration.of(500, ChronoUnit.MILLIS))
-                    }
-                }
-                val end = Instant.now()
-                log.info {
-                    val elapsed = Duration.between(start, end).toMillis()
-                    val opsPerSecond = String.format("%.2f", entries.size.toDouble() / elapsed * 1000)
-                    "Retrieval rate: $opsPerSecond ops/s"
-                }
-            } else {
-                log.error("Skipping retrieval benchmark as it was not possible to insert any entry in the cache")
-            }
-        }
+        run(
+            profile,
+            numberOfEntries,
+            size,
+            randomValues
+        )
     }
 }

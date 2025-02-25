@@ -37,6 +37,7 @@ import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.GenericFutureListener
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.client.impl.Parser
+import net.woggioni.rbcs.common.RBCS.loadKeystore
 import net.woggioni.rbcs.common.Xml
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
@@ -54,6 +55,8 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 import kotlin.random.Random
 import io.netty.util.concurrent.Future as NettyFuture
 
@@ -63,7 +66,7 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
     }
 
     private val group: NioEventLoopGroup
-    private var sslContext: SslContext
+    private val sslContext: SslContext
     private val pool: ChannelPool
 
     data class Configuration(
@@ -77,6 +80,13 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
 
             data class BasicAuthenticationCredentials(val username: String, val password: String) : Authentication()
         }
+
+        class TrustStore (
+            var file: Path?,
+            var password: String?,
+            var checkCertificateStatus: Boolean = false,
+            var verifyServerCertificate: Boolean = true,
+        )
 
         class RetryPolicy(
             val maxAttempts: Int,
@@ -100,6 +110,7 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
             val maxConnections: Int,
             val compressionEnabled: Boolean,
             val retryPolicy: RetryPolicy?,
+            val tlsTruststore : TrustStore?
         )
 
         companion object {
@@ -115,10 +126,33 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
         group = NioEventLoopGroup()
         sslContext = SslContextBuilder.forClient().also { builder ->
             (profile.authentication as? Configuration.Authentication.TlsClientAuthenticationCredentials)?.let { tlsClientAuthenticationCredentials ->
-                builder.keyManager(
-                    tlsClientAuthenticationCredentials.key,
-                    *tlsClientAuthenticationCredentials.certificateChain
-                )
+                builder.apply {
+                    keyManager(
+                        tlsClientAuthenticationCredentials.key,
+                        *tlsClientAuthenticationCredentials.certificateChain
+                    )
+                    profile.tlsTruststore?.let { trustStore ->
+                        if(!trustStore.verifyServerCertificate) {
+                            trustManager(object : X509TrustManager {
+                                override fun checkClientTrusted(certChain: Array<out X509Certificate>, p1: String?) {
+                                }
+
+                                override fun checkServerTrusted(certChain: Array<out X509Certificate>, p1: String?) {
+                                }
+
+                                override fun getAcceptedIssuers() = null
+                            })
+                        } else {
+                            trustStore.file?.let {
+                                val ts = loadKeystore(it, trustStore.password)
+                                val trustManagerFactory: TrustManagerFactory =
+                                    TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+                                trustManagerFactory.init(ts)
+                                trustManager(trustManagerFactory)
+                            }
+                        }
+                    }
+                }
             }
         }.build()
 

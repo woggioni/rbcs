@@ -31,6 +31,7 @@ object Parser {
                     var authentication: RemoteBuildCacheClient.Configuration.Authentication? = null
                     var retryPolicy: RemoteBuildCacheClient.Configuration.RetryPolicy? = null
                     var connection : RemoteBuildCacheClient.Configuration.Connection? = null
+                    var trustStore : RemoteBuildCacheClient.Configuration.TrustStore? = null
                     for (gchild in child.asIterable()) {
                         when (gchild.localName) {
                             "tls-client-auth" -> {
@@ -108,6 +109,17 @@ object Parser {
                                     writeIdleTimeout,
                                 )
                             }
+
+                            "tls-trust-store" -> {
+                                val file = gchild.renderAttribute("file")
+                                    ?.let(Path::of)
+                                val password = gchild.renderAttribute("password")
+                                val checkCertificateStatus = gchild.renderAttribute("check-certificate-status")
+                                    ?.let(String::toBoolean) ?: false
+                                val verifyServerCertificate = gchild.renderAttribute("verify-server-certificate")
+                                    ?.let(String::toBoolean) ?: true
+                                trustStore = RemoteBuildCacheClient.Configuration.TrustStore(file, password, checkCertificateStatus, verifyServerCertificate)
+                            }
                         }
                     }
                     val maxConnections = child.renderAttribute("max-connections")
@@ -126,7 +138,8 @@ object Parser {
                         connectionTimeout,
                         maxConnections,
                         compressionEnabled,
-                        retryPolicy
+                        retryPolicy,
+                        trustStore
                     )
                 }
             }

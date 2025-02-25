@@ -23,8 +23,13 @@ class RemoteBuildCacheServerCli : RbcsCommand() {
 
     class VersionProvider : AbstractVersionProvider()
     companion object {
+        private fun setPropertyIfNotPresent(key: String, value: String) {
+            System.getProperty(key) ?: System.setProperty(key, value)
+        }
         @JvmStatic
         fun main(vararg args: String) {
+            setPropertyIfNotPresent("logback.configurationFile", "net/woggioni/rbcs/cli/logback.xml")
+            setPropertyIfNotPresent("io.netty.leakDetectionLevel", "DISABLED")
             val currentClassLoader = RemoteBuildCacheServerCli::class.java.classLoader
             Thread.currentThread().contextClassLoader = currentClassLoader
             if(currentClassLoader.javaClass.name == "net.woggioni.envelope.loader.ModuleClassLoader") {

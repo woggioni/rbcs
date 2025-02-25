@@ -35,13 +35,13 @@ import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.AttributeKey
 import io.netty.util.concurrent.DefaultEventExecutorGroup
 import io.netty.util.concurrent.EventExecutorGroup
-import net.woggioni.jwo.JWO
-import net.woggioni.jwo.Tuple2
 import net.woggioni.rbcs.api.AsyncCloseable
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.exception.ConfigurationException
 import net.woggioni.rbcs.common.PasswordSecurity.decodePasswordHash
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
+import net.woggioni.rbcs.common.RBCS.getTrustManager
+import net.woggioni.rbcs.common.RBCS.loadKeystore
 import net.woggioni.rbcs.common.RBCS.toUrl
 import net.woggioni.rbcs.common.Xml
 import net.woggioni.rbcs.common.createLogger
@@ -49,7 +49,6 @@ import net.woggioni.rbcs.common.debug
 import net.woggioni.rbcs.common.info
 import net.woggioni.rbcs.server.auth.AbstractNettyHttpAuthenticator
 import net.woggioni.rbcs.server.auth.Authorizer
-import net.woggioni.rbcs.server.auth.ClientCertificateValidator
 import net.woggioni.rbcs.server.auth.RoleAuthorizer
 import net.woggioni.rbcs.server.configuration.Parser
 import net.woggioni.rbcs.server.configuration.Serializer
@@ -63,7 +62,6 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.nio.file.Files
 import java.nio.file.Path
-import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -230,7 +228,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                         val clientAuth = tls.trustStore?.let { trustStore ->
                             val ts = loadKeystore(trustStore.file, trustStore.password)
                             trustManager(
-                                ClientCertificateValidator.getTrustManager(ts, trustStore.isCheckCertificateStatus)
+                                getTrustManager(ts, trustStore.isCheckCertificateStatus)
                             )
                             if (trustStore.isRequireClientCertificate) ClientAuth.REQUIRE
                             else ClientAuth.OPTIONAL
@@ -238,27 +236,6 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                         clientAuth(clientAuth)
                     }.build()
                 }
-            }
-
-            fun loadKeystore(file: Path, password: String?): KeyStore {
-                val ext = JWO.splitExtension(file)
-                    .map(Tuple2<String, String>::get_2)
-                    .orElseThrow {
-                        IllegalArgumentException(
-                            "Keystore file '${file}' must have .jks, .p12, .pfx extension"
-                        )
-                    }
-                val keystore = when (ext.substring(1).lowercase()) {
-                    "jks" -> KeyStore.getInstance("JKS")
-                    "p12", "pfx" -> KeyStore.getInstance("PKCS12")
-                    else -> throw IllegalArgumentException(
-                        "Keystore file '${file}' must have .jks, .p12, .pfx extension"
-                    )
-                }
-                Files.newInputStream(file).use {
-                    keystore.load(it, password?.let(String::toCharArray))
-                }
-                return keystore
             }
 
             private val log = createLogger<ServerInitializer>()

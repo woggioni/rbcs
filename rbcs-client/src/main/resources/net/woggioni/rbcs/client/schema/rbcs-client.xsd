@@ -21,6 +21,7 @@
             </xs:choice>
             <xs:element name="connection" type="rbcs-client:connectionType" minOccurs="0" />
             <xs:element name="retry-policy" type="rbcs-client:retryType" minOccurs="0"/>
+            <xs:element name="tls-trust-store" type="rbcs-client:trustStoreType" minOccurs="0"/>
         </xs:sequence>
         <xs:attribute name="name" type="xs:token" use="required"/>
         <xs:attribute name="base-url" type="xs:anyURI" use="required"/>
@@ -57,4 +58,34 @@
         <xs:attribute name="exp" type="xs:double" default="2.0"/>
     </xs:complexType>
 
+    <xs:complexType name="trustStoreType">
+        <xs:attribute name="file" type="xs:string" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Path to the trustore file
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="password" type="xs:string">
+            <xs:annotation>
+                <xs:documentation>
+                    Trustore file password
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="check-certificate-status" type="xs:boolean">
+            <xs:annotation>
+                <xs:documentation>
+                    Whether or not check the certificate validity using CRL/OCSP
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="verify-server-certificate" type="xs:boolean" use="optional" default="true">
+            <xs:annotation>
+                <xs:documentation>
+                    If false, the client will blindly trust the provided server certificate
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
 </xs:schema>

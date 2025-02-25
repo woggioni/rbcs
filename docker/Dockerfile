@@ -15,3 +15,7 @@ RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distri
 WORKDIR /home/luser
 ADD logback.xml .
 ENTRYPOINT ["java", "-Dlogback.configurationFile=logback.xml", "-XX:+UseSerialGC", "-XX:GCTimeRatio=24", "-jar", "/home/luser/rbcs.jar", "server"]
+
+FROM scratch AS release-native
+ADD rbcs-cli.upx rbcs-cli
+ENTRYPOINT rbcs-cli

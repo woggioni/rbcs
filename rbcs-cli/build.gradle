@@ -13,9 +13,19 @@ import net.woggioni.gradle.envelope.EnvelopePlugin
 import net.woggioni.gradle.envelope.EnvelopeJarTask
 import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
 import net.woggioni.gradle.graalvm.NativeImagePlugin
-import net.woggioni.gradle.graalvm.NativeImageTask
+import net.woggioni.gradle.graalvm.UpxTask
 import net.woggioni.gradle.graalvm.JlinkPlugin
 import net.woggioni.gradle.graalvm.JlinkTask
+
+sourceSets {
+    configureNativeImage {
+        java {
+        }
+        kotlin {
+
+        }
+    }
+}
 
 configurations {
     release {
@@ -24,9 +34,25 @@ configurations {
         canBeResolved = true
         visible = true
     }
+
+    configureNativeImageImplementation {
+        extendsFrom implementation
+    }
+
+    configureNativeImageRuntimeOnly {
+        extendsFrom runtimeOnly
+    }
+
+    nativeImage {
+        extendsFrom runtimeClasspath
+    }
+
 }
 
 dependencies {
+    configureNativeImageImplementation project
+    configureNativeImageImplementation project(':rbcs-server-memcache')
+
     implementation catalog.jwo
     implementation catalog.slf4j.api
     implementation catalog.picocli
@@ -37,6 +63,8 @@ dependencies {
 //    runtimeOnly catalog.slf4j.jdk14
     runtimeOnly catalog.logback.classic
 //    runtimeOnly catalog.slf4j.simple
+    nativeImage project(':rbcs-server-memcache')
+
 }
 
 
@@ -49,6 +77,8 @@ tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
     options.javaModuleMainClass = mainClassName
 }
 
+Provider<Jar> jarTaskProvider = tasks.named(JavaPlugin.JAR_TASK_NAME, Jar)
+
 Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named(EnvelopePlugin.ENVELOPE_JAR_TASK_NAME, EnvelopeJarTask.class) {
     mainModule = mainModuleName
     mainClass = mainClassName
@@ -60,15 +90,28 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named(EnvelopePlugin.E
 }
 
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
-    mainClass = mainClassName
-    mainModule = mainModuleName
+    mainClass = "net.woggioni.rbcs.cli.graal.GraalNativeImageConfiguration"
+    setClasspath(configurations.configureNativeImageRuntimeClasspath + sourceSets.graal.output.classesDirs)
+    mergeConfiguration = false
+    systemProperty('logback.configurationFile', 'classpath:net/woggioni/rbcs/cli/logback.xml')
+    systemProperty('io.netty.leakDetectionLevel', 'DISABLED')
+    modularity.inferModulePath = false
+    enabled = false
 }
 
-tasks.named(NativeImagePlugin.NATIVE_IMAGE_TASK_NAME, NativeImageTask) {
+nativeImage {
     mainClass = mainClassName
-    mainModule = mainModuleName
+//    mainModule = mainModuleName
     useMusl = true
     buildStaticImage = true
+    linkAtBuildTime = false
+    classpath = project.files(jarTaskProvider, configurations.nativeImage)
+    compressExecutable = true
+    compressionLevel = 10
+    useLZMA = false
+}
+
+Provider<UpxTask> upxTaskProvider = tasks.named(NativeImagePlugin.UPX_TASK_NAME, UpxTask) {
 }
 
 tasks.named(JlinkPlugin.JLINK_TASK_NAME, JlinkTask) {
@@ -92,8 +135,13 @@ publishing {
     publications {
         maven(MavenPublication) {
             artifact envelopeJar
+            artifact(upxTaskProvider) {
+                classifier = "linux-x86_64"
+                extension = "exe"
+            }
         }
     }
 }
+
 
 

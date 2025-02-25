@@ -9,6 +9,8 @@
                 key-store-password="password"
                 key-alias="woggioni@c962475fa38"
                 key-password="key-password"/>
+        <connection write-idle-timeout="PT60S" read-idle-timeout="PT60S" write-timeout="PT0S" read-timeout="PT0S" idle-timeout="PT30S" />
+        <tls-trust-store file="file.pfx" password="password" check-certificate-status="false" verify-server-certificate="true"/>
     </profile>
     <profile name="profile2" base-url="https://rbcs2.example.com/">
         <basic-auth user="user" password="password"/>

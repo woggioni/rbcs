@@ -15,6 +15,27 @@ import kotlin.random.Random
 class HealthCheckCommand : RbcsCommand() {
     companion object{
         private val log = createLogger<HealthCheckCommand>()
+
+        fun run(profile : RemoteBuildCacheClient.Configuration.Profile) {
+            RemoteBuildCacheClient(profile).use { client ->
+                val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
+                val nonce = ByteArray(0xa0)
+                random.nextBytes(nonce)
+                client.healthCheck(nonce).thenApply { value ->
+                    if(value == null) {
+                        throw IllegalStateException("Empty response from server")
+                    }
+                    val offset = value.size - nonce.size
+                    for(i in 0 until nonce.size) {
+                        val a = nonce[i]
+                        val b = value[offset + i]
+                        if(a != b) {
+                            throw IllegalStateException("Server nonce does not match")
+                        }
+                    }
+                }.get()
+            }
+        }
     }
 
     @CommandLine.Spec
@@ -26,23 +47,6 @@ class HealthCheckCommand : RbcsCommand() {
             clientCommand.configuration.profiles[profileName]
                 ?: throw IllegalArgumentException("Profile $profileName does not exist in configuration")
         }
-        RemoteBuildCacheClient(profile).use { client ->
-            val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
-            val nonce = ByteArray(0xa0)
-            random.nextBytes(nonce)
-            client.healthCheck(nonce).thenApply { value ->
-                if(value == null) {
-                    throw IllegalStateException("Empty response from server")
-                }
-                val offset = value.size - nonce.size
-                for(i in 0 until nonce.size) {
-                    val a = nonce[i]
-                    val b = value[offset + i]
-                    if(a != b) {
-                        throw IllegalStateException("Server nonce does not match")
-                    }
-                }
-            }.get()
-        }
+        run(profile)
     }
 }

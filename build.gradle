@@ -38,7 +38,7 @@ allprojects { subproject ->
             withSourcesJar()
             modularity.inferModulePath = true
             toolchain {
-                languageVersion = JavaLanguageVersion.of(21)
+                languageVersion = JavaLanguageVersion.of(23)
                 vendor = JvmVendorSpec.ORACLE
             }
         }

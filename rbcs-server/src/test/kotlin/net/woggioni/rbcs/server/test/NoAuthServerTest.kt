@@ -2,10 +2,10 @@ package net.woggioni.rbcs.server.test
 
 import io.netty.handler.codec.http.HttpResponseStatus
 import net.woggioni.rbcs.api.Configuration
+import net.woggioni.rbcs.common.RBCS.getFreePort
 import net.woggioni.rbcs.common.Xml
 import net.woggioni.rbcs.server.cache.InMemoryCacheConfiguration
 import net.woggioni.rbcs.server.configuration.Serializer
-import net.woggioni.rbcs.server.test.utils.NetworkUtils
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -33,7 +33,7 @@ class NoAuthServerTest : AbstractServerTest() {
         this.cacheDir = testDir.resolve("cache")
         cfg = Configuration(
             "127.0.0.1",
-            NetworkUtils.getFreePort(),
+            getFreePort(),
             100,
             serverPath,
             Configuration.EventExecutor(false),

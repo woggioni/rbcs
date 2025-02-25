@@ -2,10 +2,10 @@ package net.woggioni.rbcs.server.test
 
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.Role
+import net.woggioni.rbcs.common.RBCS.getFreePort
 import net.woggioni.rbcs.common.Xml
 import net.woggioni.rbcs.server.cache.FileSystemCacheConfiguration
 import net.woggioni.rbcs.server.configuration.Serializer
-import net.woggioni.rbcs.server.test.utils.NetworkUtils
 import java.net.URI
 import java.net.http.HttpRequest
 import java.nio.charset.StandardCharsets
@@ -33,7 +33,7 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
         this.cacheDir = testDir.resolve("cache")
         cfg = Configuration.of(
             "127.0.0.1",
-            NetworkUtils.getFreePort(),
+            getFreePort(),
             50,
             serverPath,
             Configuration.EventExecutor(false),
