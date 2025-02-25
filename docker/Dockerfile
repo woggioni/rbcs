@@ -3,7 +3,7 @@ RUN adduser -D luser
 USER luser
 WORKDIR /home/luser
 
-FROM base-release AS release
+FROM base-release AS release-vanilla
 ADD rbcs-cli-envelope-*.jar rbcs.jar
 ENTRYPOINT ["java", "-XX:+UseSerialGC", "-XX:GCTimeRatio=24", "-jar", "/home/luser/rbcs.jar", "server"]
 
@@ -17,6 +17,7 @@ ADD logback.xml .
 ENTRYPOINT ["java", "-Dlogback.configurationFile=logback.xml", "-XX:+UseSerialGC", "-XX:GCTimeRatio=24", "-jar", "/home/luser/rbcs.jar", "server"]
 
 FROM scratch AS release-native
-ADD rbcs-cli.upx rbcs-cli
-ENV RBCS_CONFIGURATION_DIR="."
-ENTRYPOINT ["./rbcs-cli"]
+ADD rbcs-cli.upx /rbcs/rbcs-cli
+ENV RBCS_CONFIGURATION_DIR="/rbcs"
+WORKDIR /rbcs
+ENTRYPOINT ["./rbcs/rbcs-cli"]

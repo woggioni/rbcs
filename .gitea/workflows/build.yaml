@@ -39,9 +39,9 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:latest
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}
-          target: release
+            gitea.woggioni.net/woggioni/rbcs:vanilla
+            gitea.woggioni.net/woggioni/rbcs:vanilla-${{ steps.retrieve-version.outputs.VERSION }}
+          target: release-vanilla
           cache-from: type=registry,ref=gitea.woggioni.net/woggioni/rbcs:buildx
       -
         name: Build rbcs memcache Docker image
@@ -66,6 +66,8 @@ jobs:
           push: true
           pull: true
           tags: |
+            gitea.woggioni.net/woggioni/rbcs:latest
+            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}
             gitea.woggioni.net/woggioni/rbcs:native
             gitea.woggioni.net/woggioni/rbcs:native-${{ steps.retrieve-version.outputs.VERSION }}
           target: release-native
