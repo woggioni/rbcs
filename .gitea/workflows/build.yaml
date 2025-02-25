@@ -57,6 +57,18 @@ jobs:
           target: release-memcache
           cache-from: type=registry,ref=gitea.woggioni.net/woggioni/rbcs:buildx
           cache-to: type=registry,mode=max,compression=zstd,image-manifest=true,oci-mediatypes=true,ref=gitea.woggioni.net/woggioni/rbcs:buildx
+      -
+        name: Build rbcs memcache Docker image
+        uses: docker/build-push-action@v5.3.0
+        with:
+          context: "docker/build/docker"
+          platforms: linux/amd64
+          push: true
+          pull: true
+          tags: |
+            gitea.woggioni.net/woggioni/rbcs:native
+            gitea.woggioni.net/woggioni/rbcs:native-${{ steps.retrieve-version.outputs.VERSION }}
+          target: release-native
       - name: Publish artifacts
         env:
           PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}

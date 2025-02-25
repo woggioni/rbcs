@@ -85,7 +85,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
         val userAttribute: AttributeKey<Configuration.User> = AttributeKey.valueOf("user")
         val groupAttribute: AttributeKey<Set<Configuration.Group>> = AttributeKey.valueOf("group")
 
-        val DEFAULT_CONFIGURATION_URL by lazy { "classpath:net/woggioni/rbcs/server/rbcs-default.xml".toUrl() }
+        val DEFAULT_CONFIGURATION_URL by lazy { "jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/rbcs-default.xml".toUrl() }
         private const val SSL_HANDLER_NAME = "sslHandler"
 
         fun loadConfiguration(configurationFile: Path): Configuration {
