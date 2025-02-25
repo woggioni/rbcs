@@ -18,4 +18,5 @@ ENTRYPOINT ["java", "-Dlogback.configurationFile=logback.xml", "-XX:+UseSerialGC
 
 FROM scratch AS release-native
 ADD rbcs-cli.upx rbcs-cli
+ENV RBCS_CONFIGURATION_DIR="."
 ENTRYPOINT ["./rbcs-cli"]
