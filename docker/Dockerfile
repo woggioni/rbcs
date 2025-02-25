@@ -20,4 +20,4 @@ FROM scratch AS release-native
 ADD rbcs-cli.upx /rbcs/rbcs-cli
 ENV RBCS_CONFIGURATION_DIR="/rbcs"
 WORKDIR /rbcs
-ENTRYPOINT ["./rbcs/rbcs-cli"]
+ENTRYPOINT ["/rbcs/rbcs-cli"]
