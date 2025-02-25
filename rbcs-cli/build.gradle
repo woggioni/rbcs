@@ -129,6 +129,7 @@ tasks.named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME, ProcessResources) {
 
 artifacts {
     release(envelopeJarTaskProvider)
+    release(upxTaskProvider)
 }
 
 publishing {
