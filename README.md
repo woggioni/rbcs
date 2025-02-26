@@ -1,4 +1,44 @@
 # Remote Build Cache Server
+
+![Release](https://img.shields.io/gitea/v/release/woggioni/rbcs?gitea_url=https%3A%2F%2Fgitea.woggioni.net)
+![Version](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fgitea.woggioni.net%2Fapi%2Fpackages%2Fwoggioni%2Fmaven%2Fnet%2Fwoggioni%2Frbcs-cli%2Fmaven-metadata.xml)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Language](https://img.shields.io/gitea/languages/count/woggioni/rbcs?gitea_url=https%3A%2F%2Fgitea.woggioni.net)
+
+<!--
+![Last commit](https://img.shields.io/gitea/last-commit/woggioni/rbcs?gitea_url=https%3A%2F%2Fgitea.woggioni.net)
+-->
+
+Speed up your builds by sharing and reusing unchanged build outputs across your team.
+
+Remote Build Cache Server (RBCS) allows teams to share and reuse unchanged build and test outputs, 
+significantly reducing build times for both local and CI environments. By eliminating redundant work, 
+RBCS helps teams become more productive and efficient.
+
+**Key Features:**
+- Support for both Gradle and Maven build environments
+- Pluggable storage backends (in-memory, disk-backed, memcached)
+- Flexible authentication (HTTP basic or TLS certificate)
+- Role-based access control
+- Request throttling
+
+## Table of Contents
+- [Quickstart](#quickstart)
+- [Integration with build tools](#integration-with-build-tools)
+  - [Use RBCS with Gradle](#use-rbcs-with-gradle)
+  - [Use RBCS with Maven](#use-rbcs-with-maven)
+- [Server configuration](#server-configuration)
+- [Authentication](#authentication)
+  - [HTTP Basic authentication](#configure-http-basic-authentication)
+  - [TLS client certificate authentication](#configure-tls-certificate-authentication)
+- [Authentication & Access Control](#access-control)
+- [Plugins](#plugins)
+- [Client Tools](#rbcs-client)
+- [Logging](#logging)
+- [FAQ](#faq)
+
+
+
 Remote Build Cache Server (shortened to RBCS) allows you to share and reuse unchanged build 
 and test outputs across the team. This speeds up local and CI builds since cycles are not wasted
 re-building components that are unaffected by new code changes. RBCS supports both Gradle and
@@ -12,7 +52,7 @@ and throttling.
 
 ## Quickstart
 
-### Downloading the jar file 
+### Use the all-in-one jar file 
 You can download the latest version from [this link](https://gitea.woggioni.net/woggioni/-/packages/maven/net.woggioni:rbcs-cli/)
 
 
@@ -25,7 +65,7 @@ java -jar rbcs-cli.jar server
 By default it will start an HTTP server bound to localhost and listening on port 8080 with no authentication,
 writing data to the disk, that you can use for testing
 
-### Using the Docker image
+### Use the Docker image
 You can pull the latest Docker image with
 ```bash
 docker pull gitea.woggioni.net/woggioni/rbcs:latest
@@ -34,41 +74,16 @@ docker pull gitea.woggioni.net/woggioni/rbcs:latest
 By default it will start an HTTP server bound to localhost and listening on port 8080 with no authentication,
 writing data to the disk, that you can use for testing
 
-### Using the native executable
+### Use the native executable
 If you are on a Linux X86_64 machine you can download the native executable
 from [here](https://gitea.woggioni.net/woggioni/-/packages/maven/net.woggioni:rbcs-cli/).
 It behaves the same as the jar file but it doesn't require a JVM and it has faster startup times.
 becausue of GraalVm's [closed-world assumption](https://www.graalvm.org/latest/reference-manual/native-image/basics/#static-analysis),
 the native executable does not supports plugins, so it comes with all plugins embedded into it.
 
-## Usage
+## Integration with build tools
 
-### Configuration
-The location of the `rbcs-server.xml` configuration file depends on the operating system, 
-Alternatively it can be changed setting the `RBCS_CONFIGURATION_DIR` environmental variable or `net.woggioni.rbcs.conf.dir` Java system property
-to the directory that contain the `rbcs-server.xml` file.
-
-The server configuration file follows the XML format and uses XML schema for validation
-(you can find the schema for the main configuration file [here](https://gitea.woggioni.net/woggioni/rbcs/src/branch/master/rbcs-server/src/main/resources/net/woggioni/rbcs/server/schema/rbcs-server.xsd)).
-
-The configuration values are enclosed inside XML attribute and support system property / environmental variable interpolation.
-As an example, you can configure RBCS to read the server port number from the `RBCS_SERVER_PORT` environmental variable
-and the bind address from the `rbc.bind.address` JVM system property with
-
-```xml
-<bind host="${sys:rpc.bind.address}" port="${env:RBCS_SERVER_PORT}"/>
-```
-
-Full documentation for all tags and attributes is available [here](doc/server_configuration.md).
-
-### Plugins
-If you want to use memcache as a storage backend you'll also need to download [the memcache plugin](https://gitea.woggioni.net/woggioni/-/packages/maven/net.woggioni:rbcs-server-memcache/)
-
-Plugins need to be stored in a folder named `plugins` in the located server's working directory
-(the directory where the server process is started). They are shipped as TAR archives, so you need to extract
-the content of the archive into the `plugins` directory for the server to pick them up.
-
-### Using RBCS with Gradle 
+### Use RBCS with Gradle
 
 Add this to the `settings.gradle` file of your project
 
@@ -113,7 +128,7 @@ add `org.gradle.caching=true` to your `<project>/gradle.properties` or run gradl
 
 Read [Gradle documentation](https://docs.gradle.org/current/userguide/build_cache.html) for more detailed information.
 
-### Using RBCS with Maven
+### Use RBCS with Maven
 
 1. Create an `extensions.xml` in `<project>/.mvn/extensions.xml` with the following content
   ```xml
@@ -142,6 +157,46 @@ Alternatively you can set those properties in your `<project>/pom.xml`
 
 Read [here](https://maven.apache.org/extensions/maven-build-cache-extension/remote-cache.html)
 for more informations
+
+
+## Server configuration
+RBCS reads an XML configuration file, by default named `rbcs-server.xml`.
+The expected location of the `rbcs-server.xml` file depends on the operating system,
+if the configuration file is not found a default one will be created and its location is printed
+on the console
+
+```bash
+user@76a90cbcd75d:~$ rbcs-cli server
+2025-01-01 00:00:00,000 [INFO ] (main) n.w.r.c.impl.commands.ServerCommand -- Creating default configuration file at '/home/user/.config/rbcs/rbcs-server.xml'
+```
+
+Alternatively it can be changed setting the `RBCS_CONFIGURATION_DIR` environmental variable or `net.woggioni.rbcs.conf.dir` 
+Java system property to the directory that contain the `rbcs-server.xml` file.
+It can also be directly specified from the command line with
+```bash
+java -jar rbcs-cli.jar server -c /path/to/rbcs-server.xml
+```
+
+The server configuration file follows the XML format and uses XML schema for validation
+(you can find the schema for the `rbcs-server.xml` configuration file [here](https://gitea.woggioni.net/woggioni/rbcs/src/branch/master/rbcs-server/src/main/resources/net/woggioni/rbcs/server/schema/rbcs-server.xsd)).
+
+The configuration values are enclosed inside XML attribute and support system property / environmental variable interpolation.
+As an example, you can configure RBCS to read the server port number from the `RBCS_SERVER_PORT` environmental variable
+and the bind address from the `rbc.bind.address` JVM system property with
+
+```xml
+<bind host="${sys:rpc.bind.address}" port="${env:RBCS_SERVER_PORT}"/>
+```
+
+Full documentation for all tags and attributes and configuration file examples
+are available [here](doc/server_configuration.md).
+
+### Plugins
+If you want to use memcache as a storage backend you'll also need to download [the memcache plugin](https://gitea.woggioni.net/woggioni/-/packages/maven/net.woggioni:rbcs-server-memcache/)
+
+Plugins need to be stored in a folder named `plugins` in the located server's working directory
+(the directory where the server process is started). They are shipped as TAR archives, so you need to extract
+the content of the archive into the `plugins` directory for the server to pick them up.
 
 ## Authentication
 
@@ -250,7 +305,11 @@ as a health check (mind you need to have `Healthcheck` role in order to perform 
 
 RBCS ships with a command line client that can be used for testing, benchmarking or to manually 
 upload/download files to the cache. It must be configured with the `rbcs-client.xml`, 
-whose location follows the same logic of the `rbcs-server.xml`
+whose location follows the same logic of the `rbcs-server.xml`. 
+The `rbcs-client.xml` must adhere to the [rbcs-client.xsd](rbcs-client/src/main/resources/net/woggioni/rbcs/client/schema/rbcs-client.xsd) 
+XML schema
+
+The documentation for the `rbcs-client.xml` configuration file is available [here](conf/client_configuration.md)
 
 ### GET command
 
@@ -263,6 +322,24 @@ java -jar rbcs-cli.jar client -p $CLIENT_PROFILE_NAME get -k $CACHE_KEY -v $FILE
 ```bash
 java -jar rbcs-cli.jar client -p $CLIENT_PROFILE_NAME put -k $CACHE_KEY -v $FILE_TO_BE_UPLOADED
 ```
+
+If you don't specify the key, a UUID key based on the file content will be used, 
+if you add the `-i` command line parameter, the uploaded file will be served with
+`Content-Disposition: inline` HTTP header so that browser will attempt to render 
+it in the page instead of triggering a file download (in this way you can create a temporary web page).
+
+The client will try to detect the file mime type upon upload but if you want to be sure you can specify
+it manually with the `-t` parameter. 
+
+### Benchmark command
+
+```bash
+java -jar rbcs-cli.jar client -p $CLIENT_PROFILE_NAME benchamrk -s 4096 -e 10000
+```
+This will insert 10000 randomly generates entries of 4096 bytes into RBCS, then retrieve them
+and check that the retrieved value matches what was inserted. 
+It will also print throughput stats on the way.
+
 ## Logging
 
 RBCS uses [logback](https://logback.qos.ch/) and ships with a [default logging configuration](./conf/logback.xml) that

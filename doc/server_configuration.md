@@ -137,9 +137,22 @@ Configures TLS encryption.
             read-timeout="PT5S"
             write-timeout="PT5S"/>
     <event-executor use-virtual-threads="true"/>
+  
     <cache xs:type="rbcs:inMemoryCacheType" max-age="P7D" enable-compression="false" max-size="0x10000000" />
-    <!--cache xs:type="rbcs:fileSystemCacheType" max-age="P7D" enable-compression="false" path="${sys:java.io.tmpdir}/rbcs"/-->
-    <authorization>
+  
+  <!-- uncomment this to enable the filesystem storage backend, sotring cache data in "${sys:java.io.tmpdir}/rbcs"
+    <cache xs:type="rbcs:fileSystemCacheType" max-age="P7D" enable-compression="false" path="${sys:java.io.tmpdir}/rbcs"/>
+  -->
+
+  <!-- uncomment this to use memcache as the storage backend, also make sure you have 
+       the memcache plugin installed in the `plugins` directory if you are using running
+       the jar version of RBCS
+  <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" chunk-size="0x1000" digest="MD5">
+    <server host="127.0.0.1" port="11211" max-connections="256"/>
+  </cache>
+  -->
+
+  <authorization>
         <users>
             <user name="user1" password="II+qeNLft2pZ/JVNo9F7jpjM/BqEcfsJW27NZ6dPVs8tAwHbxrJppKYsbL7J/SMl">
                 <quota calls="100" period="PT1S"/>
