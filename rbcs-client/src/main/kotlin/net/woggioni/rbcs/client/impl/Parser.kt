@@ -1,7 +1,7 @@
 package net.woggioni.rbcs.client.impl
 
 import net.woggioni.rbcs.api.exception.ConfigurationException
-import net.woggioni.rbcs.client.RemoteBuildCacheClient
+import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.common.Xml.Companion.asIterable
 import net.woggioni.rbcs.common.Xml.Companion.renderAttribute
 import org.w3c.dom.Document
@@ -16,9 +16,9 @@ import java.time.temporal.ChronoUnit
 
 object Parser {
 
-    fun parse(document: Document): RemoteBuildCacheClient.Configuration {
+    fun parse(document: Document): Configuration {
         val root = document.documentElement
-        val profiles = mutableMapOf<String, RemoteBuildCacheClient.Configuration.Profile>()
+        val profiles = mutableMapOf<String, Configuration.Profile>()
 
         for (child in root.asIterable()) {
             val tagName = child.localName
@@ -28,10 +28,10 @@ object Parser {
                         child.renderAttribute("name") ?: throw ConfigurationException("name attribute is required")
                     val uri = child.renderAttribute("base-url")?.let(::URI)
                         ?: throw ConfigurationException("base-url attribute is required")
-                    var authentication: RemoteBuildCacheClient.Configuration.Authentication? = null
-                    var retryPolicy: RemoteBuildCacheClient.Configuration.RetryPolicy? = null
-                    var connection : RemoteBuildCacheClient.Configuration.Connection? = null
-                    var trustStore : RemoteBuildCacheClient.Configuration.TrustStore? = null
+                    var authentication: Configuration.Authentication? = null
+                    var retryPolicy: Configuration.RetryPolicy? = null
+                    var connection : Configuration.Connection? = null
+                    var trustStore : Configuration.TrustStore? = null
                     for (gchild in child.asIterable()) {
                         when (gchild.localName) {
                             "tls-client-auth" -> {
@@ -52,7 +52,7 @@ object Parser {
                                     .toList()
                                     .toTypedArray()
                                 authentication =
-                                    RemoteBuildCacheClient.Configuration.Authentication.TlsClientAuthenticationCredentials(
+                                    Configuration.Authentication.TlsClientAuthenticationCredentials(
                                         key,
                                         certChain
                                     )
@@ -64,7 +64,7 @@ object Parser {
                                 val password = gchild.renderAttribute("password")
                                     ?: throw ConfigurationException("password attribute is required")
                                 authentication =
-                                    RemoteBuildCacheClient.Configuration.Authentication.BasicAuthenticationCredentials(
+                                    Configuration.Authentication.BasicAuthenticationCredentials(
                                         username,
                                         password
                                     )
@@ -83,7 +83,7 @@ object Parser {
                                     gchild.renderAttribute("exp")
                                         ?.let(String::toDouble)
                                         ?: 2.0f
-                                retryPolicy = RemoteBuildCacheClient.Configuration.RetryPolicy(
+                                retryPolicy = Configuration.RetryPolicy(
                                     maxAttempts,
                                     initialDelay.toMillis(),
                                     exp.toDouble()
@@ -91,22 +91,16 @@ object Parser {
                             }
 
                             "connection" -> {
-                                val writeTimeout = gchild.renderAttribute("write-timeout")
-                                    ?.let(Duration::parse) ?: Duration.of(0, ChronoUnit.SECONDS)
-                                val readTimeout = gchild.renderAttribute("read-timeout")
-                                    ?.let(Duration::parse) ?: Duration.of(0, ChronoUnit.SECONDS)
                                 val idleTimeout = gchild.renderAttribute("idle-timeout")
                                     ?.let(Duration::parse) ?: Duration.of(30, ChronoUnit.SECONDS)
                                 val readIdleTimeout = gchild.renderAttribute("read-idle-timeout")
                                     ?.let(Duration::parse) ?: Duration.of(60, ChronoUnit.SECONDS)
                                 val writeIdleTimeout = gchild.renderAttribute("write-idle-timeout")
                                     ?.let(Duration::parse) ?: Duration.of(60, ChronoUnit.SECONDS)
-                                connection = RemoteBuildCacheClient.Configuration.Connection(
-                                    readTimeout,
-                                    writeTimeout,
-                                    idleTimeout,
+                                connection = Configuration.Connection(
                                     readIdleTimeout,
                                     writeIdleTimeout,
+                                    idleTimeout,
                                 )
                             }
 
@@ -118,7 +112,7 @@ object Parser {
                                     ?.let(String::toBoolean) ?: false
                                 val verifyServerCertificate = gchild.renderAttribute("verify-server-certificate")
                                     ?.let(String::toBoolean) ?: true
-                                trustStore = RemoteBuildCacheClient.Configuration.TrustStore(file, password, checkCertificateStatus, verifyServerCertificate)
+                                trustStore = Configuration.TrustStore(file, password, checkCertificateStatus, verifyServerCertificate)
                             }
                         }
                     }
@@ -131,7 +125,7 @@ object Parser {
                         ?.let(String::toBoolean)
                         ?: true
 
-                    profiles[name] = RemoteBuildCacheClient.Configuration.Profile(
+                    profiles[name] = Configuration.Profile(
                         uri,
                         connection,
                         authentication,
@@ -144,6 +138,6 @@ object Parser {
                 }
             }
         }
-        return RemoteBuildCacheClient.Configuration(profiles)
+        return Configuration(profiles)
     }
 }

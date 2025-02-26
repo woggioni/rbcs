@@ -11,7 +11,7 @@ import java.util.zip.Deflater
 
 class InMemoryCacheProvider : CacheProvider<InMemoryCacheConfiguration> {
 
-    override fun getXmlSchemaLocation() = "classpath:net/woggioni/rbcs/server/schema/rbcs.xsd"
+    override fun getXmlSchemaLocation() = "classpath:net/woggioni/rbcs/server/schema/rbcs-server.xsd"
 
     override fun getXmlType() = "inMemoryCacheType"
 

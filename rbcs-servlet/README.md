@@ -1,3 +1,10 @@
+# RBCS servlet
+
+This is a minimal implementation of RBCs using Jakarta servlet API, it relies
+on the servlet container (Tomcat in this example) for authentication, authorization,
+throttling, encryption and compression. It only supports in-memory caching.
+The main purpose is to provide a performance comparison for RBCS Netty implementation.
+
 ## How to run
 
 ```bash

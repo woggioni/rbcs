@@ -36,20 +36,14 @@ import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.GenericFutureListener
 import net.woggioni.rbcs.api.CacheValueMetadata
-import net.woggioni.rbcs.client.impl.Parser
 import net.woggioni.rbcs.common.RBCS.loadKeystore
-import net.woggioni.rbcs.common.Xml
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
 import net.woggioni.rbcs.common.trace
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.URI
-import java.nio.file.Files
-import java.nio.file.Path
-import java.security.PrivateKey
 import java.security.cert.X509Certificate
-import java.time.Duration
 import java.util.Base64
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
@@ -68,59 +62,6 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
     private val group: NioEventLoopGroup
     private val sslContext: SslContext
     private val pool: ChannelPool
-
-    data class Configuration(
-        val profiles: Map<String, Profile>
-    ) {
-        sealed class Authentication {
-            data class TlsClientAuthenticationCredentials(
-                val key: PrivateKey,
-                val certificateChain: Array<X509Certificate>
-            ) : Authentication()
-
-            data class BasicAuthenticationCredentials(val username: String, val password: String) : Authentication()
-        }
-
-        class TrustStore (
-            var file: Path?,
-            var password: String?,
-            var checkCertificateStatus: Boolean = false,
-            var verifyServerCertificate: Boolean = true,
-        )
-
-        class RetryPolicy(
-            val maxAttempts: Int,
-            val initialDelayMillis: Long,
-            val exp: Double
-        )
-
-        class Connection(
-            val readTimeout: Duration,
-            val writeTimeout: Duration,
-            val idleTimeout: Duration,
-            val readIdleTimeout: Duration,
-            val writeIdleTimeout: Duration
-        )
-
-        data class Profile(
-            val serverURI: URI,
-            val connection: Connection?,
-            val authentication: Authentication?,
-            val connectionTimeout: Duration?,
-            val maxConnections: Int,
-            val compressionEnabled: Boolean,
-            val retryPolicy: RetryPolicy?,
-            val tlsTruststore : TrustStore?
-        )
-
-        companion object {
-            fun parse(path: Path): Configuration {
-                return Files.newInputStream(path).use {
-                    Xml.parseXml(path.toUri().toURL(), it)
-                }.let(Parser::parse)
-            }
-        }
-    }
 
     init {
         group = NioEventLoopGroup()
@@ -212,19 +153,6 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                 val pipeline: ChannelPipeline = ch.pipeline()
 
                 profile.connection?.also { conn ->
-                    val readTimeout = conn.readTimeout.toMillis()
-                    val writeTimeout = conn.writeTimeout.toMillis()
-                    if (readTimeout > 0 || writeTimeout > 0) {
-                        pipeline.addLast(
-                            IdleStateHandler(
-                                false,
-                                readTimeout,
-                                writeTimeout,
-                                0,
-                                TimeUnit.MILLISECONDS
-                            )
-                        )
-                    }
                     val readIdleTimeout = conn.readIdleTimeout.toMillis()
                     val writeIdleTimeout = conn.writeIdleTimeout.toMillis()
                     val idleTimeout = conn.idleTimeout.toMillis()

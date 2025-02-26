@@ -11,7 +11,7 @@ import net.woggioni.rbcs.cli.impl.commands.PasswordHashCommand
 import net.woggioni.rbcs.cli.impl.commands.PutCommand
 import net.woggioni.rbcs.cli.impl.commands.ServerCommand
 import net.woggioni.rbcs.common.RbcsUrlStreamHandlerFactory
-import net.woggioni.rbcs.common.contextLogger
+import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
 import picocli.CommandLine.Model.CommandSpec
 
@@ -36,7 +36,7 @@ class RemoteBuildCacheServerCli : RbcsCommand() {
                 //We're running in an envelope jar and custom URL protocols won't work
                 RbcsUrlStreamHandlerFactory.install()
             }
-            val log = contextLogger()
+            val log = createLogger<RemoteBuildCacheServerCli>()
             val app = Application.builder("rbcs")
                 .configurationDirectoryEnvVar("RBCS_CONFIGURATION_DIR")
                 .configurationDirectoryPropertyKey("net.woggioni.rbcs.conf.dir")

@@ -15,6 +15,7 @@ and throttling.
 ### Downloading the jar file 
 You can download the latest version from [this link](https://gitea.woggioni.net/woggioni/-/packages/maven/net.woggioni:rbcs-cli/)
 
+
 Assuming you have Java 21 or later installed, you can launch the server directly with
 
 ```bash
@@ -33,19 +34,30 @@ docker pull gitea.woggioni.net/woggioni/rbcs:latest
 By default it will start an HTTP server bound to localhost and listening on port 8080 with no authentication,
 writing data to the disk, that you can use for testing
 
+### Using the native executable
+If you are on a Linux X86_64 machine you can download the native executable
+from [here](https://gitea.woggioni.net/woggioni/-/packages/maven/net.woggioni:rbcs-cli/).
+It behaves the same as the jar file but it doesn't require a JVM and it has faster startup times.
+becausue of GraalVm's [closed-world assumption](https://www.graalvm.org/latest/reference-manual/native-image/basics/#static-analysis),
+the native executable does not supports plugins, so it comes with all plugins embedded into it.
+
 ## Usage
 
 ### Configuration
-The location of the `rbcs.xml` configuration file depends on the operating system, 
+The location of the `rbcs-server.xml` configuration file depends on the operating system, 
 Alternatively it can be changed setting the `RBCS_CONFIGURATION_DIR` environmental variable or `net.woggioni.rbcs.conf.dir` Java system property
-to the directory that contain the `rbcs.xml` file.
+to the directory that contain the `rbcs-server.xml` file.
 
 The server configuration file follows the XML format and uses XML schema for validation
-(you can find the schema for the main configuration file [here](https://gitea.woggioni.net/woggioni/rbcs/src/branch/master/rbcs-server/src/main/resources/net/woggioni/rbcs/server/schema/rbcs.xsd)).
+(you can find the schema for the main configuration file [here](https://gitea.woggioni.net/woggioni/rbcs/src/branch/master/rbcs-server/src/main/resources/net/woggioni/rbcs/server/schema/rbcs-server.xsd)).
 
 The configuration values are enclosed inside XML attribute and support system property / environmental variable interpolation.
 As an example, you can configure RBCS to read the server port number from the `RBCS_SERVER_PORT` environmental variable
-and the bind address from the `rbc.bind.address` JVM system property with.
+and the bind address from the `rbc.bind.address` JVM system property with
+
+```xml
+<bind host="${sys:rpc.bind.address}" port="${env:RBCS_SERVER_PORT}"/>
+```
 
 Full documentation for all tags and attributes is available [here](doc/server_configuration.md).
 
@@ -128,9 +140,135 @@ Read [Gradle documentation](https://docs.gradle.org/current/userguide/build_cach
 
 Alternatively you can set those properties in your `<project>/pom.xml`
 
-
 Read [here](https://maven.apache.org/extensions/maven-build-cache-extension/remote-cache.html)
 for more informations
+
+## Authentication
+
+RBCS supports 2 authentication mechanisms:
+
+- HTTP basic authentication
+- TLS certificate authentication
+
+### Configure HTTP basic authentication
+
+Add a `<basic>` element to the `<authentication>` element in your `rbcs-server.xml`
+```xml
+    <authentication>
+      <basic/>
+    </authentication>
+```
+
+### Configure TLS certificate authentication
+
+Add a `<client-certificate>` element to the `<authentication>` element in your `rbcs-server.xml`
+```xml
+    <authentication>
+        <client-certificate>
+            <user-extractor attribute-name="CN" pattern="(.*)"/>
+            <group-extractor attribute-name="O" pattern="(.*)"/>
+        </client-certificate>
+    </authentication>
+```
+The `<user-extractor>` here determines how the username is extracted from the
+subject's X.500 name in the TLS certificate presented by the client, where `attribute-name`
+is the `RelativeDistinguishedName` (RDN) identifier and pattern is a regular expression
+that will be applied to extract the username from the first group present in the regex.
+An error will be thrown if the regular expression contains no groups, while additional
+groups are ignored.
+
+Similarly, the `<group-extractor>` here determines how the group name is extracted from the
+subject's X.500 name in the TLS certificate presented by the client. 
+Note that this allows to assign roles to incoming requests without necessarily assigning them
+a username.
+
+
+
+## Access control
+
+RBCS supports role-based access control (RBAC), three roles are available:
+- `Reader` can perform `GET` calls
+- `Writer` can perform `PUT` calls
+- `Healthcheck` can perform `TRACE` calls
+
+Roles are assigned to groups so that a user will have a role only if that roles belongs
+to one of the groups he is a member of.
+
+There is also a special `<anonymous>` user 
+which matches any request who hasn't been authenticated and that can be assigned
+to any group like a normal user. This permits to have a build cache that is
+publicly readable but only writable by authenticated users (e.g. CI/CD pipeline).
+
+### Defining users
+
+Users can be defined in the `<authorization>` element
+```xml
+    <authorization>
+        <users>
+            <user name="user1" password="kb/vNnkn2RvyPkTN6Q07uH0F7wI7u61MkManD3NHregRukBg4KHehfbqtLTb39fZjHA+SRH+EpEWDCf+Rihr5H5C1YN5qwmArV0p8O5ptC4="/>
+            <user name="user2" password="2J7MAhdIzZ3SO+JGB+K6wPhb4P5LH1L4L7yJCl5QrxNfAWRr5jTUExJRbcgbH1UfnkCbIO1p+xTDq+FCj3LFBZeMZUNZ47npN+WR7AX3VTo="/>
+            <anonymous/>
+        </users>
+        <groups>
+            <group name="readers">
+                <users>
+                    <anonymous/>
+                </users>
+                <roles>
+                    <reader/>
+                </roles>
+            </group>
+            <group name="writers">
+                <users>
+                    <user ref="user1"/>
+                    <user ref="user2"/>
+                </users>
+                <roles>
+                    <reader/>
+                    <writer/>
+                    <healthcheck/>
+                </roles>
+            </group>
+        </groups>
+    </authorization>
+```
+
+The `password` attribute is only used for HTTP Basic authentication, so it can be omitted
+if you use TLS certificate authentication. It must contain a password hash that can be derived from
+the actual password using the following command
+
+```bash
+java -jar rbcs-cli.jar password
+```
+
+## Reliability
+
+RBCS implements the [TRACE](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/TRACE) HTTP method and this functionality can be used
+as a health check (mind you need to have `Healthcheck` role in order to perform it and match the server's `prefix` in the URL).
+
+## RBCS Client
+
+RBCS ships with a command line client that can be used for testing, benchmarking or to manually 
+upload/download files to the cache. It must be configured with the `rbcs-client.xml`, 
+whose location follows the same logic of the `rbcs-server.xml`
+
+### GET command
+
+```bash
+java -jar rbcs-cli.jar client -p $CLIENT_PROFILE_NAME get -k $CACHE_KEY -v $FILE_WHERE_THE_VALUE_WILL_BE_STORED
+```
+
+### PUT command
+
+```bash
+java -jar rbcs-cli.jar client -p $CLIENT_PROFILE_NAME put -k $CACHE_KEY -v $FILE_TO_BE_UPLOADED
+```
+## Logging
+
+RBCS uses [logback](https://logback.qos.ch/) and ships with a [default logging configuration](./conf/logback.xml) that
+can be overridden with `-Dlogback.configurationFile=path/to/custom/configuration.xml`, refer to
+[Logback documentation](https://logback.qos.ch/manual/configuration.html) for more details about
+how to configure Logback
 
 ## FAQ
 ### Why should I use a build cache?

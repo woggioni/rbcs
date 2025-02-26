@@ -47,6 +47,7 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
 
     protected val readersGroup = Configuration.Group("readers", setOf(Role.Reader), null, null)
     protected val writersGroup = Configuration.Group("writers", setOf(Role.Writer), null, null)
+    protected val healthCheckGroup = Configuration.Group("healthcheckers", setOf(Role.Healthcheck), null, null)
     protected val random = Random(101325)
     protected val keyValuePair = newEntry(random)
     private val serverPath : String? = null

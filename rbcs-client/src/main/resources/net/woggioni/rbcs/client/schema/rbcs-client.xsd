@@ -15,75 +15,237 @@
     <xs:complexType name="profileType">
         <xs:sequence>
             <xs:choice>
-                <xs:element name="no-auth" type="rbcs-client:noAuthType"/>
-                <xs:element name="basic-auth" type="rbcs-client:basicAuthType"/>
-                <xs:element name="tls-client-auth" type="rbcs-client:tlsClientAuthType"/>
+                <xs:element name="no-auth" type="rbcs-client:noAuthType">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Disable authentication.
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="basic-auth" type="rbcs-client:basicAuthType">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Enable HTTP basic authentication.
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="tls-client-auth" type="rbcs-client:tlsClientAuthType">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Enable TLS certificate authentication.
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:element>
             </xs:choice>
-            <xs:element name="connection" type="rbcs-client:connectionType" minOccurs="0" />
-            <xs:element name="retry-policy" type="rbcs-client:retryType" minOccurs="0"/>
-            <xs:element name="tls-trust-store" type="rbcs-client:trustStoreType" minOccurs="0"/>
+            <xs:element name="connection" type="rbcs-client:connectionType" minOccurs="0" >
+                <xs:annotation>
+                    <xs:documentation>
+                        Set inactivity timeouts for connections to this server,
+                        if not present, connections are only closed on network errors.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="retry-policy" type="rbcs-client:retryType" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Set a retry policy for this server, if not present requests won't be retried
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="tls-trust-store" type="rbcs-client:trustStoreType" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        If set, specify an alternative truststore to validate the server certificate.
+                        If not present the system truststore is used.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:sequence>
-        <xs:attribute name="name" type="xs:token" use="required"/>
-        <xs:attribute name="base-url" type="xs:anyURI" use="required"/>
-        <xs:attribute name="max-connections" type="xs:positiveInteger" default="50"/>
-        <xs:attribute name="connection-timeout" type="xs:duration"/>
-        <xs:attribute name="enable-compression" type="xs:boolean" default="true"/>
+        <xs:attribute name="name" type="xs:token" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Name of this server profile, to be referred to from rbcs-cli with the '-p' parameter
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="base-url" type="xs:anyURI" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    RBCs server URL
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="max-connections" type="xs:positiveInteger" default="50">
+            <xs:annotation>
+                <xs:documentation>
+                    Maximum number of concurrent TCP connection to open with this server
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="connection-timeout" type="xs:duration">
+            <xs:annotation>
+                <xs:documentation>
+                    Enable HTTP compression when communicating to this server
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="enable-compression" type="xs:boolean" default="true">
+            <xs:annotation>
+                <xs:documentation>
+                    Enable HTTP compression when communicating to this server
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="connectionType">
-        <xs:attribute name="read-timeout" type="xs:duration" use="optional" default="PT0S"/>
-        <xs:attribute name="write-timeout" type="xs:duration" use="optional" default="PT0S"/>
-        <xs:attribute name="idle-timeout" type="xs:duration" use="optional" default="PT30S"/>
-        <xs:attribute name="read-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
-        <xs:attribute name="write-idle-timeout" type="xs:duration" use="optional" default="PT60S"/>
+        <xs:attribute name="idle-timeout" type="xs:duration" use="optional" default="PT30S">
+            <xs:annotation>
+                <xs:documentation>
+                    The client will close the connection with the server
+                    when neither a read nor a write was performed for the specified period of time.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="read-idle-timeout" type="xs:duration" use="optional" default="PT60S">
+            <xs:annotation>
+                <xs:documentation>
+                    The client will close the connection with the server
+                    when no read was performed for the specified period of time.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="write-idle-timeout" type="xs:duration" use="optional" default="PT60S">
+            <xs:annotation>
+                <xs:documentation>
+                    The client will close the connection with the server
+                    when no write was performed for the specified period of time.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
-    <xs:complexType name="noAuthType"/>
+    <xs:complexType name="noAuthType">
+        <xs:annotation>
+            <xs:documentation>
+                Add this tag to not use any type of authentication when talking to the RBCS server
+            </xs:documentation>
+        </xs:annotation>
+    </xs:complexType>
 
     <xs:complexType name="basicAuthType">
-        <xs:attribute name="user" type="xs:token" use="required"/>
-        <xs:attribute name="password" type="xs:string" use="required"/>
+        <xs:annotation>
+            <xs:documentation>
+                Add this tag to enable HTTP basic authentication for the communication to this server,
+                mind that HTTP basic authentication sends credentials directly over the network, so make sure
+                your communication is protected by TLS (i.e. your server's URL starts with "https")
+            </xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="user" type="xs:token" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Username for HTTP basic authentication
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="password" type="xs:string" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Password used for HTTP basic authentication
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="tlsClientAuthType">
-        <xs:attribute name="key-store-file" type="xs:anyURI" use="required"/>
-        <xs:attribute name="key-store-password" type="xs:string" use="required"/>
-        <xs:attribute name="key-alias" type="xs:token" use="required"/>
-        <xs:attribute name="key-password" type="xs:string" use="optional"/>
+        <xs:attribute name="key-store-file" type="xs:anyURI" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    System path to the keystore file
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="key-store-password" type="xs:string" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Password to open they keystore file
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="key-alias" type="xs:token" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Alias of the keystore entry containing the private key
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="key-password" type="xs:string" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Private key entry's encryption password
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="retryType">
-        <xs:attribute name="max-attempts" type="xs:positiveInteger" use="required"/>
-        <xs:attribute name="initial-delay" type="xs:duration" default="PT1S"/>
-        <xs:attribute name="exp" type="xs:double" default="2.0"/>
+        <xs:annotation>
+            <xs:documentation>
+                Retry policy to use in case of failures, based on exponential backoff
+                https://en.wikipedia.org/wiki/Exponential_backoff
+            </xs:documentation>
+        </xs:annotation>
+
+        <xs:attribute name="max-attempts" type="xs:positiveInteger" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Maximum number of attempts, after which the call will result in an error,
+                    throwing an exception related to the last received failure
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="initial-delay" type="xs:duration" default="PT1S">
+            <xs:annotation>
+                <xs:documentation>
+                    Delay to apply before retrying after the first failed call
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="exp" type="xs:double" default="2.0">
+            <xs:annotation>
+                <xs:documentation>
+                    Exponent to apply to compute the next delay
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="trustStoreType">
         <xs:attribute name="file" type="xs:string" use="required">
             <xs:annotation>
                 <xs:documentation>
-                    Path to the trustore file
+                    Path to the truststore file
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
         <xs:attribute name="password" type="xs:string">
             <xs:annotation>
                 <xs:documentation>
-                    Trustore file password
+                    Truststore file password
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
         <xs:attribute name="check-certificate-status" type="xs:boolean">
             <xs:annotation>
                 <xs:documentation>
-                    Whether or not check the certificate validity using CRL/OCSP
+                    Whether or not check the server certificate validity using CRL/OCSP
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
         <xs:attribute name="verify-server-certificate" type="xs:boolean" use="optional" default="true">
             <xs:annotation>
                 <xs:documentation>
-                    If false, the client will blindly trust the provided server certificate
+                    If false, the client will blindly trust the certificate provided by the server
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>

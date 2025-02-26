@@ -4,7 +4,7 @@
            xmlns:rbcs="urn:net.woggioni.rbcs.server"
            xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-    <xs:import schemaLocation="jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs.xsd" namespace="urn:net.woggioni.rbcs.server"/>
+    <xs:import schemaLocation="jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs-server.xsd" namespace="urn:net.woggioni.rbcs.server"/>
 
     <xs:complexType name="memcacheServerType">
         <xs:attribute name="host" type="xs:token" use="required"/>

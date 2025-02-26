@@ -1,6 +1,7 @@
 package net.woggioni.rbcs.cli.impl.commands
 
 import net.woggioni.rbcs.cli.impl.RbcsCommand
+import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
@@ -16,7 +17,7 @@ class HealthCheckCommand : RbcsCommand() {
     companion object{
         private val log = createLogger<HealthCheckCommand>()
 
-        fun run(profile : RemoteBuildCacheClient.Configuration.Profile) {
+        fun run(profile : Configuration.Profile) {
             RemoteBuildCacheClient(profile).use { client ->
                 val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
                 val nonce = ByteArray(0xa0)

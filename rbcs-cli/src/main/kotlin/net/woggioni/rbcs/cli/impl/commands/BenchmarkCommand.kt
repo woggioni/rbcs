@@ -5,6 +5,7 @@ import net.woggioni.jwo.LongMath
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.cli.impl.converters.ByteSizeConverter
+import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
@@ -29,7 +30,7 @@ class BenchmarkCommand : RbcsCommand() {
     companion object {
         private val log = createLogger<BenchmarkCommand>()
 
-        fun run(profile : RemoteBuildCacheClient.Configuration.Profile,
+        fun run(profile : Configuration.Profile,
                 numberOfEntries : Int,
                 entrySize : Int,
                 useRandomValue : Boolean,

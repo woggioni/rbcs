@@ -424,7 +424,8 @@
         <xs:attribute name="password" type="xs:string" use="optional">
             <xs:annotation>
                 <xs:documentation>
-                    User's password used in HTTP basic authentication
+                    User's password hash used for HTTP basic authentication, this has to be generated with
+                    the `password` subcommand of `rbcs-cli`
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
@@ -498,18 +499,12 @@
         </xs:attribute>
     </xs:complexType>
 
-    <xs:simpleType name="role" final="restriction" >
-        <xs:restriction base="xs:token">
-            <xs:enumeration value="READER" />
-            <xs:enumeration value="WRITER" />
-        </xs:restriction>
-    </xs:simpleType>
-
     <xs:complexType name="rolesType">
         <xs:sequence>
             <xs:choice maxOccurs="unbounded">
                 <xs:element name="writer"/>
                 <xs:element name="reader"/>
+                <xs:element name="healthcheck"/>
             </xs:choice>
         </xs:sequence>
     </xs:complexType>

@@ -50,7 +50,7 @@
         "pattern": "\\Qnet/woggioni/rbcs/server/rbcs-default.xml\\E"
       },
       {
-        "pattern": "\\Qnet/woggioni/rbcs/server/schema/rbcs.xsd\\E"
+        "pattern": "\\Qnet/woggioni/rbcs/server/schema/rbcs-server.xsd\\E"
       },
       {
         "pattern": "\\Qnet/woggioni/rbcs/client/schema/rbcs-client.xsd\\E"

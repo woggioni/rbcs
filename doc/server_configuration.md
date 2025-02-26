@@ -1,4 +1,3 @@
-
 ### RBCS server configuration file elements and attributes
 
 #### Root Element: `server`
@@ -109,6 +108,7 @@ Configures TLS encryption.
     - `password`: Keystore password
     - `key-alias` (required): Private key alias
     - `key-password`: Private key password
+
 - `<truststore>`: Client certificate verification
 
     **Attributes:**  
@@ -126,7 +126,7 @@ Configures TLS encryption.
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <rbcs:server xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:rbcs="urn:net.woggioni.rbcs.server"
-             xs:schemaLocation="urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs.xsd"
+             xs:schemaLocation="urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs-server.xsd"
 >
     <bind host="0.0.0.0" port="8080" incoming-connections-backlog-size="1024"/>
     <connection

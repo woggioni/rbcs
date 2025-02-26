@@ -1,5 +1,5 @@
 package net.woggioni.rbcs.api;
 
 public enum Role {
-    Reader, Writer
+    Reader, Writer, Healthcheck
 }

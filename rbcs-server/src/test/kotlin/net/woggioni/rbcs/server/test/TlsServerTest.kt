@@ -18,6 +18,7 @@ class TlsServerTest : AbstractTlsServerTest() {
         Configuration.User("user1", null, setOf(readersGroup), null),
         Configuration.User("user2", null, setOf(writersGroup), null),
         Configuration.User("user3", null, setOf(readersGroup, writersGroup), null),
+        Configuration.User("user4", null, setOf(healthCheckGroup), null),
         Configuration.User("", null, setOf(readersGroup), null)
     )
 
@@ -140,7 +141,24 @@ class TlsServerTest : AbstractTlsServerTest() {
         val client: HttpClient = getHttpClient(null)
         val requestBuilder = newRequestBuilder("").method(
             "TRACE",
-            HttpRequest.BodyPublishers.ofByteArray("sfgsdgfaiousfiuhsd".toByteArray())
+            HttpRequest.BodyPublishers.ofByteArray("this is an healthcheck".toByteArray())
+        )
+
+        val response: HttpResponse<ByteArray> =
+            client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        Assertions.assertEquals(HttpResponseStatus.FORBIDDEN.code(), response.statusCode())
+    }
+
+    @Test
+    @Order(9)
+    fun traceAsHealthcheckUser() {
+        val user = cfg.users.values.find {
+            Role.Healthcheck in it.roles
+        } ?: throw RuntimeException("Reader user not found")
+        val client: HttpClient = getHttpClient(getClientKeyStore(ca, X500Name("CN=${user.name}")))
+        val requestBuilder = newRequestBuilder("").method(
+            "TRACE",
+            HttpRequest.BodyPublishers.ofByteArray("this is an healthcheck".toByteArray())
         )
 
         val response: HttpResponse<ByteArray> =

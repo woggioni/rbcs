@@ -193,6 +193,7 @@ object Parser {
         when (it.localName) {
             "reader" -> Role.Reader
             "writer" -> Role.Writer
+            "healthcheck" -> Role.Healthcheck
             else -> throw UnsupportedOperationException("Illegal node '${it.localName}'")
         }
     }.toSet()

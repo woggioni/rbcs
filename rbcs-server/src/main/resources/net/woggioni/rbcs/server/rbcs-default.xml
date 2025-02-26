@@ -2,7 +2,7 @@
 <rbcs:server
              xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:rbcs="urn:net.woggioni.rbcs.server"
-             xs:schemaLocation="urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs.xsd">
+             xs:schemaLocation="urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs-server.xsd">
     <bind host="127.0.0.1" port="8080" incoming-connections-backlog-size="1024"/>
     <cache xs:type="rbcs:fileSystemCacheType" path="${sys:java.io.tmpdir}/rbcs" max-age="P7D"/>
 </rbcs:server>
