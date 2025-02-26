@@ -30,10 +30,10 @@ class BenchmarkCommand : RbcsCommand() {
     companion object {
         private val log = createLogger<BenchmarkCommand>()
 
-        fun run(profile : Configuration.Profile,
-                numberOfEntries : Int,
-                entrySize : Int,
-                useRandomValue : Boolean,
+        fun execute(profile : Configuration.Profile,
+                    numberOfEntries : Int,
+                    entrySize : Int,
+                    useRandomValue : Boolean,
         ) {
             val progressThreshold = LongMath.ceilDiv(numberOfEntries.toLong(), 20)
             RemoteBuildCacheClient(profile).use { client ->
@@ -176,7 +176,7 @@ class BenchmarkCommand : RbcsCommand() {
             clientCommand.configuration.profiles[profileName]
                 ?: throw IllegalArgumentException("Profile $profileName does not exist in configuration")
         }
-        run(
+        execute(
             profile,
             numberOfEntries,
             size,

@@ -5,6 +5,7 @@ import net.woggioni.jwo.JWO
 import net.woggioni.jwo.NullOutputStream
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.cli.impl.RbcsCommand
+import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
@@ -19,8 +20,22 @@ import java.util.UUID
     showDefaultValues = true
 )
 class PutCommand : RbcsCommand() {
-    companion object{
+    companion object {
         private val log = createLogger<PutCommand>()
+
+        fun execute(profile: Configuration.Profile,
+                    actualKey : String,
+                    inputStream: InputStream,
+                    mimeType : String?,
+                    contentDisposition: String?
+        ) {
+            RemoteBuildCacheClient(profile).use { client ->
+                inputStream.use {
+                    client.put(actualKey, it.readAllBytes(), CacheValueMetadata(contentDisposition, mimeType))
+                }.get()
+                println(profile.serverURI.resolve(actualKey))
+            }
+        }
     }
 
 
@@ -92,10 +107,7 @@ class PutCommand : RbcsCommand() {
                 }
                 actualKey = key ?: UUID.randomUUID().toString()
             }
-            inputStream.use {
-                client.put(actualKey, it.readAllBytes(), CacheValueMetadata(contentDisposition, mimeType))
-            }.get()
-            println(profile.serverURI.resolve(actualKey))
+            execute(profile, actualKey, inputStream, mimeType, contentDisposition)
         }
     }
 }

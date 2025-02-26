@@ -1,12 +1,14 @@
 package net.woggioni.rbcs.cli.graal
 
+import net.woggioni.jwo.NullOutputStream
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.Configuration.User
 import net.woggioni.rbcs.api.Role
 import net.woggioni.rbcs.cli.RemoteBuildCacheServerCli
 import net.woggioni.rbcs.cli.impl.commands.BenchmarkCommand
+import net.woggioni.rbcs.cli.impl.commands.GetCommand
 import net.woggioni.rbcs.cli.impl.commands.HealthCheckCommand
-import net.woggioni.rbcs.client.RemoteBuildCacheClient
+import net.woggioni.rbcs.cli.impl.commands.PutCommand
 import net.woggioni.rbcs.common.HostAndPort
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
 import net.woggioni.rbcs.common.RBCS
@@ -16,12 +18,15 @@ import net.woggioni.rbcs.server.cache.FileSystemCacheConfiguration
 import net.woggioni.rbcs.server.cache.InMemoryCacheConfiguration
 import net.woggioni.rbcs.server.configuration.Parser
 import net.woggioni.rbcs.server.memcache.MemcacheCacheConfiguration
+import java.io.ByteArrayInputStream
 import java.net.URI
 import java.nio.file.Path
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutionException
 import java.util.zip.Deflater
+import net.woggioni.rbcs.client.Configuration as ClientConfiguration
+import net.woggioni.rbcs.client.impl.Parser as ClientConfigurationParser
 
 object GraalNativeImageConfiguration {
     @JvmStatic
@@ -30,15 +35,16 @@ object GraalNativeImageConfiguration {
         val serverDoc = RemoteBuildCacheServer.DEFAULT_CONFIGURATION_URL.openStream().use {
             Xml.parseXml(RemoteBuildCacheServer.DEFAULT_CONFIGURATION_URL, it)
         }
-        Parser.parse(doc)
+        Parser.parse(serverDoc)
 
-        val clientDoc = RemoteBuildCacheClient.Configuration.openStream().use {
-            Xml.parseXml(RemoteBuildCacheServer.DEFAULT_CONFIGURATION_URL, it)
+        val url = URI.create("file:conf/rbcs-client.xml").toURL()
+        val clientDoc = url.openStream().use {
+            Xml.parseXml(url, it)
         }
-        Parser.parse(doc)
+        ClientConfigurationParser.parse(clientDoc)
 
         val PASSWORD = "password"
-        val readersGroup = Configuration.Group("readers", setOf(Role.Reader), null, null)
+        val readersGroup = Configuration.Group("readers", setOf(Role.Reader, Role.Healthcheck), null, null)
         val writersGroup = Configuration.Group("writers", setOf(Role.Writer), null, null)
 
 
@@ -126,28 +132,42 @@ object GraalNativeImageConfiguration {
             val serverHandle = RemoteBuildCacheServer(serverConfiguration).run()
 
 
-            val clientProfile = RemoteBuildCacheClient.Configuration.Profile(
+            val clientProfile = ClientConfiguration.Profile(
                 URI.create("http://127.0.0.1:$serverPort/"),
                 null,
-                RemoteBuildCacheClient.Configuration.Authentication.BasicAuthenticationCredentials("user3", PASSWORD),
+                ClientConfiguration.Authentication.BasicAuthenticationCredentials("user3", PASSWORD),
                 Duration.ofSeconds(3),
                 10,
                 true,
-                RemoteBuildCacheClient.Configuration.RetryPolicy(
+                ClientConfiguration.RetryPolicy(
                     3,
                     1000,
                     1.2
                 ),
-                RemoteBuildCacheClient.Configuration.TrustStore(null, null, false, false)
+                ClientConfiguration.TrustStore(null, null, false, false)
             )
 
-            HealthCheckCommand.run(clientProfile)
+            HealthCheckCommand.execute(clientProfile)
 
-            BenchmarkCommand.run(
+            BenchmarkCommand.execute(
                 clientProfile,
                 1000,
                 0x100,
                 true
+            )
+
+            PutCommand.execute(
+                clientProfile,
+                "some-file.bin",
+                ByteArrayInputStream(ByteArray(0x1000) { it.toByte() }),
+                "application/octet-setream",
+                "attachment; filename=\"some-file.bin\""
+            )
+
+            GetCommand.execute(
+                clientProfile,
+                "some-file.bin",
+                NullOutputStream()
             )
 
             serverHandle.sendShutdownSignal()

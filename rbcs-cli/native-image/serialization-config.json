@@ -1,6 +1,9 @@
 {
   "types":[
     {
+      "name":"java.lang.String"
+    },
+    {
       "name":"net.woggioni.rbcs.api.CacheValueMetadata"
     }
   ],

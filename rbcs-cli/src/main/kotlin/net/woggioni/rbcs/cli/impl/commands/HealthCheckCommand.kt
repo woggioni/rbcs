@@ -17,7 +17,7 @@ class HealthCheckCommand : RbcsCommand() {
     companion object{
         private val log = createLogger<HealthCheckCommand>()
 
-        fun run(profile : Configuration.Profile) {
+        fun execute(profile : Configuration.Profile) {
             RemoteBuildCacheClient(profile).use { client ->
                 val random = Random(SecureRandom.getInstance("NativePRNGNonBlocking").nextLong())
                 val nonce = ByteArray(0xa0)
@@ -48,6 +48,6 @@ class HealthCheckCommand : RbcsCommand() {
             clientCommand.configuration.profiles[profileName]
                 ?: throw IllegalArgumentException("Profile $profileName does not exist in configuration")
         }
-        run(profile)
+        execute(profile)
     }
 }

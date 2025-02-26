@@ -1,9 +1,11 @@
 package net.woggioni.rbcs.cli.impl.commands
 
 import net.woggioni.rbcs.cli.impl.RbcsCommand
+import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
+import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -13,8 +15,20 @@ import java.nio.file.Path
     showDefaultValues = true
 )
 class GetCommand : RbcsCommand() {
-    companion object{
+    companion object {
         private val log = createLogger<GetCommand>()
+
+        fun execute(profile : Configuration.Profile, key : String, outputStream: OutputStream) {
+            RemoteBuildCacheClient(profile).use { client ->
+                client.get(key).thenApply { value ->
+                    value?.let {
+                        outputStream.use {
+                            it.write(value)
+                        }
+                    } ?: throw NoSuchElementException("No value found for key $key")
+                }.get()
+            }
+        }
     }
 
     @CommandLine.Spec
@@ -40,14 +54,6 @@ class GetCommand : RbcsCommand() {
             clientCommand.configuration.profiles[profileName]
                 ?: throw IllegalArgumentException("Profile $profileName does not exist in configuration")
         }
-        RemoteBuildCacheClient(profile).use { client ->
-            client.get(key).thenApply { value ->
-                value?.let {
-                    (output?.let(Files::newOutputStream) ?: System.out).use {
-                        it.write(value)
-                    }
-                } ?: throw NoSuchElementException("No value found for key $key")
-            }.get()
-        }
+        execute(profile, key, (output?.let(Files::newOutputStream) ?: System.out))
     }
 }

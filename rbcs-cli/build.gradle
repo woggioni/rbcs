@@ -90,13 +90,21 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named(EnvelopePlugin.E
 }
 
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+        vendor = JvmVendorSpec.ORACLE
+    }
+
     mainClass = "net.woggioni.rbcs.cli.graal.GraalNativeImageConfiguration"
-    setClasspath(configurations.configureNativeImageRuntimeClasspath + sourceSets.graal.output.classesDirs)
+    classpath = project.files(
+        configurations.configureNativeImageRuntimeClasspath,
+        sourceSets.configureNativeImage.output
+    )
     mergeConfiguration = false
     systemProperty('logback.configurationFile', 'classpath:net/woggioni/rbcs/cli/logback.xml')
     systemProperty('io.netty.leakDetectionLevel', 'DISABLED')
     modularity.inferModulePath = false
-    enabled = false
+    enabled = true
 }
 
 nativeImage {

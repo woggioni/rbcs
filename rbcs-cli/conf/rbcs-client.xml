@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rbcs-client:profiles xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+                      xmlns:rbcs-client="urn:net.woggioni.rbcs.client"
+                      xs:schemaLocation="urn:net.woggioni.rbcs.client jpms://net.woggioni.rbcs.client/net/woggioni/rbcs/client/schema/rbcs-client.xsd"
+>
+    <profile name="profile1" base-url="https://rbcs1.example.com/">
+        <no-auth/>
+        <connection write-idle-timeout="PT60S"
+                    read-idle-timeout="PT60S"
+                    idle-timeout="PT30S" />
+    </profile>
+    <profile name="profile2" base-url="https://rbcs2.example.com/">
+        <basic-auth user="user" password="password"/>
+    </profile>
+</rbcs-client:profiles>
