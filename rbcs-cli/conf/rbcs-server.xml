@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<rbcs:server xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:rbcs="urn:net.woggioni.rbcs.server"
+             xmlns:rbcs-memcache="urn:net.woggioni.rbcs.server.memcache"
+             xs:schemaLocation="urn:net.woggioni.rbcs.server.memcache jpms://net.woggioni.rbcs.server.memcache/net/woggioni/rbcs/server/memcache/schema/rbcs-memcache.xsd urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs-server.xsd"
+>
+    <bind host="127.0.0.1" port="8080" incoming-connections-backlog-size="1024"/>
+    <connection
+            max-request-size="67108864"
+            idle-timeout="PT10S"
+            read-idle-timeout="PT20S"
+            write-idle-timeout="PT20S"/>
+    <event-executor use-virtual-threads="true"/>
+    <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" chunk-size="0x1000" digest="MD5">
+        <server host="127.0.0.1" port="11211" max-connections="256"/>
+    </cache>
+    <!--cache xs:type="rbcs:inMemoryCacheType" max-age="P7D" enable-compression="false" max-size="0x10000000" /-->
+    <!--cache xs:type="rbcs:fileSystemCacheType" max-age="P7D" enable-compression="false" /-->
+    <authorization>
+        <users>
+            <user name="woggioni" password="II+qeNLft2pZ/JVNo9F7jpjM/BqEcfsJW27NZ6dPVs8tAwHbxrJppKYsbL7J/SMl">
+                <quota calls="100" period="PT1S"/>
+            </user>
+            <user name="gitea" password="v6T9+q6/VNpvLknji3ixPiyz2YZCQMXj2FN7hvzbfc2Ig+IzAHO0iiBCH9oWuBDq"/>
+            <anonymous>
+                <quota calls="10" period="PT60S" initial-available-calls="10" max-available-calls="10"/>
+            </anonymous>
+        </users>
+        <groups>
+            <group name="readers">
+                <users>
+                    <anonymous/>
+                </users>
+                <roles>
+                    <reader/>
+                </roles>
+            </group>
+            <group name="writers">
+                <users>
+                    <user ref="woggioni"/>
+                    <user ref="gitea"/>
+                </users>
+                <roles>
+                    <reader/>
+                    <writer/>
+                </roles>
+            </group>
+        </groups>
+    </authorization>
+    <authentication>
+        <none/>
+    </authentication>
+</rbcs:server>

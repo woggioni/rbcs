@@ -32,8 +32,9 @@ object GraalNativeImageConfiguration {
     @JvmStatic
     fun main(vararg args : String) {
 
-        val serverDoc = RemoteBuildCacheServer.DEFAULT_CONFIGURATION_URL.openStream().use {
-            Xml.parseXml(RemoteBuildCacheServer.DEFAULT_CONFIGURATION_URL, it)
+        val serverURL = URI.create("file:conf/rbcs-client.xml").toURL()
+        val serverDoc = serverURL.openStream().use {
+            Xml.parseXml(serverURL, it)
         }
         Parser.parse(serverDoc)
 
