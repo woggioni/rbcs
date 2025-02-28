@@ -35,6 +35,7 @@ RBCS helps teams become more productive and efficient.
 - [Plugins](#plugins)
 - [Client Tools](#rbcs-client)
 - [Logging](#logging)
+- [Performance](#performance)
 - [FAQ](#faq)
 
 
@@ -78,7 +79,7 @@ writing data to the disk, that you can use for testing
 If you are on a Linux X86_64 machine you can download the native executable
 from [here](https://gitea.woggioni.net/woggioni/-/packages/maven/net.woggioni:rbcs-cli/).
 It behaves the same as the jar file but it doesn't require a JVM and it has faster startup times.
-becausue of GraalVm's [closed-world assumption](https://www.graalvm.org/latest/reference-manual/native-image/basics/#static-analysis),
+because of GraalVM's [closed-world assumption](https://www.graalvm.org/latest/reference-manual/native-image/basics/#static-analysis),
 the native executable does not supports plugins, so it comes with all plugins embedded into it.
 
 ## Integration with build tools
@@ -346,6 +347,10 @@ RBCS uses [logback](https://logback.qos.ch/) and ships with a [default logging c
 can be overridden with `-Dlogback.configurationFile=path/to/custom/configuration.xml`, refer to
 [Logback documentation](https://logback.qos.ch/manual/configuration.html) for more details about
 how to configure Logback
+
+## Performance
+
+You can check performance benchmarks [here](doc/benchmarks.md)
 
 ## FAQ
 ### Why should I use a build cache?
