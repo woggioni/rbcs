@@ -12,6 +12,7 @@ plugins {
 import net.woggioni.gradle.envelope.EnvelopePlugin
 import net.woggioni.gradle.envelope.EnvelopeJarTask
 import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
+import net.woggioni.gradle.graalvm.NativeImageTask
 import net.woggioni.gradle.graalvm.NativeImagePlugin
 import net.woggioni.gradle.graalvm.UpxTask
 import net.woggioni.gradle.graalvm.JlinkPlugin
@@ -90,11 +91,6 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named(EnvelopePlugin.E
 }
 
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
-    javaLauncher = javaToolchains.launcherFor {
-        languageVersion = JavaLanguageVersion.of(21)
-        vendor = JvmVendorSpec.ORACLE
-    }
-
     mainClass = "net.woggioni.rbcs.cli.graal.GraalNativeImageConfiguration"
     classpath = project.files(
         configurations.configureNativeImageRuntimeClasspath,
@@ -108,6 +104,10 @@ tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfi
 }
 
 nativeImage {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(23)
+        vendor = JvmVendorSpec.GRAAL_VM
+    }
     mainClass = mainClassName
 //    mainModule = mainModuleName
     useMusl = true
