@@ -368,13 +368,14 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
         private val bossGroup: EventExecutorGroup,
         private val executorGroups: Iterable<EventExecutorGroup>,
         private val serverInitializer: AsyncCloseable,
-    ) : Future<Void> by from(closeFuture, executorGroups, serverInitializer) {
+    ) : Future<Void> by from(closeFuture, bossGroup, executorGroups, serverInitializer) {
 
         companion object {
             private val log = createLogger<ServerHandle>()
 
             private fun from(
                 closeFuture: ChannelFuture,
+                bossGroup: EventExecutorGroup,
                 executorGroups: Iterable<EventExecutorGroup>,
                 serverInitializer: AsyncCloseable
             ): CompletableFuture<Void> {
@@ -382,22 +383,15 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 closeFuture.addListener {
                     val errors = mutableListOf<Throwable>()
                     val deadline = Instant.now().plusSeconds(20)
-                    try {
-                        serverInitializer.close()
-                    } catch (ex: Throwable) {
-                        log.error(ex.message, ex)
-                        errors.addLast(ex)
-                    }
 
-                    serverInitializer.asyncClose().whenComplete { _, ex ->
+                    serverInitializer.asyncClose().whenCompleteAsync { _, ex ->
                         if(ex != null) {
                             log.error(ex.message, ex)
                             errors.addLast(ex)
                         }
 
-                        executorGroups.map {
-                            it.shutdownGracefully()
-                        }
+                        executorGroups.forEach(EventExecutorGroup::shutdownGracefully)
+                        bossGroup.terminationFuture().sync()
 
                         for (executorGroup in executorGroups) {
                             val future = executorGroup.terminationFuture()

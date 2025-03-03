@@ -9,6 +9,7 @@ import io.netty.channel.socket.SocketChannel
 import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.common.HostAndPort
+import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.server.memcache.client.MemcacheClient
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
@@ -24,6 +25,10 @@ data class MemcacheCacheConfiguration(
     val compressionLevel: Int,
     val chunkSize: Int
 ) : Configuration.Cache {
+
+    companion object {
+        private val log = createLogger<MemcacheCacheConfiguration>()
+    }
 
     enum class CompressionMode {
         /**
@@ -69,15 +74,19 @@ data class MemcacheCacheConfiguration(
                 val pools = connectionPoolMap.values.toList()
                 val npools = pools.size
                 val finished = AtomicInteger(0)
-                pools.forEach { pool ->
-                    pool.closeAsync().addListener {
-                        if (!it.isSuccess) {
-                            failure.compareAndSet(null, it.cause())
-                        }
-                        if(finished.incrementAndGet() == npools) {
-                            when(val ex = failure.get()) {
-                                null -> complete(null)
-                                else -> completeExceptionally(ex)
+                if (pools.isEmpty()) {
+                    complete(null)
+                } else {
+                    pools.forEach { pool ->
+                        pool.closeAsync().addListener {
+                            if (!it.isSuccess) {
+                                failure.compareAndSet(null, it.cause())
+                            }
+                            if (finished.incrementAndGet() == npools) {
+                                when (val ex = failure.get()) {
+                                    null -> complete(null)
+                                    else -> completeExceptionally(ex)
+                                }
                             }
                         }
                     }
