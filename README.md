@@ -82,6 +82,10 @@ It behaves the same as the jar file but it doesn't require a JVM and it has fast
 because of GraalVM's [closed-world assumption](https://www.graalvm.org/latest/reference-manual/native-image/basics/#static-analysis),
 the native executable does not supports plugins, so it comes with all plugins embedded into it.
 
+> [!WARNING]
+> The native executable is built with `-march=skylake`, so it may fail with SIGILL on x86 CPUs that do not support
+> the full skylake instruction set (as a rule of thumb, older than 2015)
+
 ## Integration with build tools
 
 ### Use RBCS with Gradle
