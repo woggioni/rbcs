@@ -166,4 +166,17 @@ class TlsServerTest : AbstractTlsServerTest() {
         Assertions.assertEquals(HttpResponseStatus.OK.code(), response.statusCode())
         println(String(response.body()))
     }
+
+    @Test
+    @Order(10)
+    fun putAsUnknownUserUser() {
+        val (key, value) = keyValuePair
+        val client: HttpClient = getHttpClient(getClientKeyStore(ca, X500Name("CN=Unknown user")))
+        val requestBuilder = newRequestBuilder(key)
+            .header("Content-Type", "application/octet-stream")
+            .PUT(HttpRequest.BodyPublishers.ofByteArray(value))
+
+        val response: HttpResponse<String> = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString())
+        Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), response.statusCode())
+    }
 }
