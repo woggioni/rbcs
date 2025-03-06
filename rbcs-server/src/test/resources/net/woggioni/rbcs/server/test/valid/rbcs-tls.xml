@@ -7,9 +7,10 @@
             read-idle-timeout="PT10M"
             write-idle-timeout="PT11M"
             idle-timeout="PT30M"
-            max-request-size="4096"/>
+            max-request-size="4096"
+            chunk-size="0xa91f"/>
     <event-executor use-virtual-threads="false"/>
-    <cache xs:type="rbcs:inMemoryCacheType" max-age="P7D" chunk-size="0xa91f"/>
+    <cache xs:type="rbcs:inMemoryCacheType" max-age="P7D"/>
     <authorization>
         <users>
             <user name="user1" password="password1">

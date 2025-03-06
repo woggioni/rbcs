@@ -8,9 +8,10 @@
             read-idle-timeout="PT10M"
             write-idle-timeout="PT11M"
             idle-timeout="PT30M"
-            max-request-size="101325"/>
+            max-request-size="101325"
+            chunk-size="456"/>
     <event-executor use-virtual-threads="false"/>
-    <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" digest="SHA-256" chunk-size="456" compression-mode="deflate" compression-level="7">
+    <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" digest="SHA-256" compression-mode="deflate" compression-level="7">
         <server host="127.0.0.1" port="11211" max-connections="10" connection-timeout="PT20S"/>
     </cache>
     <authentication>

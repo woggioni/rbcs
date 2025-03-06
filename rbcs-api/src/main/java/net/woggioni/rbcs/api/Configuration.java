@@ -39,6 +39,7 @@ public class Configuration {
         Duration readIdleTimeout;
         Duration writeIdleTimeout;
         int maxRequestSize;
+        int chunkSize;
     }
 
     @Value

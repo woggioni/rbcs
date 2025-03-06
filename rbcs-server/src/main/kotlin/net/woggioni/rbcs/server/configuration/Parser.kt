@@ -27,10 +27,11 @@ object Parser {
         val root = document.documentElement
         val anonymousUser = User("", null, emptySet(), null)
         var connection: Configuration.Connection = Configuration.Connection(
+            Duration.of(30, ChronoUnit.SECONDS),
             Duration.of(60, ChronoUnit.SECONDS),
-            Duration.of(30, ChronoUnit.SECONDS),
-            Duration.of(30, ChronoUnit.SECONDS),
-            67108864
+            Duration.of(60, ChronoUnit.SECONDS),
+            0x4000000,
+            0x10000
         )
         var eventExecutor: Configuration.EventExecutor = Configuration.EventExecutor(true)
         var cache: Cache? = null
@@ -119,11 +120,14 @@ object Parser {
                         ?.let(Duration::parse) ?: Duration.of(60, ChronoUnit.SECONDS)
                     val maxRequestSize = child.renderAttribute("max-request-size")
                         ?.let(Integer::decode) ?: 0x4000000
+                    val chunkSize = child.renderAttribute("chunk-size")
+                        ?.let(Integer::decode) ?: 0x10000
                     connection = Configuration.Connection(
                         idleTimeout,
                         readIdleTimeout,
                         writeIdleTimeout,
-                        maxRequestSize
+                        maxRequestSize,
+                        chunkSize
                     )
                 }
 

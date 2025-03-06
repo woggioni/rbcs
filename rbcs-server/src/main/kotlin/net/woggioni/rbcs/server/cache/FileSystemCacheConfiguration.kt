@@ -17,7 +17,6 @@ data class FileSystemCacheConfiguration(
     val digestAlgorithm : String?,
     val compressionEnabled: Boolean,
     val compressionLevel: Int,
-    val chunkSize: Int,
 ) : Configuration.Cache {
 
     override fun materialize() = object : CacheHandlerFactory {
@@ -26,10 +25,11 @@ data class FileSystemCacheConfiguration(
         override fun asyncClose() = cache.asyncClose()
 
         override fun newHandler(
+            cfg : Configuration,
             eventLoop: EventLoopGroup,
             socketChannelFactory: ChannelFactory<SocketChannel>,
             datagramChannelFactory: ChannelFactory<DatagramChannel>
-        ) = FileSystemCacheHandler(cache, digestAlgorithm, compressionEnabled, compressionLevel, chunkSize)
+        ) = FileSystemCacheHandler(cache, digestAlgorithm, compressionEnabled, compressionLevel, cfg.connection.chunkSize)
     }
 
     override fun getNamespaceURI() = RBCS.RBCS_NAMESPACE_URI

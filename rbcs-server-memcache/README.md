@@ -22,7 +22,7 @@ The plugins currently supports the following configuration attributes:
 - `digest`: digest algorithm to use on the key before submission 
   to memcache (optional, no digest is applied if omitted)
 - `compression`: compression algorithm to apply to cache values before, 
-  currently only `deflate` is supported (optionla, if omitted compression is disabled)
+  currently only `deflate` is supported (optional, if omitted compression is disabled)
 - `compression-level`: compression level to use, deflate supports compression levels from 1 to 9, 
   where 1 is for fast compression at the expense of speed (optional, 6 is used if omitted)
 ```xml
@@ -37,8 +37,7 @@ The plugins currently supports the following configuration attributes:
            max-age="P7D"
            digest="SHA-256"
            compression-mode="deflate"
-           compression-level="6"
-           chunk-size="0x10000">
+           compression-level="6">
         <server host="127.0.0.1" port="11211" max-connections="256"/>
         <server host="127.0.0.1" port="11212" max-connections="256"/>
     </cache>

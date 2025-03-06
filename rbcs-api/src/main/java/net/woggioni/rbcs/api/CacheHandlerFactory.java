@@ -8,6 +8,7 @@ import io.netty.channel.socket.SocketChannel;
 
 public interface CacheHandlerFactory extends AsyncCloseable {
     ChannelHandler newHandler(
+            Configuration configuration,
             EventLoopGroup eventLoopGroup,
             ChannelFactory<SocketChannel> socketChannelFactory,
             ChannelFactory<DatagramChannel> datagramChannelFactory

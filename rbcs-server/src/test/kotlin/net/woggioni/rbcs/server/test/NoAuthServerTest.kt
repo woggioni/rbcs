@@ -41,7 +41,8 @@ class NoAuthServerTest : AbstractServerTest() {
                 Duration.of(60, ChronoUnit.SECONDS),
                 Duration.of(30, ChronoUnit.SECONDS),
                 Duration.of(30, ChronoUnit.SECONDS),
-                0x1000
+                0x1000,
+                0x10000
             ),
             emptyMap(),
             emptyMap(),
@@ -51,7 +52,6 @@ class NoAuthServerTest : AbstractServerTest() {
                 digestAlgorithm = "MD5",
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
                 maxSize = 0x1000000,
-                chunkSize = 0x1000
             ),
             null,
             null,

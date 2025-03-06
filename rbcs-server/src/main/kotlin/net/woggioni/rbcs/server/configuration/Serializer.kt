@@ -40,6 +40,7 @@ object Serializer {
                     attr("read-idle-timeout", connection.readIdleTimeout.toString())
                     attr("write-idle-timeout", connection.writeIdleTimeout.toString())
                     attr("max-request-size", connection.maxRequestSize.toString())
+                    attr("chunk-size", connection.chunkSize.toString())
                 }
             }
             node("event-executor") {

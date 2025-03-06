@@ -7,9 +7,10 @@
             read-idle-timeout="PT10M"
             write-idle-timeout="PT11M"
             idle-timeout="PT30M"
-            max-request-size="101325"/>
+            max-request-size="101325"
+            chunk-size="0xa910"/>
     <event-executor use-virtual-threads="false"/>
-    <cache xs:type="rbcs:fileSystemCacheType" path="/tmp/rbcs" max-age="P7D" chunk-size="0xa910"/>
+    <cache xs:type="rbcs:fileSystemCacheType" path="/tmp/rbcs" max-age="P7D"/>
     <authentication>
         <none/>
     </authentication>

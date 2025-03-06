@@ -41,7 +41,8 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
                 Duration.of(60, ChronoUnit.SECONDS),
                 Duration.of(30, ChronoUnit.SECONDS),
                 Duration.of(30, ChronoUnit.SECONDS),
-                0x1000
+                0x1000,
+                0x10000
             ),
             users.asSequence().map { it.name to it}.toMap(),
             sequenceOf(writersGroup, readersGroup).map { it.name to it}.toMap(),
@@ -50,8 +51,7 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
                 maxAge = Duration.ofSeconds(3600 * 24),
                 digestAlgorithm = "MD5",
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
-                compressionEnabled = false,
-                chunkSize = 0x1000
+                compressionEnabled = false
             ),
             Configuration.BasicAuthentication(),
             null,

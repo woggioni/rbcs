@@ -31,16 +31,12 @@ class InMemoryCacheProvider : CacheProvider<InMemoryCacheConfiguration> {
             ?.let(String::toInt)
             ?: Deflater.DEFAULT_COMPRESSION
         val digestAlgorithm = el.renderAttribute("digest")
-        val chunkSize = el.renderAttribute("chunk-size")
-            ?.let(Integer::decode)
-            ?: 0x10000
         return InMemoryCacheConfiguration(
             maxAge,
             maxSize,
             digestAlgorithm,
             enableCompression,
             compressionLevel,
-            chunkSize
         )
     }
 
@@ -60,7 +56,6 @@ class InMemoryCacheProvider : CacheProvider<InMemoryCacheConfiguration> {
             }?.let {
                 attr("compression-level", it.toString())
             }
-            attr("chunk-size", chunkSize.toString())
         }
         result
     }

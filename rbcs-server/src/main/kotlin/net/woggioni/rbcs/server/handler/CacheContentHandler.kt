@@ -22,7 +22,7 @@ object CacheContentHandler : SimpleChannelInboundHandler<HttpContent>() {
         }
     }
 
-    override fun exceptionCaught(ctx: ChannelHandlerContext?, cause: Throwable?) {
+    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
         super.exceptionCaught(ctx, cause)
     }
 }

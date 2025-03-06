@@ -28,9 +28,6 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
         val maxAge = el.renderAttribute("max-age")
             ?.let(Duration::parse)
             ?: Duration.ofDays(1)
-        val chunkSize = el.renderAttribute("chunk-size")
-            ?.let(Integer::decode)
-            ?: 0x10000
         val compressionLevel = el.renderAttribute("compression-level")
             ?.let(Integer::decode)
             ?: -1
@@ -63,8 +60,7 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
             maxAge,
             digestAlgorithm,
             compressionMode,
-            compressionLevel,
-            chunkSize
+            compressionLevel
         )
     }
 
@@ -84,7 +80,6 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
                 }
             }
             attr("max-age", maxAge.toString())
-            attr("chunk-size", chunkSize.toString())
             digestAlgorithm?.let { digestAlgorithm ->
                 attr("digest", digestAlgorithm)
             }

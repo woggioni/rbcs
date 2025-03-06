@@ -21,6 +21,7 @@ import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.compression.CompressionOptions
 import io.netty.handler.codec.http.DefaultHttpContent
 import io.netty.handler.codec.http.HttpContentCompressor
+import io.netty.handler.codec.http.HttpDecoderConfig
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpServerCodec
@@ -340,7 +341,10 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             sslContext?.newHandler(ch.alloc())?.also {
                 pipeline.addLast(SSL_HANDLER_NAME, it)
             }
-            pipeline.addLast(HttpServerCodec())
+            val httpDecoderConfig = HttpDecoderConfig().apply {
+                maxChunkSize = cfg.connection.chunkSize
+            }
+            pipeline.addLast(HttpServerCodec(httpDecoderConfig))
             pipeline.addLast(MaxRequestSizeHandler.NAME, MaxRequestSizeHandler(cfg.connection.maxRequestSize))
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
@@ -355,7 +359,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             }
             pipeline.addLast(eventExecutorGroup, ServerHandler.NAME, serverHandler)
 
-            pipeline.addLast(cacheHandlerFactory.newHandler(ch.eventLoop(), channelFactory, datagramChannelFactory))
+            pipeline.addLast(cacheHandlerFactory.newHandler(cfg, ch.eventLoop(), channelFactory, datagramChannelFactory))
             pipeline.addLast(TraceHandler)
             pipeline.addLast(ExceptionHandler)
         }

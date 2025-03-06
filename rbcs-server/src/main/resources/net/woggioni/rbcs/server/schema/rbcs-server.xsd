@@ -115,6 +115,14 @@
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
+        <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000">
+            <xs:annotation>
+                <xs:documentation>
+                    Maximum byte size of socket write calls
+                    (reduce it to reduce memory consumption, increase it for increased throughput)
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="eventExecutorType">
@@ -175,13 +183,6 @@
                         </xs:documentation>
                     </xs:annotation>
                 </xs:attribute>
-                <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000">
-                    <xs:annotation>
-                        <xs:documentation>
-                            Maximum byte size of socket write calls
-                        </xs:documentation>
-                    </xs:annotation>
-                </xs:attribute>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
@@ -228,14 +229,6 @@
                         <xs:documentation>
                             Deflate compression level to use for cache compression,
                             use -1 to use the default compression level of java.util.zip.Deflater
-                        </xs:documentation>
-                    </xs:annotation>
-                </xs:attribute>
-                <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000">
-                    <xs:annotation>
-                        <xs:documentation>
-                            Maximum byte size of a cache value that will be stored in memory
-                            (reduce it to reduce memory consumption, increase it for increased throughput)
                         </xs:documentation>
                     </xs:annotation>
                 </xs:attribute>

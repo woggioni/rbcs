@@ -24,6 +24,7 @@ Configures connection handling parameters.
 - `read-idle-timeout` (optional, default: PT60S): Connection timeout when no reads
 - `write-idle-timeout` (optional, default: PT60S): Connection timeout when no writes
 - `max-request-size` (optional, default: 0x4000000): Maximum allowed request body size
+- `chunk-size` (default: 0x10000): Maximum socket write size
 
 #### `<event-executor>`
 Configures event execution settings.
@@ -44,7 +45,6 @@ A simple storage backend that uses an hash map to store data in memory
 - `digest` (default: MD5): Key hashing algorithm
 - `enable-compression` (default: true): Enable deflate compression
 - `compression-level` (default: -1): Compression level (-1 to 9)
-- `chunk-size` (default: 0x10000): Maximum socket write size
 
 ##### FileSystem Cache
 
@@ -56,7 +56,6 @@ A storage backend that stores data in a folder on the disk
 - `digest` (default: MD5): Key hashing algorithm
 - `enable-compression` (default: true): Enable deflate compression
 - `compression-level` (default: -1): Compression level
-- `chunk-size` (default: 0x10000): Maximum in-memory cache value size
 
 #### `<authorization>`
 Configures user and group-based access control.
@@ -134,8 +133,7 @@ Configures TLS encryption.
             idle-timeout="PT10S"
             read-idle-timeout="PT20S"
             write-idle-timeout="PT20S"
-            read-timeout="PT5S"
-            write-timeout="PT5S"/>
+            chunk-size="0x1000"/>
     <event-executor use-virtual-threads="true"/>
   
     <cache xs:type="rbcs:inMemoryCacheType" max-age="P7D" enable-compression="false" max-size="0x10000000" />
@@ -147,7 +145,7 @@ Configures TLS encryption.
   <!-- uncomment this to use memcache as the storage backend, also make sure you have 
        the memcache plugin installed in the `plugins` directory if you are using running
        the jar version of RBCS
-  <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" chunk-size="0x1000" digest="MD5">
+  <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" digest="MD5">
     <server host="127.0.0.1" port="11211" max-connections="256"/>
   </cache>
   -->

@@ -16,7 +16,6 @@ data class InMemoryCacheConfiguration(
     val digestAlgorithm : String?,
     val compressionEnabled: Boolean,
     val compressionLevel: Int,
-    val chunkSize : Int
 ) : Configuration.Cache {
     override fun materialize() = object : CacheHandlerFactory {
         private val cache = InMemoryCache(maxAge, maxSize)
@@ -24,6 +23,7 @@ data class InMemoryCacheConfiguration(
         override fun asyncClose() = cache.asyncClose()
 
         override fun newHandler(
+            cfg : Configuration,
             eventLoop: EventLoopGroup,
             socketChannelFactory: ChannelFactory<SocketChannel>,
             datagramChannelFactory: ChannelFactory<DatagramChannel>

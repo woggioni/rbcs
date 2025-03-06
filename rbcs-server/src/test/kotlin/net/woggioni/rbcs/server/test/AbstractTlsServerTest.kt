@@ -147,7 +147,8 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
                 Duration.of(60, ChronoUnit.SECONDS),
                 Duration.of(30, ChronoUnit.SECONDS),
                 Duration.of(30, ChronoUnit.SECONDS),
-                0x1000
+                0x1000,
+                0x10000
             ),
             users.asSequence().map { it.name to it }.toMap(),
             sequenceOf(writersGroup, readersGroup).map { it.name to it }.toMap(),
@@ -156,7 +157,6 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
                 compressionEnabled = false,
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
                 digestAlgorithm = "MD5",
-                chunkSize = 0x1000
             ),
 //            InMemoryCacheConfiguration(
 //                maxAge = Duration.ofSeconds(3600 * 24),

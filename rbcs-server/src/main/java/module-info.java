@@ -24,6 +24,7 @@ module net.woggioni.rbcs.server {
     opens net.woggioni.rbcs.server;
     opens net.woggioni.rbcs.server.schema;
 
+
     uses CacheProvider;
     provides CacheProvider with FileSystemCacheProvider, InMemoryCacheProvider;
 }

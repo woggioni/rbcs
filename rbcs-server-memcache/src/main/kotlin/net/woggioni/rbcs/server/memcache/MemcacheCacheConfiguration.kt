@@ -23,7 +23,6 @@ data class MemcacheCacheConfiguration(
     val digestAlgorithm: String? = null,
     val compressionMode: CompressionMode? = null,
     val compressionLevel: Int,
-    val chunkSize: Int
 ) : Configuration.Cache {
 
     companion object {
@@ -48,14 +47,15 @@ data class MemcacheCacheConfiguration(
         private val connectionPoolMap = ConcurrentHashMap<HostAndPort, FixedChannelPool>()
 
         override fun newHandler(
+            cfg : Configuration,
             eventLoop: EventLoopGroup,
             socketChannelFactory: ChannelFactory<SocketChannel>,
-            datagramChannelFactory: ChannelFactory<DatagramChannel>
+            datagramChannelFactory: ChannelFactory<DatagramChannel>,
         ): ChannelHandler {
             return MemcacheCacheHandler(
                 MemcacheClient(
                     this@MemcacheCacheConfiguration.servers,
-                    chunkSize,
+                    cfg.connection.chunkSize,
                     eventLoop,
                     socketChannelFactory,
                     connectionPoolMap
@@ -63,7 +63,7 @@ data class MemcacheCacheConfiguration(
                 digestAlgorithm,
                 compressionMode != null,
                 compressionLevel,
-                chunkSize,
+                cfg.connection.chunkSize,
                 maxAge
             )
         }
