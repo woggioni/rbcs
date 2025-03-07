@@ -27,6 +27,9 @@ import javax.net.ssl.SSLPeerUnverifiedException
 
 @Sharable
 object ExceptionHandler : ChannelDuplexHandler() {
+
+    val NAME : String = this::class.java.name
+
     private val log = contextLogger()
 
     private val NOT_AUTHORIZED: FullHttpResponse = DefaultFullHttpResponse(

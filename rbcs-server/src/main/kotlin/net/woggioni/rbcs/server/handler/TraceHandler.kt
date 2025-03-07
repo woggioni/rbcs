@@ -42,6 +42,7 @@ object TraceHandler : ChannelInboundHandlerAdapter() {
             }
             is LastHttpContent -> {
                 ctx.writeAndFlush(msg)
+                ctx.pipeline().remove(this)
             }
             is HttpContent -> ctx.writeAndFlush(msg)
             else -> super.channelRead(ctx, msg)

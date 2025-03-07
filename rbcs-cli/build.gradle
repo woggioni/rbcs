@@ -91,6 +91,10 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named(EnvelopePlugin.E
 }
 
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+        vendor = JvmVendorSpec.GRAAL_VM
+    }
     mainClass = "net.woggioni.rbcs.cli.graal.GraalNativeImageConfiguration"
     classpath = project.files(
         configurations.configureNativeImageRuntimeClasspath,

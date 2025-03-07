@@ -56,7 +56,6 @@ import net.woggioni.rbcs.server.configuration.Serializer
 import net.woggioni.rbcs.server.exception.ExceptionHandler
 import net.woggioni.rbcs.server.handler.MaxRequestSizeHandler
 import net.woggioni.rbcs.server.handler.ServerHandler
-import net.woggioni.rbcs.server.handler.TraceHandler
 import net.woggioni.rbcs.server.throttling.BucketManager
 import net.woggioni.rbcs.server.throttling.ThrottlingHandler
 import java.io.OutputStream
@@ -355,13 +354,12 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
 
             val serverHandler = let {
                 val prefix = Path.of("/").resolve(Path.of(cfg.serverPath ?: "/"))
-                ServerHandler(prefix)
+                ServerHandler(prefix) {
+                    cacheHandlerFactory.newHandler(cfg, ch.eventLoop(), channelFactory, datagramChannelFactory)
+                }
             }
             pipeline.addLast(eventExecutorGroup, ServerHandler.NAME, serverHandler)
-
-            pipeline.addLast(cacheHandlerFactory.newHandler(cfg, ch.eventLoop(), channelFactory, datagramChannelFactory))
-            pipeline.addLast(TraceHandler)
-            pipeline.addLast(ExceptionHandler)
+            pipeline.addLast(ExceptionHandler.NAME, ExceptionHandler)
         }
 
         override fun asyncClose() = cacheHandlerFactory.asyncClose()

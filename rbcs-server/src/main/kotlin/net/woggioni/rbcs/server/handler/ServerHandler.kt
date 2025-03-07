@@ -1,6 +1,7 @@
 package net.woggioni.rbcs.server.handler
 
 import io.netty.channel.ChannelDuplexHandler
+import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPromise
 import io.netty.handler.codec.http.DefaultFullHttpResponse
@@ -15,6 +16,8 @@ import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpUtil
 import io.netty.handler.codec.http.HttpVersion
+import io.netty.handler.codec.http.LastHttpContent
+import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.api.message.CacheMessage
 import net.woggioni.rbcs.api.message.CacheMessage.CacheContent
@@ -27,19 +30,22 @@ import net.woggioni.rbcs.api.message.CacheMessage.LastCacheContent
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
 import net.woggioni.rbcs.common.warn
+import net.woggioni.rbcs.server.event.RequestCompletedEvent
+import net.woggioni.rbcs.server.exception.ExceptionHandler
 import java.nio.file.Path
 import java.util.Locale
 
-class ServerHandler(private val serverPrefix: Path) :
+class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupplier : () -> ChannelHandler) :
     ChannelDuplexHandler() {
 
     companion object {
         private val log = createLogger<ServerHandler>()
-        val NAME = this::class.java.name
+        val NAME = ServerHandler::class.java.name
     }
 
     private var httpVersion = HttpVersion.HTTP_1_1
     private var keepAlive = true
+    private var pipelinedRequests = 0
 
     private fun resetRequestMetadata() {
         httpVersion = HttpVersion.HTTP_1_1
@@ -73,6 +79,8 @@ class ServerHandler(private val serverPrefix: Path) :
             try {
                 when (msg) {
                     is CachePutResponse -> {
+                        pipelinedRequests -= 1
+                        ctx.fireUserEventTriggered(RequestCompletedEvent())
                         val response = DefaultFullHttpResponse(httpVersion, HttpResponseStatus.CREATED)
                         val keyBytes = msg.key.toByteArray(Charsets.UTF_8)
                         response.headers().apply {
@@ -88,6 +96,8 @@ class ServerHandler(private val serverPrefix: Path) :
                     }
 
                     is CacheValueNotFoundResponse -> {
+                        pipelinedRequests -= 1
+                        ctx.fireUserEventTriggered(RequestCompletedEvent())
                         val response = DefaultFullHttpResponse(httpVersion, HttpResponseStatus.NOT_FOUND)
                         response.headers()[HttpHeaderNames.CONTENT_LENGTH] = 0
                         setKeepAliveHeader(response.headers())
@@ -108,6 +118,8 @@ class ServerHandler(private val serverPrefix: Path) :
                     }
 
                     is LastCacheContent -> {
+                        pipelinedRequests -= 1
+                        ctx.fireUserEventTriggered(RequestCompletedEvent())
                         ctx.writeAndFlush(DefaultLastHttpContent(msg.content()))
                     }
 
@@ -127,6 +139,10 @@ class ServerHandler(private val serverPrefix: Path) :
             } finally {
                 resetRequestMetadata()
             }
+        } else if(msg is LastHttpContent) {
+            pipelinedRequests -= 1
+            ctx.fireUserEventTriggered(RequestCompletedEvent())
+            ctx.write(msg, promise)
         } else super.write(ctx, msg, promise)
     }
 
@@ -139,7 +155,13 @@ class ServerHandler(private val serverPrefix: Path) :
             if (path.startsWith(serverPrefix)) {
                 val relativePath = serverPrefix.relativize(path)
                 val key = relativePath.toString()
-                ctx.pipeline().addAfter(NAME, CacheContentHandler.NAME, CacheContentHandler)
+                if(pipelinedRequests > 0) {
+                    ctx.pipeline().addBefore(ExceptionHandler.NAME, null, ResponseCapHandler())
+                }
+                val cacheHandler = cacheHandlerSupplier()
+                ctx.pipeline().addBefore(ExceptionHandler.NAME, null, CacheContentHandler(cacheHandler))
+                ctx.pipeline().addBefore(ExceptionHandler.NAME, null, cacheHandler)
+                pipelinedRequests += 1
                 key.let(::CacheGetRequest)
                     .let(ctx::fireChannelRead)
                     ?: ctx.channel().write(CacheValueNotFoundResponse())
@@ -159,7 +181,14 @@ class ServerHandler(private val serverPrefix: Path) :
                 log.debug(ctx) {
                     "Added value for key '$key' to build cache"
                 }
-                ctx.pipeline().addAfter(NAME, CacheContentHandler.NAME, CacheContentHandler)
+                if(pipelinedRequests > 0) {
+                    ctx.pipeline().addBefore(ExceptionHandler.NAME, null, ResponseCapHandler())
+                }
+                val cacheHandler = cacheHandlerSupplier()
+                ctx.pipeline().addBefore(ExceptionHandler.NAME, null, CacheContentHandler(cacheHandler))
+                ctx.pipeline().addBefore(ExceptionHandler.NAME, null, cacheHandler)
+                pipelinedRequests += 1
+
                 path.fileName?.toString()
                     ?.let {
                         val mimeType = HttpUtil.getMimeType(msg)?.toString()
@@ -176,6 +205,11 @@ class ServerHandler(private val serverPrefix: Path) :
                 ctx.writeAndFlush(response)
             }
         } else if (method == HttpMethod.TRACE) {
+            if(pipelinedRequests > 0) {
+                ctx.pipeline().addBefore(ExceptionHandler.NAME, null, ResponseCapHandler())
+            }
+            ctx.pipeline().addBefore(ExceptionHandler.NAME, null, TraceHandler)
+            pipelinedRequests += 1
             super.channelRead(ctx, msg)
         } else {
             log.warn(ctx) {
@@ -184,42 +218,6 @@ class ServerHandler(private val serverPrefix: Path) :
             val response = DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.METHOD_NOT_ALLOWED)
             response.headers()[HttpHeaderNames.CONTENT_LENGTH] = "0"
             ctx.writeAndFlush(response)
-        }
-    }
-
-
-    data class ContentDisposition(val type: Type?, val fileName: String?) {
-        enum class Type {
-            attachment, `inline`;
-
-            companion object {
-                @JvmStatic
-                fun parse(maybeString: String?) = maybeString.let { s ->
-                    try {
-                        java.lang.Enum.valueOf(Type::class.java, s)
-                    } catch (ex: IllegalArgumentException) {
-                        null
-                    }
-                }
-            }
-        }
-
-        companion object {
-            @JvmStatic
-            fun parse(contentDisposition: String) : ContentDisposition {
-                val parts = contentDisposition.split(";").dropLastWhile { it.isEmpty() }.toTypedArray()
-                val dispositionType = parts[0].trim { it <= ' ' }.let(Type::parse)  // Get the type (e.g., attachment)
-
-                var filename: String? = null
-                for (i in 1..<parts.size) {
-                    val part = parts[i].trim { it <= ' ' }
-                    if (part.lowercase(Locale.getDefault()).startsWith("filename=")) {
-                        filename = part.substring("filename=".length).trim { it <= ' ' }.replace("\"", "")
-                        break
-                    }
-                }
-                return ContentDisposition(dispositionType, filename)
-            }
         }
     }
 

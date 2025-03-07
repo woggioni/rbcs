@@ -39,7 +39,6 @@ allprojects { subproject ->
             modularity.inferModulePath = true
             toolchain {
                 languageVersion = JavaLanguageVersion.of(21)
-                vendor = JvmVendorSpec.GRAAL_VM
             }
         }
 
