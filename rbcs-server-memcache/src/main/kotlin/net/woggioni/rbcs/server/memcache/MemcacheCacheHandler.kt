@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.CompositeByteBuf
 import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.handler.codec.memcache.DefaultLastMemcacheContent
 import io.netty.handler.codec.memcache.DefaultMemcacheContent
 import io.netty.handler.codec.memcache.LastMemcacheContent
@@ -13,6 +12,7 @@ import io.netty.handler.codec.memcache.binary.BinaryMemcacheOpcodes
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponse
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponseStatus
 import io.netty.handler.codec.memcache.binary.DefaultBinaryMemcacheRequest
+import net.woggioni.rbcs.api.CacheHandler
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.api.exception.ContentTooLargeException
 import net.woggioni.rbcs.api.message.CacheMessage
@@ -58,7 +58,7 @@ class MemcacheCacheHandler(
     private val compressionLevel: Int,
     private val chunkSize: Int,
     private val maxAge: Duration
-) : SimpleChannelInboundHandler<CacheMessage>() {
+) : CacheHandler() {
     companion object {
         private val log = createLogger<MemcacheCacheHandler>()
 
@@ -98,7 +98,10 @@ class MemcacheCacheHandler(
                         acc.retain()
                         it.readObject() as CacheValueMetadata
                     }
-                    ctx.writeAndFlush(CacheValueFoundResponse(key, metadata))
+                    log.trace(ctx) {
+                        "Sending response from cache"
+                    }
+                    sendMessageAndFlush(ctx, CacheValueFoundResponse(key, metadata))
                     responseSent = true
                     acc.readerIndex(Int.SIZE_BYTES + mSize)
                 }
@@ -114,16 +117,16 @@ class MemcacheCacheHandler(
             val toSend = extractChunk(chunk, ctx.alloc())
             val msg = if(last) {
                 log.trace(ctx) {
-                    "Sending last chunk to client on channel ${ctx.channel().id().asShortText()}"
+                    "Sending last chunk to client on channel"
                 }
                 LastCacheContent(toSend)
             } else {
                 log.trace(ctx) {
-                    "Sending chunk to client on channel ${ctx.channel().id().asShortText()}"
+                    "Sending chunk to client"
                 }
                 CacheContent(toSend)
             }
-            ctx.writeAndFlush(msg)
+            sendMessageAndFlush(ctx, msg)
         }
 
         fun commit() {
@@ -259,7 +262,7 @@ class MemcacheCacheHandler(
                         log.debug(ctx) {
                             "Cache miss for key ${msg.key} on memcache"
                         }
-                        ctx.writeAndFlush(CacheValueNotFoundResponse())
+                        sendMessageAndFlush(ctx, CacheValueNotFoundResponse())
                     }
                 }
             }
@@ -290,6 +293,7 @@ class MemcacheCacheHandler(
                 setOpcode(BinaryMemcacheOpcodes.GET)
             }
             requestHandle.sendRequest(request)
+            requestHandle.sendContent(LastMemcacheContent.EMPTY_LAST_CONTENT)
         }
     }
 
@@ -305,7 +309,7 @@ class MemcacheCacheHandler(
                         log.debug(ctx) {
                             "Inserted key ${msg.key} into memcache"
                         }
-                        ctx.writeAndFlush(CachePutResponse(msg.key))
+                        sendMessageAndFlush(ctx, CachePutResponse(msg.key))
                     }
                     else -> this@MemcacheCacheHandler.exceptionCaught(ctx, MemcacheException(status))
                 }
@@ -348,6 +352,9 @@ class MemcacheCacheHandler(
             extras.writeInt(0)
             extras.writeInt(encodeExpiry(maxAge))
             val totalBodyLength = request.digest.readableBytes() + extras.readableBytes() + payloadSize
+            log.trace(ctx) {
+                "Trying to send SET request to memcache"
+            }
             request.requestController.whenComplete { requestController, ex ->
                 if(ex == null) {
                     log.trace(ctx) {

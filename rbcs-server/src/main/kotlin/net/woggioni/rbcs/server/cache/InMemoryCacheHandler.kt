@@ -3,6 +3,7 @@ package net.woggioni.rbcs.server.cache
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
+import net.woggioni.rbcs.api.CacheHandler
 import net.woggioni.rbcs.api.message.CacheMessage
 import net.woggioni.rbcs.api.message.CacheMessage.CacheContent
 import net.woggioni.rbcs.api.message.CacheMessage.CacheGetRequest
@@ -13,6 +14,7 @@ import net.woggioni.rbcs.api.message.CacheMessage.CacheValueNotFoundResponse
 import net.woggioni.rbcs.api.message.CacheMessage.LastCacheContent
 import net.woggioni.rbcs.common.ByteBufOutputStream
 import net.woggioni.rbcs.common.RBCS.processCacheKey
+import net.woggioni.rbcs.common.trace
 import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterOutputStream
@@ -22,7 +24,7 @@ class InMemoryCacheHandler(
     private val digestAlgorithm: String?,
     private val compressionEnabled: Boolean,
     private val compressionLevel: Int
-) : SimpleChannelInboundHandler<CacheMessage>() {
+) : CacheHandler() {
 
     private interface InProgressPutRequest : AutoCloseable {
         val request: CachePutRequest
@@ -86,7 +88,7 @@ class InMemoryCacheHandler(
 
     private fun handleGetRequest(ctx: ChannelHandlerContext, msg: CacheGetRequest) {
         cache.get(processCacheKey(msg.key, digestAlgorithm))?.let { value ->
-            ctx.writeAndFlush(CacheValueFoundResponse(msg.key, value.metadata))
+            sendMessageAndFlush(ctx, CacheValueFoundResponse(msg.key, value.metadata))
             if (compressionEnabled) {
                 val buf = ctx.alloc().heapBuffer()
                 InflaterOutputStream(ByteBufOutputStream(buf)).use {
@@ -94,11 +96,11 @@ class InMemoryCacheHandler(
                     value.content.release()
                     buf.retain()
                 }
-                ctx.writeAndFlush(LastCacheContent(buf))
+                sendMessage(ctx, LastCacheContent(buf))
             } else {
-                ctx.writeAndFlush(LastCacheContent(value.content))
+                sendMessage(ctx, LastCacheContent(value.content))
             }
-        } ?: ctx.writeAndFlush(CacheValueNotFoundResponse())
+        } ?: sendMessage(ctx, CacheValueNotFoundResponse())
     }
 
     private fun handlePutRequest(ctx: ChannelHandlerContext, msg: CachePutRequest) {
@@ -122,7 +124,7 @@ class InMemoryCacheHandler(
             inProgressRequest.close()
             val cacheKey = processCacheKey(inProgressRequest.request.key, digestAlgorithm)
             cache.put(cacheKey, CacheEntry(inProgressRequest.request.metadata, buf))
-            ctx.writeAndFlush(CachePutResponse(inProgressRequest.request.key))
+            sendMessageAndFlush(ctx, CachePutResponse(inProgressRequest.request.key))
         }
     }
 

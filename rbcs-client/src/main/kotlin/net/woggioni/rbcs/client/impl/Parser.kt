@@ -30,7 +30,12 @@ object Parser {
                         ?: throw ConfigurationException("base-url attribute is required")
                     var authentication: Configuration.Authentication? = null
                     var retryPolicy: Configuration.RetryPolicy? = null
-                    var connection : Configuration.Connection? = null
+                    var connection : Configuration.Connection = Configuration.Connection(
+                        Duration.ofSeconds(60),
+                        Duration.ofSeconds(60),
+                        Duration.ofSeconds(30),
+                        false
+                    )
                     var trustStore : Configuration.TrustStore? = null
                     for (gchild in child.asIterable()) {
                         when (gchild.localName) {
@@ -97,10 +102,13 @@ object Parser {
                                     ?.let(Duration::parse) ?: Duration.of(60, ChronoUnit.SECONDS)
                                 val writeIdleTimeout = gchild.renderAttribute("write-idle-timeout")
                                     ?.let(Duration::parse) ?: Duration.of(60, ChronoUnit.SECONDS)
+                                val requestPipelining = gchild.renderAttribute("request-pipelining")
+                                    ?.let(String::toBoolean) ?: false
                                 connection = Configuration.Connection(
                                     readIdleTimeout,
                                     writeIdleTimeout,
                                     idleTimeout,
+                                    requestPipelining
                                 )
                             }
 

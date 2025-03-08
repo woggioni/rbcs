@@ -6,6 +6,7 @@ import io.netty.channel.EventLoopGroup
 import io.netty.channel.pool.FixedChannelPool
 import io.netty.channel.socket.DatagramChannel
 import io.netty.channel.socket.SocketChannel
+import net.woggioni.rbcs.api.CacheHandler
 import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.common.HostAndPort
@@ -51,7 +52,7 @@ data class MemcacheCacheConfiguration(
             eventLoop: EventLoopGroup,
             socketChannelFactory: ChannelFactory<SocketChannel>,
             datagramChannelFactory: ChannelFactory<DatagramChannel>,
-        ): ChannelHandler {
+        ): CacheHandler {
             return MemcacheCacheHandler(
                 MemcacheClient(
                     this@MemcacheCacheConfiguration.servers,

@@ -5,6 +5,7 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.stream.ChunkedNioFile
+import net.woggioni.rbcs.api.CacheHandler
 import net.woggioni.rbcs.api.message.CacheMessage
 import net.woggioni.rbcs.api.message.CacheMessage.CacheContent
 import net.woggioni.rbcs.api.message.CacheMessage.CacheGetRequest
@@ -26,7 +27,7 @@ class FileSystemCacheHandler(
     private val compressionEnabled: Boolean,
     private val compressionLevel: Int,
     private val chunkSize: Int
-) : SimpleChannelInboundHandler<CacheMessage>() {
+) : CacheHandler() {
 
     private inner class InProgressPutRequest(
         val key : String,
@@ -70,7 +71,7 @@ class FileSystemCacheHandler(
     private fun handleGetRequest(ctx: ChannelHandlerContext, msg: CacheGetRequest) {
         val key = String(Base64.getUrlEncoder().encode(processCacheKey(msg.key, digestAlgorithm)))
         cache.get(key)?.also { entryValue ->
-            ctx.writeAndFlush(CacheValueFoundResponse(msg.key, entryValue.metadata))
+            sendMessageAndFlush(ctx, CacheValueFoundResponse(msg.key, entryValue.metadata))
             entryValue.channel.let { channel ->
                 if(compressionEnabled) {
                     InflaterInputStream(Channels.newInputStream(channel)).use { stream ->
@@ -81,19 +82,19 @@ class FileSystemCacheHandler(
                             while(buf.readableBytes() < chunkSize) {
                                 val read = buf.writeBytes(stream, chunkSize)
                                 if(read < 0) {
-                                    ctx.writeAndFlush(LastCacheContent(buf))
+                                    sendMessageAndFlush(ctx, LastCacheContent(buf))
                                     break@outerLoop
                                 }
                             }
-                            ctx.writeAndFlush(CacheContent(buf))
+                            sendMessageAndFlush(ctx, CacheContent(buf))
                         }
                     }
                 } else {
-                    ctx.writeAndFlush(ChunkedNioFile(channel, entryValue.offset, entryValue.size - entryValue.offset, chunkSize))
-                    ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+                    sendMessage(ctx, ChunkedNioFile(channel, entryValue.offset, entryValue.size - entryValue.offset, chunkSize))
+                    sendMessageAndFlush(ctx, LastHttpContent.EMPTY_LAST_CONTENT)
                 }
             }
-        } ?: ctx.writeAndFlush(CacheValueNotFoundResponse())
+        } ?: sendMessageAndFlush(ctx, CacheValueNotFoundResponse())
     }
 
     private fun handlePutRequest(ctx: ChannelHandlerContext, msg: CachePutRequest) {
@@ -111,7 +112,7 @@ class FileSystemCacheHandler(
             inProgressPutRequest = null
             request.write(msg.content())
             request.commit()
-            ctx.writeAndFlush(CachePutResponse(request.key))
+            sendMessageAndFlush(ctx, CachePutResponse(request.key))
         }
     }
 

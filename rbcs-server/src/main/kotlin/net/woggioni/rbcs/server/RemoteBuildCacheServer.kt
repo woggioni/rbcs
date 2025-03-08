@@ -298,6 +298,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                     "Closed connection ${ch.id().asShortText()} with ${ch.remoteAddress()}"
                 }
             }
+            ch.config().setAutoRead(false)
             val pipeline = ch.pipeline()
             cfg.connection.also { conn ->
                 val readIdleTimeout = conn.readIdleTimeout.toMillis()

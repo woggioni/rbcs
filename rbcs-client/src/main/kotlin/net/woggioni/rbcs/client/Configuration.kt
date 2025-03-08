@@ -38,11 +38,12 @@ data class Configuration(
         val readIdleTimeout: Duration,
         val writeIdleTimeout: Duration,
         val idleTimeout: Duration,
+        val requestPipelining : Boolean,
     )
 
     data class Profile(
         val serverURI: URI,
-        val connection: Connection?,
+        val connection: Connection,
         val authentication: Authentication?,
         val connectionTimeout: Duration?,
         val maxConnections: Int,

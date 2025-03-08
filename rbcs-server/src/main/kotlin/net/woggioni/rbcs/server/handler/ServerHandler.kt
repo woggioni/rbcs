@@ -8,6 +8,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse
 import io.netty.handler.codec.http.DefaultHttpContent
 import io.netty.handler.codec.http.DefaultHttpResponse
 import io.netty.handler.codec.http.DefaultLastHttpContent
+import io.netty.handler.codec.http.HttpContent
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpHeaders
@@ -17,7 +18,6 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpUtil
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.handler.codec.http.LastHttpContent
-import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.api.message.CacheMessage
 import net.woggioni.rbcs.api.message.CacheMessage.CacheContent
@@ -30,10 +30,8 @@ import net.woggioni.rbcs.api.message.CacheMessage.LastCacheContent
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
 import net.woggioni.rbcs.common.warn
-import net.woggioni.rbcs.server.event.RequestCompletedEvent
 import net.woggioni.rbcs.server.exception.ExceptionHandler
 import java.nio.file.Path
-import java.util.Locale
 
 class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupplier : () -> ChannelHandler) :
     ChannelDuplexHandler() {
@@ -46,6 +44,15 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
     private var httpVersion = HttpVersion.HTTP_1_1
     private var keepAlive = true
     private var pipelinedRequests = 0
+
+    private fun newRequest() {
+        pipelinedRequests += 1
+    }
+
+    private fun requestCompleted(ctx : ChannelHandlerContext) {
+        pipelinedRequests -= 1
+        if(pipelinedRequests == 0) ctx.read()
+    }
 
     private fun resetRequestMetadata() {
         httpVersion = HttpVersion.HTTP_1_1
@@ -65,22 +72,44 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
         }
     }
 
+    private var cacheRequestInProgress : Boolean = false
+
+    override fun handlerAdded(ctx: ChannelHandlerContext) {
+        ctx.read()
+    }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         when (msg) {
             is HttpRequest -> handleRequest(ctx, msg)
+            is HttpContent -> {
+                if(cacheRequestInProgress) {
+                    if(msg is LastHttpContent) {
+                        super.channelRead(ctx, LastCacheContent(msg.content().retain()))
+                        cacheRequestInProgress = false
+                    } else {
+                        super.channelRead(ctx, CacheContent(msg.content().retain()))
+                    }
+                    msg.release()
+                } else {
+                    super.channelRead(ctx, msg)
+                }
+            }
             else -> super.channelRead(ctx, msg)
         }
     }
 
+    override fun channelReadComplete(ctx: ChannelHandlerContext) {
+        super.channelReadComplete(ctx)
+        if(cacheRequestInProgress) {
+            ctx.read()
+        }
+    }
 
     override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise?) {
         if (msg is CacheMessage) {
             try {
                 when (msg) {
                     is CachePutResponse -> {
-                        pipelinedRequests -= 1
-                        ctx.fireUserEventTriggered(RequestCompletedEvent())
                         val response = DefaultFullHttpResponse(httpVersion, HttpResponseStatus.CREATED)
                         val keyBytes = msg.key.toByteArray(Charsets.UTF_8)
                         response.headers().apply {
@@ -92,16 +121,18 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                         val buf = ctx.alloc().buffer(keyBytes.size).apply {
                             writeBytes(keyBytes)
                         }
-                        ctx.writeAndFlush(DefaultLastHttpContent(buf))
+                        ctx.writeAndFlush(DefaultLastHttpContent(buf)).also {
+                            requestCompleted(ctx)
+                        }
                     }
 
                     is CacheValueNotFoundResponse -> {
-                        pipelinedRequests -= 1
-                        ctx.fireUserEventTriggered(RequestCompletedEvent())
                         val response = DefaultFullHttpResponse(httpVersion, HttpResponseStatus.NOT_FOUND)
                         response.headers()[HttpHeaderNames.CONTENT_LENGTH] = 0
                         setKeepAliveHeader(response.headers())
-                        ctx.writeAndFlush(response)
+                        ctx.writeAndFlush(response).also {
+                            requestCompleted(ctx)
+                        }
                     }
 
                     is CacheValueFoundResponse -> {
@@ -118,9 +149,9 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                     }
 
                     is LastCacheContent -> {
-                        pipelinedRequests -= 1
-                        ctx.fireUserEventTriggered(RequestCompletedEvent())
-                        ctx.writeAndFlush(DefaultLastHttpContent(msg.content()))
+                        ctx.writeAndFlush(DefaultLastHttpContent(msg.content())).also {
+                            requestCompleted(ctx)
+                        }
                     }
 
                     is CacheContent -> {
@@ -140,9 +171,8 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                 resetRequestMetadata()
             }
         } else if(msg is LastHttpContent) {
-            pipelinedRequests -= 1
-            ctx.fireUserEventTriggered(RequestCompletedEvent())
             ctx.write(msg, promise)
+            requestCompleted(ctx)
         } else super.write(ctx, msg, promise)
     }
 
@@ -153,15 +183,12 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
         if (method === HttpMethod.GET) {
             val path = Path.of(msg.uri()).normalize()
             if (path.startsWith(serverPrefix)) {
+                cacheRequestInProgress = true
                 val relativePath = serverPrefix.relativize(path)
-                val key = relativePath.toString()
-                if(pipelinedRequests > 0) {
-                    ctx.pipeline().addBefore(ExceptionHandler.NAME, null, ResponseCapHandler())
-                }
+                val key : String = relativePath.toString()
+                newRequest()
                 val cacheHandler = cacheHandlerSupplier()
-                ctx.pipeline().addBefore(ExceptionHandler.NAME, null, CacheContentHandler(cacheHandler))
                 ctx.pipeline().addBefore(ExceptionHandler.NAME, null, cacheHandler)
-                pipelinedRequests += 1
                 key.let(::CacheGetRequest)
                     .let(ctx::fireChannelRead)
                     ?: ctx.channel().write(CacheValueNotFoundResponse())
@@ -176,18 +203,15 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
         } else if (method === HttpMethod.PUT) {
             val path = Path.of(msg.uri()).normalize()
             if (path.startsWith(serverPrefix)) {
+                cacheRequestInProgress = true
                 val relativePath = serverPrefix.relativize(path)
                 val key = relativePath.toString()
                 log.debug(ctx) {
                     "Added value for key '$key' to build cache"
                 }
-                if(pipelinedRequests > 0) {
-                    ctx.pipeline().addBefore(ExceptionHandler.NAME, null, ResponseCapHandler())
-                }
+                newRequest()
                 val cacheHandler = cacheHandlerSupplier()
-                ctx.pipeline().addBefore(ExceptionHandler.NAME, null, CacheContentHandler(cacheHandler))
                 ctx.pipeline().addBefore(ExceptionHandler.NAME, null, cacheHandler)
-                pipelinedRequests += 1
 
                 path.fileName?.toString()
                     ?.let {
@@ -205,11 +229,8 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                 ctx.writeAndFlush(response)
             }
         } else if (method == HttpMethod.TRACE) {
-            if(pipelinedRequests > 0) {
-                ctx.pipeline().addBefore(ExceptionHandler.NAME, null, ResponseCapHandler())
-            }
+            newRequest()
             ctx.pipeline().addBefore(ExceptionHandler.NAME, null, TraceHandler)
-            pipelinedRequests += 1
             super.channelRead(ctx, msg)
         } else {
             log.warn(ctx) {

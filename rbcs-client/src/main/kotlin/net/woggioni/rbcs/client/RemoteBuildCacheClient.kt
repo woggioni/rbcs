@@ -318,6 +318,9 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                         ) {
                             pipeline.remove(this)
                             responseFuture.complete(response)
+                            if(!profile.connection.requestPipelining) {
+                                pool.release(channel)
+                            }
                         }
 
                         override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
@@ -332,6 +335,9 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
 
                         override fun channelInactive(ctx: ChannelHandlerContext) {
                             responseFuture.completeExceptionally(IOException("The remote server closed the connection"))
+                            if(!profile.connection.requestPipelining) {
+                                pool.release(channel)
+                            }
                             super.channelInactive(ctx)
                         }
 
@@ -351,6 +357,9 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                                 super.userEventTriggered(ctx, evt)
                                 if (this === pipeline.last()) {
                                     ctx.close()
+                                }
+                                if(!profile.connection.requestPipelining) {
+                                    pool.release(channel)
                                 }
                             } else {
                                 super.userEventTriggered(ctx, evt)
@@ -401,8 +410,9 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                             val ex = it.cause()
                             log.warn(ex.message, ex)
                         }
-
-                        pool.release(channel)
+                        if(profile.connection.requestPipelining) {
+                            pool.release(channel)
+                        }
                     }
                 } else {
                     responseFuture.completeExceptionally(channelFuture.cause())

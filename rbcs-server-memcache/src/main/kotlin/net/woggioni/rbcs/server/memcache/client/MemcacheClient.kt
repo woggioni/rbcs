@@ -12,7 +12,6 @@ import io.netty.channel.ChannelPipeline
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.pool.AbstractChannelPoolHandler
-import io.netty.channel.pool.ChannelPool
 import io.netty.channel.pool.FixedChannelPool
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.codec.memcache.LastMemcacheContent
@@ -24,7 +23,7 @@ import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponse
 import io.netty.util.concurrent.GenericFutureListener
 import net.woggioni.rbcs.common.HostAndPort
 import net.woggioni.rbcs.common.createLogger
-import net.woggioni.rbcs.common.warn
+import net.woggioni.rbcs.common.trace
 import net.woggioni.rbcs.server.memcache.MemcacheCacheConfiguration
 import net.woggioni.rbcs.server.memcache.MemcacheCacheHandler
 import java.io.IOException
@@ -94,18 +93,6 @@ class MemcacheClient(
         pool.acquire().addListener(object : GenericFutureListener<NettyFuture<Channel>> {
             override fun operationComplete(channelFuture: NettyFuture<Channel>) {
                 if (channelFuture.isSuccess) {
-
-                    var requestSent = false
-                    var requestBodySent = false
-                    var requestFinished = false
-                    var responseReceived = false
-                    var responseBodyReceived = false
-                    var responseFinished = false
-                    var requestBodySize = 0
-                    var requestBodyBytesSent = 0
-
-
-
                     val channel = channelFuture.now
                     var connectionClosedByTheRemoteServer = true
                     val closeCallback = {
@@ -113,14 +100,7 @@ class MemcacheClient(
                             val ex = IOException("The memcache server closed the connection")
                             val completed = response.completeExceptionally(ex)
                             if(!completed) responseHandler.exceptionCaught(ex)
-                            log.warn {
-                                "RequestSent: $requestSent, RequestBodySent: $requestBodySent, " +
-                                "RequestFinished: $requestFinished, ResponseReceived: $responseReceived, " +
-                                "ResponseBodyReceived: $responseBodyReceived, ResponseFinished: $responseFinished, " +
-                                "RequestBodySize: $requestBodySize, RequestBodyBytesSent: $requestBodyBytesSent"
-                            }
                         }
-                        pool.release(channel)
                     }
                     val closeListener = ChannelFutureListener {
                         closeCallback()
@@ -140,18 +120,14 @@ class MemcacheClient(
                             when (msg) {
                                 is BinaryMemcacheResponse -> {
                                     responseHandler.responseReceived(msg)
-                                    responseReceived = true
                                 }
 
                                 is LastMemcacheContent -> {
-                                    responseFinished = true
                                     responseHandler.contentReceived(msg)
                                     pipeline.remove(this)
-                                    pool.release(channel)
                                 }
 
                                 is MemcacheContent -> {
-                                    responseBodyReceived = true
                                     responseHandler.contentReceived(msg)
                                 }
                             }
@@ -165,35 +141,43 @@ class MemcacheClient(
                         override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
                             connectionClosedByTheRemoteServer = false
                             ctx.close()
-                            pool.release(channel)
                             responseHandler.exceptionCaught(cause)
                         }
                     }
 
-                    channel.pipeline()
-                        .addLast("client-handler", handler)
+                    channel.pipeline().addLast(handler)
                     response.complete(object : MemcacheRequestController {
+                        private var channelReleased = false
 
                         override fun sendRequest(request: BinaryMemcacheRequest) {
-                            requestBodySize = request.totalBodyLength() - request.keyLength() - request.extrasLength()
                             channel.writeAndFlush(request)
-                            requestSent = true
                         }
 
                         override fun sendContent(content: MemcacheContent) {
-                            val size = content.content().readableBytes()
                             channel.writeAndFlush(content).addListener {
-                                requestBodyBytesSent += size
-                                requestBodySent = true
                                 if(content is LastMemcacheContent) {
-                                    requestFinished = true
+                                    if(!channelReleased) {
+                                        pool.release(channel)
+                                        channelReleased = true
+                                        log.trace(channel) {
+                                            "Channel released"
+                                        }
+                                    }
                                 }
                             }
                         }
 
                         override fun exceptionCaught(ex: Throwable) {
+                            log.warn(ex.message, ex)
                             connectionClosedByTheRemoteServer = false
                             channel.close()
+                            if(!channelReleased) {
+                                pool.release(channel)
+                                channelReleased = true
+                                log.trace(channel) {
+                                    "Channel released"
+                                }
+                            }
                         }
                     })
                 } else {

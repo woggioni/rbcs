@@ -6,7 +6,7 @@ plugins {
 }
 
 dependencies {
-    implementation project(':rbcs-api')
+    implementation catalog.netty.transport
     implementation catalog.slf4j.api
     implementation catalog.jwo
     implementation catalog.netty.buffer
