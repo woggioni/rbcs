@@ -32,7 +32,7 @@ object GraalNativeImageConfiguration {
     @JvmStatic
     fun main(vararg args : String) {
 
-        val serverURL = URI.create("file:conf/rbcs-client.xml").toURL()
+        val serverURL = URI.create("file:conf/rbcs-server.xml").toURL()
         val serverDoc = serverURL.openStream().use {
             Xml.parseXml(serverURL, it)
         }
@@ -71,7 +71,6 @@ object GraalNativeImageConfiguration {
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
                 compressionEnabled = false,
                 maxSize = 0x1000000,
-                chunkSize = 0x1000
             ),
             FileSystemCacheConfiguration(
                 Path.of(System.getProperty("java.io.tmpdir")).resolve("rbcs"),
@@ -79,7 +78,6 @@ object GraalNativeImageConfiguration {
                 digestAlgorithm = "MD5",
                 compressionLevel = Deflater.DEFAULT_COMPRESSION,
                 compressionEnabled = false,
-                chunkSize = 0x1000
             ),
             MemcacheCacheConfiguration(
                 listOf(MemcacheCacheConfiguration.Server(
@@ -91,7 +89,6 @@ object GraalNativeImageConfiguration {
                 "MD5",
                 null,
                 1,
-                0x1000
             )
         )
 
@@ -107,6 +104,7 @@ object GraalNativeImageConfiguration {
                     Duration.ofSeconds(15),
                     Duration.ofSeconds(15),
                     0x10000,
+                    0x1000
                 ),
                 users.asSequence().map { it.name to it }.toMap(),
                 sequenceOf(writersGroup, readersGroup).map { it.name to it }.toMap(),
@@ -127,7 +125,6 @@ object GraalNativeImageConfiguration {
                 "MD5",
                 null,
                 1,
-                0x1000
             )
 
             val serverHandle = RemoteBuildCacheServer(serverConfiguration).run()
@@ -135,7 +132,12 @@ object GraalNativeImageConfiguration {
 
             val clientProfile = ClientConfiguration.Profile(
                 URI.create("http://127.0.0.1:$serverPort/"),
-                null,
+                ClientConfiguration.Connection(
+                    Duration.ofSeconds(5),
+                    Duration.ofSeconds(5),
+                    Duration.ofSeconds(7),
+                    true,
+                ),
                 ClientConfiguration.Authentication.BasicAuthenticationCredentials("user3", PASSWORD),
                 Duration.ofSeconds(3),
                 10,
