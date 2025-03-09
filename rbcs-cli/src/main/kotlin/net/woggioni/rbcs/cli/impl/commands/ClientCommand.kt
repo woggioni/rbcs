@@ -6,7 +6,6 @@ import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
 import picocli.CommandLine
-import java.lang.IllegalArgumentException
 import java.nio.file.Path
 
 @CommandLine.Command(

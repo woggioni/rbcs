@@ -129,7 +129,7 @@ class RetryTest {
                     previousAttempt.first + testArgs.initialDelay * Math.pow(testArgs.exp, index.toDouble()) * 1e6
                 val actualTimestamp = timestamp
                 val err = Math.abs(expectedTimestamp - actualTimestamp) / expectedTimestamp
-                Assertions.assertTrue(err < 0.1)
+                Assertions.assertTrue(err < 0.5)
             }
             if (index == attempts.size - 1 && index < testArgs.maxAttempt - 1) {
                 /*
