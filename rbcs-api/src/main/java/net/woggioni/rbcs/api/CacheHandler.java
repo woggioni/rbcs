@@ -16,7 +16,7 @@ public abstract class CacheHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if(!requestFinished && msg instanceof CacheMessage) {
-            if(msg instanceof CacheMessage.LastCacheContent || msg instanceof CacheMessage.CacheGetRequest) requestFinished = true;
+            if(msg instanceof CacheMessage.LastCacheContent) requestFinished = true;
             try {
                 channelRead0(ctx, (CacheMessage) msg);
             } finally {

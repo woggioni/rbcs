@@ -69,10 +69,14 @@ class MemcacheCacheHandler(
         }
     }
 
+    private interface InProgressRequest {
+
+    }
+
     private inner class InProgressGetRequest(
-        private val key: String,
+        val key: String,
         private val ctx: ChannelHandlerContext
-    ) {
+    ) : InProgressRequest {
         private val acc = ctx.alloc().compositeBuffer()
         private val chunk = ctx.alloc().compositeBuffer()
         private val outputStream = ByteBufOutputStream(chunk).let {
@@ -149,7 +153,7 @@ class MemcacheCacheHandler(
         val digest : ByteBuf,
         val requestController: CompletableFuture<MemcacheRequestController>,
         private val alloc: ByteBufAllocator
-    ) {
+    ) : InProgressRequest {
         private var totalSize = 0
         private var tmpFile : FileChannel? = null
         private val accumulator = alloc.compositeBuffer()
@@ -227,8 +231,7 @@ class MemcacheCacheHandler(
         }
     }
 
-    private var inProgressPutRequest: InProgressPutRequest? = null
-    private var inProgressGetRequest: InProgressGetRequest? = null
+    private var inProgressRequest: InProgressRequest? = null
 
     override fun channelRead0(ctx: ChannelHandlerContext, msg: CacheMessage) {
         when (msg) {
@@ -241,60 +244,7 @@ class MemcacheCacheHandler(
     }
 
     private fun handleGetRequest(ctx: ChannelHandlerContext, msg: CacheGetRequest) {
-        log.debug(ctx) {
-            "Fetching ${msg.key} from memcache"
-        }
-        val key = ctx.alloc().buffer().also {
-            it.writeBytes(processCacheKey(msg.key, digestAlgorithm))
-        }
-        val responseHandler = object : MemcacheResponseHandler {
-            override fun responseReceived(response: BinaryMemcacheResponse) {
-                val status = response.status()
-                when (status) {
-                    BinaryMemcacheResponseStatus.SUCCESS -> {
-                        log.debug(ctx) {
-                            "Cache hit for key ${msg.key} on memcache"
-                        }
-                        inProgressGetRequest = InProgressGetRequest(msg.key, ctx)
-                    }
-
-                    BinaryMemcacheResponseStatus.KEY_ENOENT -> {
-                        log.debug(ctx) {
-                            "Cache miss for key ${msg.key} on memcache"
-                        }
-                        sendMessageAndFlush(ctx, CacheValueNotFoundResponse())
-                    }
-                }
-            }
-
-            override fun contentReceived(content: MemcacheContent) {
-                log.trace(ctx) {
-                    "${if(content is LastMemcacheContent) "Last chunk" else "Chunk"} of ${content.content().readableBytes()} bytes received from memcache for key ${msg.key}"
-                }
-                inProgressGetRequest?.write(content.content())
-                if (content is LastMemcacheContent) {
-                    inProgressGetRequest?.commit()
-                }
-            }
-
-            override fun exceptionCaught(ex: Throwable) {
-                inProgressGetRequest?.let {
-                    inProgressGetRequest = null
-                    it.rollback()
-                }
-                this@MemcacheCacheHandler.exceptionCaught(ctx, ex)
-            }
-        }
-        client.sendRequest(key.retainedDuplicate(), responseHandler).thenAccept { requestHandle ->
-            log.trace(ctx) {
-                "Sending GET request for key ${msg.key} to memcache"
-            }
-            val request = DefaultBinaryMemcacheRequest(key).apply {
-                setOpcode(BinaryMemcacheOpcodes.GET)
-            }
-            requestHandle.sendRequest(request)
-            requestHandle.sendContent(LastMemcacheContent.EMPTY_LAST_CONTENT)
-        }
+        inProgressRequest = InProgressGetRequest(msg.key, ctx)
     }
 
     private fun handlePutRequest(ctx: ChannelHandlerContext, msg: CachePutRequest) {
@@ -327,89 +277,162 @@ class MemcacheCacheHandler(
                 this@MemcacheCacheHandler.exceptionCaught(ctx, ex)
             }
         }
-        inProgressPutRequest = InProgressPutRequest(ctx.channel(), msg.metadata, key, requestController, ctx.alloc())
+        inProgressRequest = InProgressPutRequest(ctx.channel(), msg.metadata, key, requestController, ctx.alloc())
     }
 
     private fun handleCacheContent(ctx: ChannelHandlerContext, msg: CacheContent) {
-        inProgressPutRequest?.let { request ->
-            log.trace(ctx) {
-                "Received chunk of ${msg.content().readableBytes()} bytes for memcache"
+        val request = inProgressRequest
+        when(request) {
+            is InProgressPutRequest -> {
+                log.trace(ctx) {
+                    "Received chunk of ${msg.content().readableBytes()} bytes for memcache"
+                }
+                request.write(msg.content())
             }
-            request.write(msg.content())
+            is InProgressGetRequest -> {
+                msg.release()
+            }
         }
     }
 
     private fun handleLastCacheContent(ctx: ChannelHandlerContext, msg: LastCacheContent) {
-        inProgressPutRequest?.let { request ->
-            inProgressPutRequest = null
-            log.trace(ctx) {
-                "Received last chunk of ${msg.content().readableBytes()} bytes for memcache"
-            }
-            request.write(msg.content())
-            val key = request.digest.retainedDuplicate()
-            val (payloadSize, payloadSource) = request.commit()
-            val extras = ctx.alloc().buffer(8, 8)
-            extras.writeInt(0)
-            extras.writeInt(encodeExpiry(maxAge))
-            val totalBodyLength = request.digest.readableBytes() + extras.readableBytes() + payloadSize
-            log.trace(ctx) {
-                "Trying to send SET request to memcache"
-            }
-            request.requestController.whenComplete { requestController, ex ->
-                if(ex == null) {
-                    log.trace(ctx) {
-                        "Sending SET request to memcache"
-                    }
-                    requestController.sendRequest(DefaultBinaryMemcacheRequest().apply {
-                        setOpcode(BinaryMemcacheOpcodes.SET)
-                        setKey(key)
-                        setExtras(extras)
-                        setTotalBodyLength(totalBodyLength)
-                    })
-                    log.trace(ctx) {
-                        "Sending request payload to memcache"
-                    }
-                    payloadSource.use { source ->
-                        val bb = ByteBuffer.allocate(chunkSize)
-                        while (true) {
-                            val read = source.read(bb)
-                            bb.limit()
-                            if(read >= 0 && bb.position() < chunkSize && bb.hasRemaining()) {
-                                continue
+        val request = inProgressRequest
+        when(request) {
+            is InProgressPutRequest -> {
+                inProgressRequest = null
+                log.trace(ctx) {
+                    "Received last chunk of ${msg.content().readableBytes()} bytes for memcache"
+                }
+                request.write(msg.content())
+                val key = request.digest.retainedDuplicate()
+                val (payloadSize, payloadSource) = request.commit()
+                val extras = ctx.alloc().buffer(8, 8)
+                extras.writeInt(0)
+                extras.writeInt(encodeExpiry(maxAge))
+                val totalBodyLength = request.digest.readableBytes() + extras.readableBytes() + payloadSize
+                log.trace(ctx) {
+                    "Trying to send SET request to memcache"
+                }
+                request.requestController.whenComplete { requestController, ex ->
+                    if(ex == null) {
+                        log.trace(ctx) {
+                            "Sending SET request to memcache"
+                        }
+                        requestController.sendRequest(DefaultBinaryMemcacheRequest().apply {
+                            setOpcode(BinaryMemcacheOpcodes.SET)
+                            setKey(key)
+                            setExtras(extras)
+                            setTotalBodyLength(totalBodyLength)
+                        })
+                        log.trace(ctx) {
+                            "Sending request payload to memcache"
+                        }
+                        payloadSource.use { source ->
+                            val bb = ByteBuffer.allocate(chunkSize)
+                            while (true) {
+                                val read = source.read(bb)
+                                bb.limit()
+                                if(read >= 0 && bb.position() < chunkSize && bb.hasRemaining()) {
+                                    continue
+                                }
+                                val chunk = ctx.alloc().buffer(chunkSize)
+                                bb.flip()
+                                chunk.writeBytes(bb)
+                                bb.clear()
+                                log.trace(ctx) {
+                                    "Sending ${chunk.readableBytes()} bytes chunk to memcache"
+                                }
+                                if(read < 0) {
+                                    requestController.sendContent(DefaultLastMemcacheContent(chunk))
+                                    break
+                                } else {
+                                    requestController.sendContent(DefaultMemcacheContent(chunk))
+                                }
                             }
-                            val chunk = ctx.alloc().buffer(chunkSize)
-                            bb.flip()
-                            chunk.writeBytes(bb)
-                            bb.clear()
-                            log.trace(ctx) {
-                                "Sending ${chunk.readableBytes()} bytes chunk to memcache"
+                        }
+                    } else {
+                        payloadSource.close()
+                    }
+                }
+            }
+            is InProgressGetRequest -> {
+                log.debug(ctx) {
+                    "Fetching ${request.key} from memcache"
+                }
+                val key = ctx.alloc().buffer().also {
+                    it.writeBytes(processCacheKey(request.key, digestAlgorithm))
+                }
+                val responseHandler = object : MemcacheResponseHandler {
+                    override fun responseReceived(response: BinaryMemcacheResponse) {
+                        val status = response.status()
+                        when (status) {
+                            BinaryMemcacheResponseStatus.SUCCESS -> {
+                                log.debug(ctx) {
+                                    "Cache hit for key ${request.key} on memcache"
+                                }
+                                inProgressRequest = InProgressGetRequest(request.key, ctx)
                             }
-                            if(read < 0) {
-                                requestController.sendContent(DefaultLastMemcacheContent(chunk))
-                                break
-                            } else {
-                                requestController.sendContent(DefaultMemcacheContent(chunk))
+
+                            BinaryMemcacheResponseStatus.KEY_ENOENT -> {
+                                log.debug(ctx) {
+                                    "Cache miss for key ${request.key} on memcache"
+                                }
+                                sendMessageAndFlush(ctx, CacheValueNotFoundResponse())
                             }
                         }
                     }
-                } else {
-                    payloadSource.close()
+
+                    override fun contentReceived(content: MemcacheContent) {
+                        log.trace(ctx) {
+                            "${if(content is LastMemcacheContent) "Last chunk" else "Chunk"} of ${content.content().readableBytes()} bytes received from memcache for key ${request.key}"
+                        }
+                        (inProgressRequest as? InProgressGetRequest).let { inProgressGetRequest ->
+                            inProgressGetRequest?.write(content.content())
+                            if (content is LastMemcacheContent) {
+                                inProgressRequest = null
+                                inProgressGetRequest?.commit()
+                            }
+                        }
+                    }
+
+                    override fun exceptionCaught(ex: Throwable) {
+                        (inProgressRequest as? InProgressGetRequest).let { inProgressGetRequest ->
+                            inProgressGetRequest?.let {
+                                inProgressRequest = null
+                                it.rollback()
+                            }
+                        }
+                        this@MemcacheCacheHandler.exceptionCaught(ctx, ex)
+                    }
+                }
+                client.sendRequest(key.retainedDuplicate(), responseHandler).thenAccept { requestHandle ->
+                    log.trace(ctx) {
+                        "Sending GET request for key ${request.key} to memcache"
+                    }
+                    val request = DefaultBinaryMemcacheRequest(key).apply {
+                        setOpcode(BinaryMemcacheOpcodes.GET)
+                    }
+                    requestHandle.sendRequest(request)
+                    requestHandle.sendContent(LastMemcacheContent.EMPTY_LAST_CONTENT)
                 }
             }
         }
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-        inProgressGetRequest?.let {
-            inProgressGetRequest = null
-            it.rollback()
-        }
-        inProgressPutRequest?.let {
-            inProgressPutRequest = null
-            it.requestController.thenAccept { controller ->
-                controller.exceptionCaught(cause)
+        val request = inProgressRequest
+        when(request) {
+            is InProgressPutRequest -> {
+                inProgressRequest = null
+                request.requestController.thenAccept { controller ->
+                    controller.exceptionCaught(cause)
+                }
+                request.rollback()
             }
-            it.rollback()
+            is InProgressGetRequest -> {
+                inProgressRequest = null
+                request.rollback()
+            }
         }
         super.exceptionCaught(ctx, cause)
     }

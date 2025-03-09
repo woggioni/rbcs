@@ -154,7 +154,7 @@ class BasicAuthServerTest : AbstractBasicAuthServerTest() {
     }
 
     @Test
-    @Order(6)
+    @Order(8)
     fun getAsAThrottledUser() {
         val client: HttpClient = HttpClient.newHttpClient()
 
@@ -172,7 +172,7 @@ class BasicAuthServerTest : AbstractBasicAuthServerTest() {
     }
 
     @Test
-    @Order(7)
+    @Order(9)
     fun getAsAThrottledUser2() {
         val client: HttpClient = HttpClient.newHttpClient()
 

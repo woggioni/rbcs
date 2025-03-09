@@ -75,6 +75,10 @@ class InMemoryCache(
                                 cond.await(interval.toMillis(), TimeUnit.MILLISECONDS)
                             }
                         }
+                        map.forEach {
+                            it.value.content.release()
+                        }
+                        map.clear()
                     }
                     complete(null)
                 } catch (ex: Throwable) {

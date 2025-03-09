@@ -179,6 +179,8 @@ object GraalNativeImageConfiguration {
             } catch (ee : ExecutionException) {
             }
         }
-        RemoteBuildCacheServerCli.main("--help")
+        System.setProperty("net.woggioni.rbcs.conf.dir", System.getProperty("gradle.tmp.dir"))
+        RemoteBuildCacheServerCli.createCommandLine().execute("--version")
+        RemoteBuildCacheServerCli.createCommandLine().execute("server", "-t", "PT10S")
     }
 }

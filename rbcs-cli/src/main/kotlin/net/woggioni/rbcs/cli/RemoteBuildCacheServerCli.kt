@@ -26,8 +26,8 @@ class RemoteBuildCacheServerCli : RbcsCommand() {
         private fun setPropertyIfNotPresent(key: String, value: String) {
             System.getProperty(key) ?: System.setProperty(key, value)
         }
-        @JvmStatic
-        fun main(vararg args: String) {
+
+        fun createCommandLine() : CommandLine {
             setPropertyIfNotPresent("logback.configurationFile", "net/woggioni/rbcs/cli/logback.xml")
             setPropertyIfNotPresent("io.netty.leakDetectionLevel", "DISABLED")
             val currentClassLoader = RemoteBuildCacheServerCli::class.java.classLoader
@@ -56,7 +56,12 @@ class RemoteBuildCacheServerCli : RbcsCommand() {
                     addSubcommand(GetCommand())
                     addSubcommand(HealthCheckCommand())
                 })
-            System.exit(commandLine.execute(*args))
+            return commandLine
+        }
+
+        @JvmStatic
+        fun main(vararg args: String) {
+            System.exit(createCommandLine().execute(*args))
         }
     }
 

@@ -54,6 +54,7 @@ import net.woggioni.rbcs.server.auth.RoleAuthorizer
 import net.woggioni.rbcs.server.configuration.Parser
 import net.woggioni.rbcs.server.configuration.Serializer
 import net.woggioni.rbcs.server.exception.ExceptionHandler
+import net.woggioni.rbcs.server.handler.BlackHoleRequestHandler
 import net.woggioni.rbcs.server.handler.MaxRequestSizeHandler
 import net.woggioni.rbcs.server.handler.ServerHandler
 import net.woggioni.rbcs.server.throttling.BucketManager
@@ -361,6 +362,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             }
             pipeline.addLast(eventExecutorGroup, ServerHandler.NAME, serverHandler)
             pipeline.addLast(ExceptionHandler.NAME, ExceptionHandler)
+            pipeline.addLast(BlackHoleRequestHandler.NAME, BlackHoleRequestHandler())
         }
 
         override fun asyncClose() = cacheHandlerFactory.asyncClose()

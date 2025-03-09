@@ -2,7 +2,6 @@ package net.woggioni.rbcs.server.cache
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.handler.codec.http.LastHttpContent
 import io.netty.handler.stream.ChunkedNioFile
 import net.woggioni.rbcs.api.CacheHandler
@@ -29,10 +28,16 @@ class FileSystemCacheHandler(
     private val chunkSize: Int
 ) : CacheHandler() {
 
+    private interface InProgressRequest{
+
+    }
+
+    private class InProgressGetRequest(val request : CacheGetRequest) : InProgressRequest
+
     private inner class InProgressPutRequest(
         val key : String,
         private val fileSink : FileSystemCache.FileSink
-    ) {
+    ) : InProgressRequest {
 
         private val stream = Channels.newOutputStream(fileSink.channel).let {
             if (compressionEnabled) {
@@ -56,7 +61,7 @@ class FileSystemCacheHandler(
         }
     }
 
-    private var inProgressPutRequest: InProgressPutRequest? = null
+    private var inProgressRequest: InProgressRequest? = null
 
     override fun channelRead0(ctx: ChannelHandlerContext, msg: CacheMessage) {
         when (msg) {
@@ -69,55 +74,64 @@ class FileSystemCacheHandler(
     }
 
     private fun handleGetRequest(ctx: ChannelHandlerContext, msg: CacheGetRequest) {
-        val key = String(Base64.getUrlEncoder().encode(processCacheKey(msg.key, digestAlgorithm)))
-        cache.get(key)?.also { entryValue ->
-            sendMessageAndFlush(ctx, CacheValueFoundResponse(msg.key, entryValue.metadata))
-            entryValue.channel.let { channel ->
-                if(compressionEnabled) {
-                    InflaterInputStream(Channels.newInputStream(channel)).use { stream ->
+        inProgressRequest = InProgressGetRequest(msg)
 
-                        outerLoop@
-                        while (true) {
-                            val buf = ctx.alloc().heapBuffer(chunkSize)
-                            while(buf.readableBytes() < chunkSize) {
-                                val read = buf.writeBytes(stream, chunkSize)
-                                if(read < 0) {
-                                    sendMessageAndFlush(ctx, LastCacheContent(buf))
-                                    break@outerLoop
-                                }
-                            }
-                            sendMessageAndFlush(ctx, CacheContent(buf))
-                        }
-                    }
-                } else {
-                    sendMessage(ctx, ChunkedNioFile(channel, entryValue.offset, entryValue.size - entryValue.offset, chunkSize))
-                    sendMessageAndFlush(ctx, LastHttpContent.EMPTY_LAST_CONTENT)
-                }
-            }
-        } ?: sendMessageAndFlush(ctx, CacheValueNotFoundResponse())
     }
 
     private fun handlePutRequest(ctx: ChannelHandlerContext, msg: CachePutRequest) {
         val key = String(Base64.getUrlEncoder().encode(processCacheKey(msg.key, digestAlgorithm)))
         val sink = cache.put(key, msg.metadata)
-        inProgressPutRequest = InProgressPutRequest(msg.key, sink)
+        inProgressRequest = InProgressPutRequest(msg.key, sink)
     }
 
     private fun handleCacheContent(ctx: ChannelHandlerContext, msg: CacheContent) {
-        inProgressPutRequest!!.write(msg.content())
+        val request = inProgressRequest
+        if(request is InProgressPutRequest) {
+            request.write(msg.content())
+        }
     }
 
     private fun handleLastCacheContent(ctx: ChannelHandlerContext, msg: LastCacheContent) {
-        inProgressPutRequest?.let { request ->
-            inProgressPutRequest = null
-            request.write(msg.content())
-            request.commit()
-            sendMessageAndFlush(ctx, CachePutResponse(request.key))
+        when(val request = inProgressRequest) {
+            is InProgressPutRequest -> {
+                inProgressRequest = null
+                request.write(msg.content())
+                request.commit()
+                sendMessageAndFlush(ctx, CachePutResponse(request.key))
+            }
+            is InProgressGetRequest -> {
+                val key = String(Base64.getUrlEncoder().encode(processCacheKey(request.request.key, digestAlgorithm)))
+                cache.get(key)?.also { entryValue ->
+                    sendMessageAndFlush(ctx, CacheValueFoundResponse(request.request.key, entryValue.metadata))
+                    entryValue.channel.let { channel ->
+                        if(compressionEnabled) {
+                            InflaterInputStream(Channels.newInputStream(channel)).use { stream ->
+
+                                outerLoop@
+                                while (true) {
+                                    val buf = ctx.alloc().heapBuffer(chunkSize)
+                                    while(buf.readableBytes() < chunkSize) {
+                                        val read = buf.writeBytes(stream, chunkSize)
+                                        if(read < 0) {
+                                            sendMessageAndFlush(ctx, LastCacheContent(buf))
+                                            break@outerLoop
+                                        }
+                                    }
+                                    sendMessageAndFlush(ctx, CacheContent(buf))
+                                }
+                            }
+                        } else {
+                            sendMessage(ctx, ChunkedNioFile(channel, entryValue.offset, entryValue.size - entryValue.offset, chunkSize))
+                            sendMessageAndFlush(ctx, LastHttpContent.EMPTY_LAST_CONTENT)
+                        }
+                    }
+                } ?: sendMessageAndFlush(ctx, CacheValueNotFoundResponse())
+            }
         }
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-        inProgressPutRequest?.rollback()
+        (inProgressRequest as? InProgressPutRequest)?.rollback()
         super.exceptionCaught(ctx, cause)
     }
 }

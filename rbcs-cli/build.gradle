@@ -105,6 +105,7 @@ tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfi
     systemProperty('io.netty.leakDetectionLevel', 'DISABLED')
     modularity.inferModulePath = false
     enabled = true
+    systemProperty('gradle.tmp.dir', temporaryDir.toString())
 }
 
 nativeImage {

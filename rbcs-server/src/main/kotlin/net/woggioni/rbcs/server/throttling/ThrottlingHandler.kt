@@ -94,6 +94,9 @@ class ThrottlingHandler(private val bucketManager : BucketManager,
                     handleBuckets(buckets, ctx, msg, false)
                 }, waitDuration.toMillis(), TimeUnit.MILLISECONDS)
             } else {
+                queuedContent?.let { qc ->
+                    qc.forEach { it.release() }
+                }
                 this.queuedContent = null
                 sendThrottledResponse(ctx, waitDuration)
             }
