@@ -1,16 +1,15 @@
 package net.woggioni.rbcs.api;
 
 
-import lombok.EqualsAndHashCode;
-import lombok.NonNull;
-import lombok.Value;
-
 import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.EqualsAndHashCode;
+import lombok.NonNull;
+import lombok.Value;
 
 @Value
 public class Configuration {

@@ -4,7 +4,6 @@ import io.netty.channel.ChannelFactory
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.socket.DatagramChannel
 import io.netty.channel.socket.SocketChannel
-import io.netty.util.concurrent.Future
 import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.common.RBCS

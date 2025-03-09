@@ -2,7 +2,6 @@ package net.woggioni.rbcs.server.cache
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.SimpleChannelInboundHandler
 import net.woggioni.rbcs.api.CacheHandler
 import net.woggioni.rbcs.api.message.CacheMessage
 import net.woggioni.rbcs.api.message.CacheMessage.CacheContent
@@ -14,7 +13,6 @@ import net.woggioni.rbcs.api.message.CacheMessage.CacheValueNotFoundResponse
 import net.woggioni.rbcs.api.message.CacheMessage.LastCacheContent
 import net.woggioni.rbcs.common.ByteBufOutputStream
 import net.woggioni.rbcs.common.RBCS.processCacheKey
-import net.woggioni.rbcs.common.trace
 import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterOutputStream

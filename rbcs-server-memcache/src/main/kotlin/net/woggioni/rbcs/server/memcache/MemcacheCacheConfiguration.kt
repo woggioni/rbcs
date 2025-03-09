@@ -1,7 +1,6 @@
 package net.woggioni.rbcs.server.memcache
 
 import io.netty.channel.ChannelFactory
-import io.netty.channel.ChannelHandler
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.pool.FixedChannelPool
 import io.netty.channel.socket.DatagramChannel
