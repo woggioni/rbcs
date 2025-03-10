@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rbcs-server
+data:
+  rbcs-server.xml: |
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <rbcs:server xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
+                     xmlns:rbcs="urn:net.woggioni.rbcs.server"
+                     xmlns:rbcs-memcache="urn:net.woggioni.rbcs.server.memcache"
+                     xs:schemaLocation="urn:net.woggioni.rbcs.server.memcache jpms://net.woggioni.rbcs.server.memcache/net/woggioni/rbcs/server/memcache/schema/rbcs-memcache.xsd urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs-server.xsd"
+        >
+            <bind host="0.0.0.0" port="8080" incoming-connections-backlog-size="128"/>
+            <connection
+                    max-request-size="0xd000000"
+                    idle-timeout="PT15S"
+                    read-idle-timeout="PT30S"
+                    write-idle-timeout="PT30S"/>
+            <event-executor use-virtual-threads="true"/>
+            <cache xs:type="rbcs:inMemoryCacheType" max-age="P7D" enable-compression="false" max-size="0x100000000" />
+        </rbcs:server>
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbcs-deployment
+  labels:
+    app: rbcs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rbcs
+  template:
+    metadata:
+      labels:
+        app: rbcs
+    spec:
+      containers:
+        - name: rbcs
+          image: gitea.woggioni.net/woggioni/rbcs:nuc
+          imagePullPolicy: Always
+          args: ['server', '-c', 'rbcs-server.xml']
+          ports:
+          - containerPort: 8080
+          volumeMounts:
+          - name: config-volume
+            mountPath: /rbcs/rbcs-server.xml
+            subPath: rbcs-server.xml
+          resources:
+            requests:
+              memory: "0.5Gi"
+              cpu: "1"
+            limits:
+              memory: "4Gi"
+              cpu: "3.5"      
+      volumes:
+        - name: config-volume
+          configMap:
+            name: rbcs-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbcs-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: rbcs
+
