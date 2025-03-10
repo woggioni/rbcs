@@ -52,7 +52,7 @@ spec:
     spec:
       containers:
         - name: rbcs
-          image: gitea.woggioni.net/woggioni/rbcs:nuc
+          image: gitea.woggioni.net/woggioni/rbcs:native
           imagePullPolicy: Always
           args: ['server', '-c', 'rbcs-server.xml']
           ports:
