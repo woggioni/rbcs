@@ -4,13 +4,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import net.woggioni.rbcs.api.CacheHandler
 import net.woggioni.rbcs.api.message.CacheMessage
-import net.woggioni.rbcs.api.message.CacheMessage.CacheContent
-import net.woggioni.rbcs.api.message.CacheMessage.CacheGetRequest
-import net.woggioni.rbcs.api.message.CacheMessage.CachePutRequest
-import net.woggioni.rbcs.api.message.CacheMessage.CachePutResponse
-import net.woggioni.rbcs.api.message.CacheMessage.CacheValueFoundResponse
-import net.woggioni.rbcs.api.message.CacheMessage.CacheValueNotFoundResponse
-import net.woggioni.rbcs.api.message.CacheMessage.LastCacheContent
+import net.woggioni.rbcs.api.message.CacheMessage.*
 import net.woggioni.rbcs.common.ByteBufOutputStream
 import net.woggioni.rbcs.common.RBCS.processCacheKey
 import java.util.zip.Deflater
@@ -41,18 +35,14 @@ class InMemoryCacheHandler(
 
     private inner class InProgressPlainPutRequest(ctx: ChannelHandlerContext, override val request: CachePutRequest) :
         InProgressPutRequest {
-        override val buf = ctx.alloc().compositeBuffer()
-
-        private val stream = ByteBufOutputStream(buf).let {
-            if (compressionEnabled) {
-                DeflaterOutputStream(it, Deflater(compressionLevel))
-            } else {
-                it
-            }
-        }
+        override val buf = ctx.alloc().compositeHeapBuffer()
 
         override fun append(buf: ByteBuf) {
-            this.buf.addComponent(true, buf.retain())
+            if(buf.isDirect) {
+                this.buf.writeBytes(buf)
+            } else {
+                this.buf.addComponent(true, buf.retain())
+            }
         }
 
         override fun close() {

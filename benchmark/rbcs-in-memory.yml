@@ -17,7 +17,7 @@ data:
                     read-idle-timeout="PT30S"
                     write-idle-timeout="PT30S"/>
             <event-executor use-virtual-threads="true"/>
-            <cache xs:type="rbcs:inMemoryCacheType" max-age="P7D" enable-compression="false" max-size="0x100000000" />
+            <cache xs:type="rbcs:inMemoryCacheType" max-age="P7D" enable-compression="false" max-size="0xb0000000" />
         </rbcs:server>
 
 ---
