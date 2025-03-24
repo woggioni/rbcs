@@ -17,7 +17,7 @@ data:
                     read-idle-timeout="PT30S"
                     write-idle-timeout="PT30S"/>
             <event-executor use-virtual-threads="true"/>
-            <cache xs:type="rbcs:fileSystemCacheType" max-age="P7D" enable-compression="false" path="/rbcs/cache"/>
+            <cache xs:type="rbcs:fileSystemCacheType" max-age="P7D" enable-compression="false" path="/home/luser/cache" digest="SHA-224"/>
         </rbcs:server>
 
 ---
@@ -52,24 +52,25 @@ spec:
     spec:
       containers:
         - name: rbcs
-          image: gitea.woggioni.net/woggioni/rbcs:native
+          image: gitea.woggioni.net/woggioni/rbcs:memcache
           imagePullPolicy: Always
+          command: ["java", "-Dlogback.configurationFile=logback.xml", "-XX:MaxRAMPercentage=75","-jar", "/home/luser/rbcs.jar"]
           args: ['server', '-c', 'rbcs-server.xml']
           ports:
           - containerPort: 8080
           volumeMounts:
           - name: config-volume
-            mountPath: /rbcs/rbcs-server.xml
+            mountPath: /home/luser/rbcs-server.xml
             subPath: rbcs-server.xml
           - name: cache-volume
-            mountPath: /rbcs/cache
+            mountPath: /home/luser/cache
           resources:
             requests:
               memory: "0.25Gi"
               cpu: "1"
             limits:
-              memory: "0.25Gi"
-              cpu: "3.5"      
+              memory: "0.5Gi"
+              cpu: "1"
       volumes:
         - name: config-volume
           configMap:

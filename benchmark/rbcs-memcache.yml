@@ -18,7 +18,7 @@ data:
                     write-idle-timeout="PT30S"/>
             <event-executor use-virtual-threads="true"/>
             <!--cache xs:type="rbcs:inMemoryCacheType" max-age="P7D" enable-compression="false" max-size="0x10000000" /-->
-            <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" chunk-size="0x1000" digest="MD5">
+            <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" chunk-size="0x1000" digest="SHA-224">
                 <server host="memcached-service" port="11211" max-connections="256"/>
             </cache>
         </rbcs:server>
@@ -43,22 +43,23 @@ spec:
     spec:
       containers:
         - name: rbcs
-          image: gitea.woggioni.net/woggioni/rbcs:native
+          image: gitea.woggioni.net/woggioni/rbcs:memcache
           imagePullPolicy: Always
+          command: ["java", "-Dlogback.configurationFile=logback.xml", "-XX:MaxRAMPercentage=75","-jar", "/home/luser/rbcs.jar"]
           args: ['server', '-c', 'rbcs-server.xml']
           ports:
           - containerPort: 8080
           volumeMounts:
           - name: config-volume
-            mountPath: /rbcs/rbcs-server.xml
+            mountPath: /home/luser/rbcs-server.xml
             subPath: rbcs-server.xml
           resources:
             requests:
-              memory: "0.25Gi"
+              memory: "0.5Gi"
               cpu: "1"
             limits:
-              memory: "0.25Gi"
-              cpu: "1"      
+              memory: "0.5Gi"
+              cpu: "3.5"
       volumes:
         - name: config-volume
           configMap:
@@ -94,7 +95,7 @@ spec:
       containers:
       - name: memcached
         image: memcached
-        args: ["-I", "128m", "-m", "4096"]
+        args: ["-I", "128m", "-m", "4096", "-t", "1"]
         resources:
           requests:
             memory: "1Gi"
