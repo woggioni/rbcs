@@ -18,6 +18,7 @@ module net.woggioni.rbcs.server {
     requires net.woggioni.jwo;
     requires net.woggioni.rbcs.common;
     requires net.woggioni.rbcs.api;
+    requires com.github.benmanes.caffeine;
 
     exports net.woggioni.rbcs.server;
 
