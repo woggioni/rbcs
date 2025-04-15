@@ -33,13 +33,11 @@
   }, {
     "pattern":"\\Qnet/woggioni/rbcs/client/schema/rbcs-client.xsd\\E"
   }, {
+    "pattern":"\\Qnet/woggioni/rbcs/server/memcache/schema/rbcs-memcache.xsd\\E"
+  }, {
     "pattern":"\\Qnet/woggioni/rbcs/server/rbcs-default.xml\\E"
   }, {
     "pattern":"\\Qnet/woggioni/rbcs/server/schema/rbcs-server.xsd\\E"
-  }, {
-    "pattern":"\\Q/net/woggioni/rbcs/server/memcache/schema/rbcs-memcache.xsd\\E"
-  }, {
-    "pattern":"java.base:\\Qsun/text/resources/LineBreakIteratorData\\E"
   }]},
   "bundles":[{
     "name":"com.sun.org.apache.xerces.internal.impl.xpath.regex.message",

@@ -18,6 +18,7 @@ import net.woggioni.gradle.graalvm.UpxTask
 import net.woggioni.gradle.graalvm.JlinkPlugin
 import net.woggioni.gradle.graalvm.JlinkTask
 
+
 sourceSets {
     configureNativeImage {
         java {
@@ -29,6 +30,13 @@ sourceSets {
 }
 
 configurations {
+
+    implementation {
+        resolutionStrategy {
+            exclude group: 'io.netty', module: 'netty-codec-marshalling'
+            exclude group: 'io.netty', module: 'netty-codec-protobuf'
+        }
+    }
     release {
         transitive = false
         canBeConsumed = true
@@ -120,16 +128,36 @@ nativeImage {
     linkAtBuildTime = false
     classpath = project.files(jarTaskProvider, configurations.nativeImage)
     compressExecutable = true
-    compressionLevel = 10
+    compressionLevel = 6
     useLZMA = false
 }
 
 Provider<UpxTask> upxTaskProvider = tasks.named(NativeImagePlugin.UPX_TASK_NAME, UpxTask) {
 }
 
-tasks.named(JlinkPlugin.JLINK_TASK_NAME, JlinkTask) {
+Provider<JlinkTask> jlinkTaskProvider = tasks.named(JlinkPlugin.JLINK_TASK_NAME, JlinkTask) {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+        vendor = JvmVendorSpec.GRAAL_VM
+    }
+
     mainClass = mainClassName
     mainModule = 'net.woggioni.rbcs.cli'
+    classpath = project.files(
+            configurations.configureNativeImageRuntimeClasspath,
+            sourceSets.configureNativeImage.output
+    )
+    additionalModules = [
+        'net.woggioni.rbcs.server.memcache',
+        'ch.qos.logback.classic',
+        'jdk.crypto.ec'
+    ]
+    compressionLevel = 2
+    stripDebug = false
+}
+
+Provider<Tar> jlinkDistTarTaskProvider = tasks.named(JlinkPlugin.JLINK_DIST_TAR_TASK_NAME, Tar) {
+    exclude 'lib/libjvmcicompiler.so'
 }
 
 tasks.named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME, ProcessResources) {
@@ -143,6 +171,7 @@ tasks.named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME, ProcessResources) {
 artifacts {
     release(envelopeJarTaskProvider)
     release(upxTaskProvider)
+    release(jlinkDistTarTaskProvider)
 }
 
 publishing {
