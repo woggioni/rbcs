@@ -29,7 +29,7 @@ Provider<Copy> prepareDockerBuild = tasks.register('prepareDockerBuild', Copy) {
     group = 'docker'
     into project.layout.buildDirectory.file('docker')
     from(configurations.docker)
-    from(file('Dockerfile'))
+    from(files('Dockerfile', 'rbcs-cli.sh'))
     from(rootProject.file('conf')) {
         include 'logback.xml'
     }

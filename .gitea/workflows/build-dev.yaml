@@ -1,8 +1,8 @@
 name: CI
 on:
   push:
-    tags:
-      - '*'
+    branches:
+      - 'dev'
 jobs:
   build:
     runs-on: hostinger
@@ -39,8 +39,7 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:vanilla
-            gitea.woggioni.net/woggioni/rbcs:vanilla-${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:vanilla-dev
           target: release-vanilla
           cache-from: type=registry,ref=gitea.woggioni.net/woggioni/rbcs:buildx
       -
@@ -52,10 +51,7 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:latest
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}
-            gitea.woggioni.net/woggioni/rbcs:memcache
-            gitea.woggioni.net/woggioni/rbcs:memcache-${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:memcache-dev
           target: release-memcache
           cache-from: type=registry,ref=gitea.woggioni.net/woggioni/rbcs:buildx
           cache-to: type=registry,mode=max,compression=zstd,image-manifest=true,oci-mediatypes=true,ref=gitea.woggioni.net/woggioni/rbcs:buildx
@@ -68,8 +64,7 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:native
-            gitea.woggioni.net/woggioni/rbcs:native-${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:native-dev
           target: release-native
       -
         name: Build rbcs jlink Docker image
@@ -80,11 +75,6 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:jlink
-            gitea.woggioni.net/woggioni/rbcs:jlink-${{ steps.retrieve-version.outputs.VERSION }}-jlink
+            gitea.woggioni.net/woggioni/rbcs:jlink-dev
           target: release-jlink
-      - name: Publish artifacts
-        env:
-          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-        run: ./gradlew publish
 

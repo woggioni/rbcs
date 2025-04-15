@@ -21,3 +21,14 @@ ADD rbcs-cli.upx /rbcs/rbcs-cli
 ENV RBCS_CONFIGURATION_DIR="/rbcs"
 WORKDIR /rbcs
 ENTRYPOINT ["/rbcs/rbcs-cli", "-XX:MaximumHeapSizePercent=70"]
+
+FROM debian:12-slim AS release-jlink
+RUN mkdir -p /usr/share/java/rbcs
+RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-cli*.tar -C /usr/share/java/rbcs
+ADD --chmod=755 rbcs-cli.sh /usr/local/bin/rbcs-cli
+RUN adduser -u 1000 luser
+USER luser
+WORKDIR /home/luser
+ADD logback.xml .
+ENV JAVA_OPTS=-XX:-UseJVMCICompiler\ -Dlogback.configurationFile=logback.xml\ -XX:MaxRAMPercentage=70\ -XX:GCTimeRatio=24\ -XX:+UseZGC\ -XX:+ZGenerational
+ENTRYPOINT ["/usr/local/bin/rbcs-cli"]

@@ -11,7 +11,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
 import io.netty.channel.ChannelPromise
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.MultiThreadIoEventLoopGroup
+import io.netty.channel.nio.NioIoHandler
 import io.netty.channel.socket.DatagramChannel
 import io.netty.channel.socket.ServerSocketChannel
 import io.netty.channel.socket.SocketChannel
@@ -34,8 +35,25 @@ import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.AttributeKey
-import io.netty.util.concurrent.DefaultEventExecutorGroup
 import io.netty.util.concurrent.EventExecutorGroup
+import java.io.OutputStream
+import java.net.InetSocketAddress
+import java.nio.file.Files
+import java.nio.file.Path
+import java.security.PrivateKey
+import java.security.cert.X509Certificate
+import java.time.Duration
+import java.time.Instant
+import java.util.Arrays
+import java.util.Base64
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+import javax.naming.ldap.LdapName
+import javax.net.ssl.SSLPeerUnverifiedException
 import net.woggioni.rbcs.api.AsyncCloseable
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.exception.ConfigurationException
@@ -59,24 +77,6 @@ import net.woggioni.rbcs.server.handler.MaxRequestSizeHandler
 import net.woggioni.rbcs.server.handler.ServerHandler
 import net.woggioni.rbcs.server.throttling.BucketManager
 import net.woggioni.rbcs.server.throttling.ThrottlingHandler
-import java.io.OutputStream
-import java.net.InetSocketAddress
-import java.nio.file.Files
-import java.nio.file.Path
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
-import java.time.Duration
-import java.time.Instant
-import java.util.Arrays
-import java.util.Base64
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
-import java.util.regex.Matcher
-import java.util.regex.Pattern
-import javax.naming.ldap.LdapName
-import javax.net.ssl.SSLPeerUnverifiedException
 
 class RemoteBuildCacheServer(private val cfg: Configuration) {
 
@@ -208,7 +208,6 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
         private val cfg: Configuration,
         private val channelFactory : ChannelFactory<SocketChannel>,
         private val datagramChannelFactory : ChannelFactory<DatagramChannel>,
-        private val eventExecutorGroup: EventExecutorGroup
     ) : ChannelInitializer<Channel>(), AsyncCloseable {
 
         companion object {
@@ -360,7 +359,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                     cacheHandlerFactory.newHandler(cfg, ch.eventLoop(), channelFactory, datagramChannelFactory)
                 }
             }
-            pipeline.addLast(eventExecutorGroup, ServerHandler.NAME, serverHandler)
+            pipeline.addLast(ServerHandler.NAME, serverHandler)
             pipeline.addLast(ExceptionHandler.NAME, ExceptionHandler)
             pipeline.addLast(BlackHoleRequestHandler.NAME, BlackHoleRequestHandler())
         }
@@ -441,20 +440,13 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
 
     fun run(): ServerHandle {
         // Create the multithreaded event loops for the server
-        val bossGroup = NioEventLoopGroup(1)
+        val bossGroup = MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory())
         val channelFactory = ChannelFactory<SocketChannel> { NioSocketChannel() }
         val datagramChannelFactory = ChannelFactory<DatagramChannel> { NioDatagramChannel() }
         val serverChannelFactory = ChannelFactory<ServerSocketChannel> { NioServerSocketChannel() }
-        val workerGroup = NioEventLoopGroup(0)
-        val eventExecutorGroup = run {
-            val threadFactory = if (cfg.eventExecutor.isUseVirtualThreads) {
-                Thread.ofVirtual().factory()
-            } else {
-                null
-            }
-            DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors(), threadFactory)
-        }
-        val serverInitializer = ServerInitializer(cfg, channelFactory, datagramChannelFactory, workerGroup)
+        val workerGroup = MultiThreadIoEventLoopGroup(0, NioIoHandler.newFactory())
+
+        val serverInitializer = ServerInitializer(cfg, channelFactory, datagramChannelFactory)
         val bootstrap = ServerBootstrap().apply {
             // Configure the server
             group(bossGroup, workerGroup)
@@ -475,7 +467,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
         return ServerHandle(
             httpChannel.closeFuture(),
             bossGroup,
-            setOf(workerGroup, eventExecutorGroup),
+            setOf(workerGroup),
             serverInitializer
         )
     }

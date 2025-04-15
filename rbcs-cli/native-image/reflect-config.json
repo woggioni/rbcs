@@ -121,6 +121,14 @@
   "fields":[{"name":"refCnt"}]
 },
 {
+  "name":"io.netty.buffer.AdaptivePoolingAllocator$Chunk",
+  "fields":[{"name":"refCnt"}]
+},
+{
+  "name":"io.netty.buffer.AdaptivePoolingAllocator$Magazine",
+  "fields":[{"name":"nextInLine"}]
+},
+{
   "name":"io.netty.channel.AbstractChannelHandlerContext",
   "fields":[{"name":"handlerState"}]
 },
@@ -284,19 +292,12 @@
   "fields":[{"name":"producerIndex"}]
 },
 {
-  "name":"io.netty.util.internal.shaded.org.jctools.queues.unpadded.MpscUnpaddedArrayQueueConsumerIndexField",
+  "name":"io.netty.util.internal.shaded.org.jctools.queues.MpmcArrayQueueConsumerIndexField",
   "fields":[{"name":"consumerIndex"}]
 },
 {
-  "name":"io.netty.util.internal.shaded.org.jctools.queues.unpadded.MpscUnpaddedArrayQueueProducerIndexField",
+  "name":"io.netty.util.internal.shaded.org.jctools.queues.MpmcArrayQueueProducerIndexField",
   "fields":[{"name":"producerIndex"}]
-},
-{
-  "name":"io.netty.util.internal.shaded.org.jctools.queues.unpadded.MpscUnpaddedArrayQueueProducerLimitField",
-  "fields":[{"name":"producerLimit"}]
-},
-{
-  "name":"java.io.FilePermission"
 },
 {
   "name":"java.lang.Object",
@@ -308,25 +309,13 @@
   "methods":[{"name":"current","parameterTypes":[] }, {"name":"pid","parameterTypes":[] }]
 },
 {
-  "name":"java.lang.RuntimePermission"
-},
-{
   "name":"java.lang.System",
   "methods":[{"name":"console","parameterTypes":[] }]
 },
 {
   "name":"java.lang.Thread",
-  "fields":[{"name":"threadLocalRandomProbe"}]
-},
-{
-  "name":"java.net.NetPermission"
-},
-{
-  "name":"java.net.SocketPermission"
-},
-{
-  "name":"java.net.URLPermission",
-  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","java.lang.String"] }]
+  "fields":[{"name":"threadLocalRandomProbe"}],
+  "methods":[{"name":"isVirtual","parameterTypes":[] }]
 },
 {
   "name":"java.nio.Bits",
@@ -359,16 +348,10 @@
   "name":"java.security.AlgorithmParametersSpi"
 },
 {
-  "name":"java.security.AllPermission"
-},
-{
   "name":"java.security.KeyStoreSpi"
 },
 {
   "name":"java.security.SecureRandomParameters"
-},
-{
-  "name":"java.security.SecurityPermission"
 },
 {
   "name":"java.sql.Connection"
@@ -445,9 +428,6 @@
   "methods":[{"name":"parse","parameterTypes":["java.lang.CharSequence"] }]
 },
 {
-  "name":"java.util.PropertyPermission"
-},
-{
   "name":"java.util.concurrent.ForkJoinTask",
   "fields":[{"name":"aux"}, {"name":"status"}]
 },
@@ -468,20 +448,9 @@
   "fields":[{"name":"value"}]
 },
 {
-  "name":"java.util.zip.Adler32",
-  "methods":[{"name":"update","parameterTypes":["java.nio.ByteBuffer"] }]
-},
-{
-  "name":"java.util.zip.CRC32",
-  "methods":[{"name":"update","parameterTypes":["java.nio.ByteBuffer"] }]
-},
-{
   "name":"javax.security.auth.x500.X500Principal",
   "fields":[{"name":"thisX500Name"}],
   "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
-},
-{
-  "name":"javax.smartcardio.CardPermission"
 },
 {
   "name":"jdk.internal.misc.Unsafe",
@@ -589,6 +558,9 @@
   "methods":[{"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }]
 },
 {
+  "name":"net.woggioni.rbcs.server.handler.BlackHoleRequestHandler"
+},
+{
   "name":"net.woggioni.rbcs.server.handler.MaxRequestSizeHandler",
   "methods":[{"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
 },
@@ -615,7 +587,7 @@
 {
   "name":"sun.misc.Unsafe",
   "fields":[{"name":"theUnsafe"}],
-  "methods":[{"name":"copyMemory","parameterTypes":["java.lang.Object","long","java.lang.Object","long","long"] }, {"name":"getAndAddLong","parameterTypes":["java.lang.Object","long","long"] }, {"name":"getAndSetObject","parameterTypes":["java.lang.Object","long","java.lang.Object"] }, {"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }, {"name":"storeFence","parameterTypes":[] }]
+  "methods":[{"name":"copyMemory","parameterTypes":["java.lang.Object","long","java.lang.Object","long","long"] }, {"name":"getAndAddLong","parameterTypes":["java.lang.Object","long","long"] }, {"name":"getAndSetObject","parameterTypes":["java.lang.Object","long","java.lang.Object"] }, {"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
 },
 {
   "name":"sun.nio.ch.SelectorImpl",
@@ -635,10 +607,6 @@
 },
 {
   "name":"sun.security.provider.DSA$SHA256withDSA",
-  "methods":[{"name":"<init>","parameterTypes":[] }]
-},
-{
-  "name":"sun.security.provider.JavaKeyStore$JKS",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
@@ -727,6 +695,14 @@
 },
 {
   "name":"sun.security.x509.CertificatePoliciesExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.ExtendedKeyUsageExtension",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
+},
+{
+  "name":"sun.security.x509.IssuerAlternativeNameExtension",
   "methods":[{"name":"<init>","parameterTypes":["java.lang.Boolean","java.lang.Object"] }]
 },
 {
