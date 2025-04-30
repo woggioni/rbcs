@@ -53,7 +53,9 @@
 <!--        <Connector port="8080" protocol="HTTP/1.1" executor="tomcatThreadPool"-->
 <!--                   connectionTimeout="20000"-->
 <!--                   redirectPort="8443" />-->
-        <Connector port="8080" protocol="HTTP/1.1"
+        <Connector port="8080" protocol="org.apache.coyote.http11.Http11NioProtocol"
+                   maxKeepAliveRequests="1000000"
+                   keepAliveTimeout="-1"
                    connectionTimeout="20000"
                    redirectPort="8443" />
         <!-- A "Connector" using the shared thread pool-->
