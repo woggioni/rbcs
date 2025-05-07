@@ -7,8 +7,10 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelOption
 import io.netty.channel.ChannelPipeline
+import io.netty.channel.IoEventLoopGroup
+import io.netty.channel.MultiThreadIoEventLoopGroup
 import io.netty.channel.SimpleChannelInboundHandler
-import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.nio.NioIoHandler
 import io.netty.channel.pool.AbstractChannelPoolHandler
 import io.netty.channel.pool.ChannelPool
 import io.netty.channel.pool.FixedChannelPool
@@ -32,12 +34,8 @@ import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.concurrent.Future
+import io.netty.util.concurrent.Future as NettyFuture
 import io.netty.util.concurrent.GenericFutureListener
-import net.woggioni.rbcs.api.CacheValueMetadata
-import net.woggioni.rbcs.common.RBCS.loadKeystore
-import net.woggioni.rbcs.common.createLogger
-import net.woggioni.rbcs.common.debug
-import net.woggioni.rbcs.common.trace
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.URI
@@ -50,19 +48,23 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 import kotlin.random.Random
-import io.netty.util.concurrent.Future as NettyFuture
+import net.woggioni.rbcs.api.CacheValueMetadata
+import net.woggioni.rbcs.common.RBCS.loadKeystore
+import net.woggioni.rbcs.common.createLogger
+import net.woggioni.rbcs.common.debug
+import net.woggioni.rbcs.common.trace
 
 class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoCloseable {
     companion object {
         private val log = createLogger<RemoteBuildCacheClient>()
     }
 
-    private val group: NioEventLoopGroup
+    private val group: IoEventLoopGroup
     private val sslContext: SslContext
     private val pool: ChannelPool
 
     init {
-        group = NioEventLoopGroup()
+        group = MultiThreadIoEventLoopGroup(NioIoHandler.newFactory())
         sslContext = SslContextBuilder.forClient().also { builder ->
             (profile.authentication as? Configuration.Authentication.TlsClientAuthenticationCredentials)?.let { tlsClientAuthenticationCredentials ->
                 builder.apply {

@@ -31,12 +31,6 @@ sourceSets {
 
 configurations {
 
-    implementation {
-        resolutionStrategy {
-            exclude group: 'io.netty', module: 'netty-codec-marshalling'
-            exclude group: 'io.netty', module: 'netty-codec-protobuf'
-        }
-    }
     release {
         transitive = false
         canBeConsumed = true
