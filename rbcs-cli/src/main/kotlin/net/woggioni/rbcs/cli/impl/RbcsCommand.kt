@@ -12,7 +12,7 @@ abstract class RbcsCommand : Runnable {
         private set
 
     protected fun findConfigurationFile(app: Application, fileName : String): Path {
-        val confDir = app.computeConfigurationDirectory()
+        val confDir = app.computeConfigurationDirectory(false)
         val configurationFile = confDir.resolve(fileName)
         return configurationFile
     }

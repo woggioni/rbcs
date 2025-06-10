@@ -16,11 +16,19 @@ WORKDIR /home/luser
 ADD logback.xml .
 ENTRYPOINT ["java", "-Dlogback.configurationFile=logback.xml", "-XX:MaxRAMPercentage=70", "-XX:GCTimeRatio=24", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "/home/luser/rbcs.jar"]
 
+FROM busybox:musl AS base-native
+RUN mkdir -p /var/lib/rbcs /etc/rbcs
+RUN adduser -D -u 1000 rbcs -h /var/lib/rbcs
+
 FROM scratch AS release-native
-ADD rbcs-cli.upx /rbcs/rbcs-cli
-ENV RBCS_CONFIGURATION_DIR="/rbcs"
-WORKDIR /rbcs
-ENTRYPOINT ["/rbcs/rbcs-cli", "-XX:MaximumHeapSizePercent=70"]
+COPY --from=base-native /etc/passwd /etc/passwd
+COPY --from=base-native /etc/rbcs /etc/rbcs
+COPY --from=base-native /var/lib/rbcs /var/lib/rbcs
+ADD rbcs-cli.upx /usr/bin/rbcs-cli
+ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
+USER rbcs
+WORKDIR /var/lib/rbcs
+ENTRYPOINT ["/usr/bin/rbcs-cli", "-XX:MaximumHeapSizePercent=70"]
 
 FROM debian:12-slim AS release-jlink
 RUN mkdir -p /usr/share/java/rbcs
