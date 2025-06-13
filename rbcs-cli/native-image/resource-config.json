@@ -35,8 +35,6 @@
   }, {
     "pattern":"\\Qnet/woggioni/rbcs/server/memcache/schema/rbcs-memcache.xsd\\E"
   }, {
-    "pattern":"\\Qnet/woggioni/rbcs/server/rbcs-default.xml\\E"
-  }, {
     "pattern":"\\Qnet/woggioni/rbcs/server/schema/rbcs-server.xsd\\E"
   }]},
   "bundles":[{
