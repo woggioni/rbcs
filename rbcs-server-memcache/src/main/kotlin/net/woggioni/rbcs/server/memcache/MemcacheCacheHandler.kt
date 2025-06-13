@@ -265,7 +265,7 @@ class MemcacheCacheHandler(
                         log.debug(ctx) {
                             "Cache miss for key ${msg.key} on memcache"
                         }
-                        sendMessageAndFlush(ctx, CacheValueNotFoundResponse())
+                        sendMessageAndFlush(ctx, CacheValueNotFoundResponse(msg.key))
                     }
                 }
             }

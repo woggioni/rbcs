@@ -152,7 +152,7 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                 }
                 val pipeline: ChannelPipeline = ch.pipeline()
 
-                profile.connection?.also { conn ->
+                profile.connection.also { conn ->
                     val readIdleTimeout = conn.readIdleTimeout.toMillis()
                     val writeIdleTimeout = conn.writeIdleTimeout.toMillis()
                     val idleTimeout = conn.idleTimeout.toMillis()
@@ -295,7 +295,6 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
     ): CompletableFuture<FullHttpResponse> {
         val responseFuture = CompletableFuture<FullHttpResponse>()
         // Custom handler for processing responses
-
         pool.acquire().addListener(object : GenericFutureListener<NettyFuture<Channel>> {
 
             override fun operationComplete(channelFuture: Future<Channel>) {
@@ -320,7 +319,7 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                         ) {
                             pipeline.remove(this)
                             responseFuture.complete(response)
-                            if(!profile.connection.requestPipelining) {
+                            if (!profile.connection.requestPipelining) {
                                 pool.release(channel)
                             }
                         }
@@ -337,21 +336,15 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
 
                         override fun channelInactive(ctx: ChannelHandlerContext) {
                             responseFuture.completeExceptionally(IOException("The remote server closed the connection"))
-                            if(!profile.connection.requestPipelining) {
-                                pool.release(channel)
-                            }
                             super.channelInactive(ctx)
+                            pool.release(channel)
                         }
 
                         override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
                             if (evt is IdleStateEvent) {
                                 val te = when (evt.state()) {
-                                    IdleState.READER_IDLE -> TimeoutException(
-                                        "Read timeout",
-                                    )
-
+                                    IdleState.READER_IDLE -> TimeoutException("Read timeout")
                                     IdleState.WRITER_IDLE -> TimeoutException("Write timeout")
-
                                     IdleState.ALL_IDLE -> TimeoutException("Idle timeout")
                                     null -> throw IllegalStateException("This should never happen")
                                 }
@@ -360,7 +353,7 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                                 if (this === pipeline.last()) {
                                     ctx.close()
                                 }
-                                if(!profile.connection.requestPipelining) {
+                                if (!profile.connection.requestPipelining) {
                                     pool.release(channel)
                                 }
                             } else {
@@ -408,11 +401,11 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
 
                     // Send the request
                     channel.writeAndFlush(request).addListener {
-                        if(!it.isSuccess) {
+                        if (!it.isSuccess) {
                             val ex = it.cause()
                             log.warn(ex.message, ex)
                         }
-                        if(profile.connection.requestPipelining) {
+                        if (profile.connection.requestPipelining) {
                             pool.release(channel)
                         }
                     }

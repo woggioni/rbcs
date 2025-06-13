@@ -143,6 +143,7 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
             100,
             serverPath,
             Configuration.EventExecutor(false),
+            Configuration.RateLimiter(true, 0x100000, 50),
             Configuration.Connection(
                 Duration.of(60, ChronoUnit.SECONDS),
                 Duration.of(30, ChronoUnit.SECONDS),

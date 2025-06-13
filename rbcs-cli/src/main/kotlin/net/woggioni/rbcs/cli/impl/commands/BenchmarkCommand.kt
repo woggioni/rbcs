@@ -101,6 +101,7 @@ class BenchmarkCommand : RbcsCommand() {
                     "Starting retrieval"
                 }
                 if (entries.isNotEmpty()) {
+                    val errorCounter = AtomicLong(0)
                     val completionCounter = AtomicLong(0)
                     val semaphore = Semaphore(profile.maxConnections * 5)
                     val start = Instant.now()
@@ -109,14 +110,20 @@ class BenchmarkCommand : RbcsCommand() {
                         if (it.hasNext()) {
                             val entry = it.next()
                             semaphore.acquire()
-                            val future = client.get(entry.first).thenApply {
-                                if (it == null) {
+                            val future = client.get(entry.first).handle { response, ex ->
+                                if(ex != null) {
+                                    errorCounter.incrementAndGet()
+                                    log.error(ex.message, ex)
+                                } else if (response == null) {
+                                    errorCounter.incrementAndGet()
                                     log.error {
                                         "Missing entry for key '${entry.first}'"
                                     }
-                                } else if (!entry.second.contentEquals(it)) {
+                                } else if (!entry.second.contentEquals(response)) {
+                                    errorCounter.incrementAndGet()
                                     log.error {
-                                        "Retrieved a value different from what was inserted for key '${entry.first}'"
+                                        "Retrieved a value different from what was inserted for key '${entry.first}': " +
+                                        "expected '${JWO.bytesToHex(entry.second)}', got '${JWO.bytesToHex(response)}' instead"
                                     }
                                 }
                             }
@@ -134,6 +141,12 @@ class BenchmarkCommand : RbcsCommand() {
                         }
                     }
                     val end = Instant.now()
+                    val errors = errorCounter.get()
+                    val successfulRetrievals = entries.size - errors
+                    val successRate = successfulRetrievals.toDouble() / entries.size
+                    log.info {
+                        "Successfully retrieved ${entries.size - errors}/${entries.size} (${String.format("%.1f", successRate * 100)}%)"
+                    }
                     log.info {
                         val elapsed = Duration.between(start, end).toMillis()
                         val opsPerSecond = String.format("%.2f", entries.size.toDouble() / elapsed * 1000)

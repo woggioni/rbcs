@@ -16,6 +16,7 @@
             <xs:element name="bind" type="rbcs:bindType" maxOccurs="1"/>
             <xs:element name="connection" type="rbcs:connectionType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="event-executor" type="rbcs:eventExecutorType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="rate-limiter" type="rbcs:rateLimiterType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="cache" type="rbcs:cacheType" maxOccurs="1">
                 <xs:annotation>
                     <xs:documentation>
@@ -131,6 +132,37 @@
                 <xs:documentation>
                     Whether or not to use virtual threads for the execution of the core server handler
                     (not for the I/O operations)
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="rateLimiterType">
+        <xs:attribute name="delay-response" type="xs:boolean" use="optional" default="false">
+            <xs:annotation>
+                <xs:documentation>
+                    If set to true, the server will delay responses to meet user quotas, otherwise it will simply
+                    return an immediate 429 status code to all requests that exceed the configured quota
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="max-queued-messages" type="xs:nonNegativeInteger" use="optional" default="100">
+            <xs:annotation>
+                <xs:documentation>
+                    Only meaningful when "delay-response" is set to "true",
+                    when a request is delayed, it and all the following messages are queued
+                    as long as "max-queued-messages" is not crossed, all requests that would exceed the
+                    max-queued-message limit are instead discarded and responded with a 429 status code
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="message-buffer-size" type="rbcs:byteSizeType" use="optional" default="0x100000">
+            <xs:annotation>
+                <xs:documentation>
+                    Only meaningful when "delay-response" is set to "true",
+                    when a request is delayed, it and all the following requests are buffered
+                    as long as "message-buffer-size" is not crossed, all requests that would exceed the buffer
+                    size are instead discarded and responded with a 429 status code
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>

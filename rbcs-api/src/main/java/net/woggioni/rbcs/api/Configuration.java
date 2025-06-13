@@ -20,12 +20,21 @@ public class Configuration {
     @NonNull
     EventExecutor eventExecutor;
     @NonNull
+    RateLimiter rateLimiter;
+    @NonNull
     Connection connection;
     Map<String, User> users;
     Map<String, Group> groups;
     Cache cache;
     Authentication authentication;
     Tls tls;
+
+    @Value
+    public static class RateLimiter {
+        boolean delayRequest;
+        int messageBufferSize;
+        int maxQueuedMessages;
+    }
 
     @Value
     public static class EventExecutor {
@@ -133,6 +142,7 @@ public class Configuration {
             int incomingConnectionsBacklogSize,
             String serverPath,
             EventExecutor eventExecutor,
+            RateLimiter rateLimiter,
             Connection connection,
             Map<String, User> users,
             Map<String, Group> groups,
@@ -146,6 +156,7 @@ public class Configuration {
                 incomingConnectionsBacklogSize,
                 serverPath != null && !serverPath.isEmpty() && !serverPath.equals("/") ? serverPath : null,
                 eventExecutor,
+                rateLimiter,
                 connection,
                 users,
                 groups,

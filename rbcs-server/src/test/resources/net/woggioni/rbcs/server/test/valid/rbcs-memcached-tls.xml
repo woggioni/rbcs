@@ -12,6 +12,7 @@
             write-idle-timeout="PT60S"
             chunk-size="123"/>
     <event-executor use-virtual-threads="true"/>
+    <rate-limiter delay-response="false" message-buffer-size="12000" max-queued-messages="53"/>
     <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D">
         <server host="memcached" port="11211"/>
     </cache>

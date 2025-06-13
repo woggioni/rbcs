@@ -112,7 +112,7 @@ tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfi
 
 nativeImage {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(23)
+        languageVersion = JavaLanguageVersion.of(24)
         vendor = JvmVendorSpec.GRAAL_VM
     }
     mainClass = mainClassName

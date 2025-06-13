@@ -125,7 +125,7 @@ class FileSystemCacheHandler(
                             sendMessageAndFlush(ctx, LastHttpContent.EMPTY_LAST_CONTENT)
                         }
                     }
-                } ?: sendMessageAndFlush(ctx, CacheValueNotFoundResponse())
+                } ?: sendMessageAndFlush(ctx, CacheValueNotFoundResponse(key))
             }
         }
     }

@@ -10,6 +10,7 @@
             max-request-size="101325"
             chunk-size="0xa910"/>
     <event-executor use-virtual-threads="false"/>
+    <rate-limiter delay-response="false" message-buffer-size="0x1234" max-queued-messages="13"/>
     <cache xs:type="rbcs:fileSystemCacheType" path="/tmp/rbcs" max-age="P7D"/>
     <authentication>
         <none/>

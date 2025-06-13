@@ -33,6 +33,7 @@ object Parser {
             0x4000000,
             0x10000
         )
+        var rateLimiter = Configuration.RateLimiter(false, 0x100000, 100)
         var eventExecutor: Configuration.EventExecutor = Configuration.EventExecutor(true)
         var cache: Cache? = null
         var host = "127.0.0.1"
@@ -132,9 +133,22 @@ object Parser {
                 }
 
                 "event-executor" -> {
-                    val useVirtualThread = root.renderAttribute("use-virtual-threads")
+                    val useVirtualThread = child.renderAttribute("use-virtual-threads")
                         ?.let(String::toBoolean) ?: true
                     eventExecutor = Configuration.EventExecutor(useVirtualThread)
+                }
+
+                "rate-limiter" -> {
+                    val delayResponse = child.renderAttribute("delay-response")
+                        ?.let(String::toBoolean)
+                        ?: false
+                    val messageBufferSize = child.renderAttribute("message-buffer-size")
+                        ?.let(Integer::decode)
+                        ?: 0x100000
+                    val maxQueuedMessages = child.renderAttribute("max-queued-messages")
+                        ?.let(Integer::decode)
+                        ?: 100
+                    rateLimiter = Configuration.RateLimiter(delayResponse, messageBufferSize, maxQueuedMessages)
                 }
 
                 "tls" -> {
@@ -184,6 +198,7 @@ object Parser {
             incomingConnectionsBacklogSize,
             serverPath,
             eventExecutor,
+            rateLimiter,
             connection,
             users,
             groups,

@@ -118,7 +118,7 @@ class InMemoryCacheHandler(
                     } else {
                         sendMessage(ctx, LastCacheContent(value.content))
                     }
-                } ?: sendMessage(ctx, CacheValueNotFoundResponse())
+                } ?: sendMessage(ctx, CacheValueNotFoundResponse(req.request.key))
             }
             is InProgressPutRequest -> {
                 this.inProgressRequest = null

@@ -46,6 +46,11 @@ object Serializer {
             node("event-executor") {
                 attr("use-virtual-threads", conf.eventExecutor.isUseVirtualThreads.toString())
             }
+            node("rate-limiter") {
+                attr("delay-response", conf.rateLimiter.isDelayRequest.toString())
+                attr("max-queued-messages", conf.rateLimiter.maxQueuedMessages.toString())
+                attr("message-buffer-size", conf.rateLimiter.messageBufferSize.toString())
+            }
             val cache = conf.cache
             val serializer : CacheProvider<Configuration.Cache> =
                 (CacheSerializers.index[cache.namespaceURI to cache.typeName] as? CacheProvider<Configuration.Cache>) ?: throw NotImplementedError()

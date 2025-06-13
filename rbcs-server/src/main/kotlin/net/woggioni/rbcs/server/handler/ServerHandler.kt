@@ -43,16 +43,6 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
 
     private var httpVersion = HttpVersion.HTTP_1_1
     private var keepAlive = true
-    private var pipelinedRequests = 0
-
-    private fun newRequest() {
-        pipelinedRequests += 1
-    }
-
-    private fun requestCompleted(ctx : ChannelHandlerContext) {
-        pipelinedRequests -= 1
-        if(pipelinedRequests == 0) ctx.read()
-    }
 
     private fun resetRequestMetadata() {
         httpVersion = HttpVersion.HTTP_1_1
@@ -74,10 +64,6 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
 
     private var cacheRequestInProgress : Boolean = false
 
-    override fun handlerAdded(ctx: ChannelHandlerContext) {
-        ctx.read()
-    }
-
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         when (msg) {
             is HttpRequest -> handleRequest(ctx, msg)
@@ -98,18 +84,14 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
         }
     }
 
-    override fun channelReadComplete(ctx: ChannelHandlerContext) {
-        super.channelReadComplete(ctx)
-        if(cacheRequestInProgress) {
-            ctx.read()
-        }
-    }
-
     override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise?) {
         if (msg is CacheMessage) {
             try {
                 when (msg) {
                     is CachePutResponse -> {
+                        log.debug(ctx) {
+                            "Added value for key '${msg.key}' to build cache"
+                        }
                         val response = DefaultFullHttpResponse(httpVersion, HttpResponseStatus.CREATED)
                         val keyBytes = msg.key.toByteArray(Charsets.UTF_8)
                         response.headers().apply {
@@ -121,21 +103,23 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                         val buf = ctx.alloc().buffer(keyBytes.size).apply {
                             writeBytes(keyBytes)
                         }
-                        ctx.writeAndFlush(DefaultLastHttpContent(buf)).also {
-                            requestCompleted(ctx)
-                        }
+                        ctx.writeAndFlush(DefaultLastHttpContent(buf))
                     }
 
                     is CacheValueNotFoundResponse -> {
+                        log.debug(ctx) {
+                            "Value not found for key '${msg.key}'"
+                        }
                         val response = DefaultFullHttpResponse(httpVersion, HttpResponseStatus.NOT_FOUND)
                         response.headers()[HttpHeaderNames.CONTENT_LENGTH] = 0
                         setKeepAliveHeader(response.headers())
-                        ctx.writeAndFlush(response).also {
-                            requestCompleted(ctx)
-                        }
+                        ctx.writeAndFlush(response)
                     }
 
                     is CacheValueFoundResponse -> {
+                        log.debug(ctx) {
+                            "Retrieved value for key '${msg.key}'"
+                        }
                         val response = DefaultHttpResponse(httpVersion, HttpResponseStatus.OK)
                         response.headers().apply {
                             set(HttpHeaderNames.CONTENT_TYPE, msg.metadata.mimeType ?: HttpHeaderValues.APPLICATION_OCTET_STREAM)
@@ -149,9 +133,7 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                     }
 
                     is LastCacheContent -> {
-                        ctx.writeAndFlush(DefaultLastHttpContent(msg.content())).also {
-                            requestCompleted(ctx)
-                        }
+                        ctx.writeAndFlush(DefaultLastHttpContent(msg.content()))
                     }
 
                     is CacheContent -> {
@@ -172,7 +154,6 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
             }
         } else if(msg is LastHttpContent) {
             ctx.write(msg, promise)
-            requestCompleted(ctx)
         } else super.write(ctx, msg, promise)
     }
 
@@ -186,13 +167,13 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                 cacheRequestInProgress = true
                 val relativePath = serverPrefix.relativize(path)
                 val key : String = relativePath.toString()
-                newRequest()
                 val cacheHandler = cacheHandlerSupplier()
                 ctx.pipeline().addBefore(ExceptionHandler.NAME, null, cacheHandler)
                 key.let(::CacheGetRequest)
                     .let(ctx::fireChannelRead)
-                    ?: ctx.channel().write(CacheValueNotFoundResponse())
+                    ?: ctx.channel().write(CacheValueNotFoundResponse(key))
             } else {
+                cacheRequestInProgress = false
                 log.warn(ctx) {
                     "Got request for unhandled path '${msg.uri()}'"
                 }
@@ -206,12 +187,8 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                 cacheRequestInProgress = true
                 val relativePath = serverPrefix.relativize(path)
                 val key = relativePath.toString()
-                log.debug(ctx) {
-                    "Added value for key '$key' to build cache"
-                }
-                newRequest()
                 val cacheHandler = cacheHandlerSupplier()
-                ctx.pipeline().addBefore(ExceptionHandler.NAME, null, cacheHandler)
+                ctx.pipeline().addAfter(NAME, null, cacheHandler)
 
                 path.fileName?.toString()
                     ?.let {
@@ -219,8 +196,9 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                         CachePutRequest(key, CacheValueMetadata(msg.headers().get(HttpHeaderNames.CONTENT_DISPOSITION), mimeType))
                     }
                     ?.let(ctx::fireChannelRead)
-                    ?: ctx.channel().write(CacheValueNotFoundResponse())
+                    ?: ctx.channel().write(CacheValueNotFoundResponse(key))
             } else {
+                cacheRequestInProgress = false
                 log.warn(ctx) {
                     "Got request for unhandled path '${msg.uri()}'"
                 }
@@ -229,10 +207,11 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                 ctx.writeAndFlush(response)
             }
         } else if (method == HttpMethod.TRACE) {
-            newRequest()
-            ctx.pipeline().addBefore(ExceptionHandler.NAME, null, TraceHandler)
+            cacheRequestInProgress = false
+            ctx.pipeline().addAfter(NAME, null, TraceHandler)
             super.channelRead(ctx, msg)
         } else {
+            cacheRequestInProgress = false
             log.warn(ctx) {
                 "Got request with unhandled method '${msg.method().name()}'"
             }

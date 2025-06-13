@@ -99,6 +99,9 @@ object GraalNativeImageConfiguration {
                 100,
                 null,
                 Configuration.EventExecutor(true),
+                Configuration.RateLimiter(
+                    false, 0x100000, 10
+                ),
                 Configuration.Connection(
                     Duration.ofSeconds(10),
                     Duration.ofSeconds(15),

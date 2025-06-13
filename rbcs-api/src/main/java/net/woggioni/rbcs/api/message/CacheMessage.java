@@ -14,17 +14,26 @@ public sealed interface CacheMessage {
         private final String key;
     }
 
+    @Getter
+    @RequiredArgsConstructor
     abstract sealed class CacheGetResponse implements CacheMessage {
+        private final String key;
     }
 
     @Getter
-    @RequiredArgsConstructor
     final class CacheValueFoundResponse extends CacheGetResponse {
-        private final String key;
         private final CacheValueMetadata metadata;
+
+        public CacheValueFoundResponse(String key, CacheValueMetadata metadata) {
+            super(key);
+            this.metadata = metadata;
+        }
     }
 
     final class CacheValueNotFoundResponse extends CacheGetResponse {
+        public CacheValueNotFoundResponse(String key) {
+            super(key);
+        }
     }
 
     @Getter

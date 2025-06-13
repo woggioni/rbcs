@@ -72,8 +72,8 @@ import net.woggioni.rbcs.server.auth.RoleAuthorizer
 import net.woggioni.rbcs.server.configuration.Parser
 import net.woggioni.rbcs.server.configuration.Serializer
 import net.woggioni.rbcs.server.exception.ExceptionHandler
-import net.woggioni.rbcs.server.handler.BlackHoleRequestHandler
 import net.woggioni.rbcs.server.handler.MaxRequestSizeHandler
+import net.woggioni.rbcs.server.handler.ReadTriggerDuplexHandler
 import net.woggioni.rbcs.server.handler.ServerHandler
 import net.woggioni.rbcs.server.throttling.BucketManager
 import net.woggioni.rbcs.server.throttling.ThrottlingHandler
@@ -298,7 +298,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                     "Closed connection ${ch.id().asShortText()} with ${ch.remoteAddress()}"
                 }
             }
-            ch.config().setAutoRead(false)
+            ch.config().isAutoRead = false
             val pipeline = ch.pipeline()
             cfg.connection.also { conn ->
                 val readIdleTimeout = conn.readIdleTimeout.toMillis()
@@ -345,13 +345,14 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 maxChunkSize = cfg.connection.chunkSize
             }
             pipeline.addLast(HttpServerCodec(httpDecoderConfig))
+            pipeline.addLast(ReadTriggerDuplexHandler.NAME, ReadTriggerDuplexHandler)
             pipeline.addLast(MaxRequestSizeHandler.NAME, MaxRequestSizeHandler(cfg.connection.maxRequestSize))
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
             authenticator?.let {
                 pipeline.addLast(it)
             }
-            pipeline.addLast(ThrottlingHandler(bucketManager, cfg.connection))
+            pipeline.addLast(ThrottlingHandler(bucketManager,cfg.rateLimiter, cfg.connection))
 
             val serverHandler = let {
                 val prefix = Path.of("/").resolve(Path.of(cfg.serverPath ?: "/"))
@@ -361,7 +362,6 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             }
             pipeline.addLast(ServerHandler.NAME, serverHandler)
             pipeline.addLast(ExceptionHandler.NAME, ExceptionHandler)
-            pipeline.addLast(BlackHoleRequestHandler.NAME, BlackHoleRequestHandler())
         }
 
         override fun asyncClose() = cacheHandlerFactory.asyncClose()
