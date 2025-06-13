@@ -86,6 +86,7 @@ object GraalNativeImageConfiguration {
                     4)
                 ),
                 Duration.ofSeconds(60),
+                "someCustomPrefix",
                 "MD5",
                 null,
                 1,
@@ -116,22 +117,7 @@ object GraalNativeImageConfiguration {
                 null,
             )
 
-            MemcacheCacheConfiguration(
-                listOf(
-                    MemcacheCacheConfiguration.Server(
-                        HostAndPort("127.0.0.1", 11211),
-                        1000,
-                        4
-                    )
-                ),
-                Duration.ofSeconds(60),
-                "MD5",
-                null,
-                1,
-            )
-
             val serverHandle = RemoteBuildCacheServer(serverConfiguration).run()
-
 
             val clientProfile = ClientConfiguration.Profile(
                 URI.create("http://127.0.0.1:$serverPort/"),

@@ -79,7 +79,7 @@ class FileSystemCacheHandler(
     }
 
     private fun handlePutRequest(ctx: ChannelHandlerContext, msg: CachePutRequest) {
-        val key = String(Base64.getUrlEncoder().encode(processCacheKey(msg.key, digestAlgorithm)))
+        val key = String(Base64.getUrlEncoder().encode(processCacheKey(msg.key, null, digestAlgorithm)))
         val sink = cache.put(key, msg.metadata)
         inProgressRequest = InProgressPutRequest(msg.key, sink)
     }
@@ -100,7 +100,7 @@ class FileSystemCacheHandler(
                 sendMessageAndFlush(ctx, CachePutResponse(request.key))
             }
             is InProgressGetRequest -> {
-                val key = String(Base64.getUrlEncoder().encode(processCacheKey(request.request.key, digestAlgorithm)))
+                val key = String(Base64.getUrlEncoder().encode(processCacheKey(request.request.key, null, digestAlgorithm)))
                 cache.get(key)?.also { entryValue ->
                     sendMessageAndFlush(ctx, CacheValueFoundResponse(request.request.key, entryValue.metadata))
                     entryValue.channel.let { channel ->

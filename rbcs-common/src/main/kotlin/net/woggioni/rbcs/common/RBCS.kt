@@ -23,24 +23,24 @@ import net.woggioni.jwo.JWO
 import net.woggioni.jwo.Tuple2
 
 object RBCS {
-    fun String.toUrl() : URL = URL.of(URI(this), null)
+    fun String.toUrl(): URL = URL.of(URI(this), null)
 
     const val RBCS_NAMESPACE_URI: String = "urn:net.woggioni.rbcs.server"
     const val RBCS_PREFIX: String = "rbcs"
     const val XML_SCHEMA_NAMESPACE_URI = "http://www.w3.org/2001/XMLSchema-instance"
 
-    fun ByteArray.toInt(index : Int = 0) : Long {
-        if(index + 4 > size) throw IllegalArgumentException("Not enough bytes to decode a 32 bits integer")
-        var value : Long = 0
+    fun ByteArray.toInt(index: Int = 0): Long {
+        if (index + 4 > size) throw IllegalArgumentException("Not enough bytes to decode a 32 bits integer")
+        var value: Long = 0
         for (b in index until index + 4) {
             value = (value shl 8) + (get(b).toInt() and 0xFF)
         }
         return value
     }
 
-    fun ByteArray.toLong(index : Int = 0) : Long {
-        if(index + 8 > size) throw IllegalArgumentException("Not enough bytes to decode a 64 bits long integer")
-        var value : Long = 0
+    fun ByteArray.toLong(index: Int = 0): Long {
+        if (index + 8 > size) throw IllegalArgumentException("Not enough bytes to decode a 64 bits long integer")
+        var value: Long = 0
         for (b in index until index + 8) {
             value = (value shl 8) + (get(b).toInt() and 0xFF)
         }
@@ -62,11 +62,18 @@ object RBCS {
         return JWO.bytesToHex(digest(data, md))
     }
 
-    fun processCacheKey(key: String, digestAlgorithm: String?) = digestAlgorithm
-        ?.let(MessageDigest::getInstance)
-        ?.let { md ->
-            digest(key.toByteArray(), md)
-        } ?: key.toByteArray(Charsets.UTF_8)
+    fun processCacheKey(key: String, keyPrefix: String?, digestAlgorithm: String?) : ByteArray {
+        val prefixedKey = if (keyPrefix == null) {
+            key
+        } else {
+            key + keyPrefix
+        }.toByteArray(Charsets.UTF_8)
+        return digestAlgorithm
+            ?.let(MessageDigest::getInstance)
+            ?.let { md ->
+                digest(prefixedKey, md)
+            } ?: prefixedKey
+    }
 
     fun Long.toIntOrNull(): Int? {
         return if (this >= Int.MIN_VALUE && this <= Int.MAX_VALUE) {

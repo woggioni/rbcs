@@ -38,6 +38,7 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
                     else -> MemcacheCacheConfiguration.CompressionMode.DEFLATE
                 }
             }
+        val keyPrefix = el.renderAttribute("key-prefix")
         val digestAlgorithm = el.renderAttribute("digest")
         for (child in el.asIterable()) {
             when (child.nodeName) {
@@ -54,10 +55,10 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
                 }
             }
         }
-
         return MemcacheCacheConfiguration(
             servers,
             maxAge,
+            keyPrefix,
             digestAlgorithm,
             compressionMode,
             compressionLevel
@@ -78,8 +79,12 @@ class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {
                     }
                     attr("max-connections", server.maxConnections.toString())
                 }
+
             }
             attr("max-age", maxAge.toString())
+            keyPrefix?.let {
+                attr("key-prefix", it)
+            }
             digestAlgorithm?.let { digestAlgorithm ->
                 attr("digest", digestAlgorithm)
             }

@@ -27,7 +27,7 @@ class InMemoryCacheHandler(
     private interface InProgressRequest : AutoCloseable {
     }
 
-    private class InProgressGetRequest(val request : CacheGetRequest) : InProgressRequest {
+    private class InProgressGetRequest(val request: CacheGetRequest) : InProgressRequest {
         override fun close() {
         }
     }
@@ -44,7 +44,7 @@ class InMemoryCacheHandler(
         override val buf = ctx.alloc().compositeHeapBuffer()
 
         override fun append(buf: ByteBuf) {
-            if(buf.isDirect) {
+            if (buf.isDirect) {
                 this.buf.writeBytes(buf)
             } else {
                 this.buf.addComponent(true, buf.retain())
@@ -93,7 +93,7 @@ class InMemoryCacheHandler(
     }
 
     private fun handlePutRequest(ctx: ChannelHandlerContext, msg: CachePutRequest) {
-        inProgressRequest = if(compressionEnabled) {
+        inProgressRequest = if (compressionEnabled) {
             InProgressCompressedPutRequest(ctx, msg)
         } else {
             InProgressPlainPutRequest(ctx, msg)
@@ -102,16 +102,16 @@ class InMemoryCacheHandler(
 
     private fun handleCacheContent(ctx: ChannelHandlerContext, msg: CacheContent) {
         val req = inProgressRequest
-        if(req is InProgressPutRequest) {
+        if (req is InProgressPutRequest) {
             req.append(msg.content())
         }
     }
 
     private fun handleLastCacheContent(ctx: ChannelHandlerContext, msg: LastCacheContent) {
         handleCacheContent(ctx, msg)
-        when(val req = inProgressRequest) {
+        when (val req = inProgressRequest) {
             is InProgressGetRequest -> {
-                cache.get(processCacheKey(req.request.key, digestAlgorithm))?.let { value ->
+                cache.get(processCacheKey(req.request.key, null, digestAlgorithm))?.let { value ->
                     sendMessageAndFlush(ctx, CacheValueFoundResponse(req.request.key, value.metadata))
                     if (compressionEnabled) {
                         val buf = ctx.alloc().heapBuffer()
@@ -126,12 +126,13 @@ class InMemoryCacheHandler(
                     }
                 } ?: sendMessage(ctx, CacheValueNotFoundResponse(req.request.key))
             }
+
             is InProgressPutRequest -> {
                 this.inProgressRequest = null
                 val buf = req.buf
                 buf.retain()
                 req.close()
-                val cacheKey = processCacheKey(req.request.key, digestAlgorithm)
+                val cacheKey = processCacheKey(req.request.key, null, digestAlgorithm)
                 cache.put(cacheKey, CacheEntry(req.request.metadata, buf))
                 sendMessageAndFlush(ctx, CachePutResponse(req.request.key))
             }

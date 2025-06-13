@@ -53,6 +53,7 @@ import net.woggioni.rbcs.server.memcache.client.MemcacheResponseHandler
 
 class MemcacheCacheHandler(
     private val client: MemcacheClient,
+    private val keyPrefix: String?,
     private val digestAlgorithm: String?,
     private val compressionEnabled: Boolean,
     private val compressionLevel: Int,
@@ -248,7 +249,7 @@ class MemcacheCacheHandler(
             "Fetching ${msg.key} from memcache"
         }
         val key = ctx.alloc().buffer().also {
-            it.writeBytes(processCacheKey(msg.key, digestAlgorithm))
+            it.writeBytes(processCacheKey(msg.key, keyPrefix, digestAlgorithm))
         }
         val responseHandler = object : MemcacheResponseHandler {
             override fun responseReceived(response: BinaryMemcacheResponse) {
@@ -309,7 +310,7 @@ class MemcacheCacheHandler(
 
     private fun handlePutRequest(ctx: ChannelHandlerContext, msg: CachePutRequest) {
         val key = ctx.alloc().buffer().also {
-            it.writeBytes(processCacheKey(msg.key, digestAlgorithm))
+            it.writeBytes(processCacheKey(msg.key, keyPrefix, digestAlgorithm))
         }
         val responseHandler = object : MemcacheResponseHandler {
             override fun responseReceived(response: BinaryMemcacheResponse) {

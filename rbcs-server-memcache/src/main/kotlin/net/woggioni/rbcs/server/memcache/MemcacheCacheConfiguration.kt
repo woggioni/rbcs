@@ -20,6 +20,7 @@ import net.woggioni.rbcs.server.memcache.client.MemcacheClient
 data class MemcacheCacheConfiguration(
     val servers: List<Server>,
     val maxAge: Duration = Duration.ofDays(1),
+    val keyPrefix : String? = null,
     val digestAlgorithm: String? = null,
     val compressionMode: CompressionMode? = null,
     val compressionLevel: Int,
@@ -60,6 +61,7 @@ data class MemcacheCacheConfiguration(
                     socketChannelFactory,
                     connectionPoolMap
                 ),
+                keyPrefix,
                 digestAlgorithm,
                 compressionMode != null,
                 compressionLevel,

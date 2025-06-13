@@ -21,6 +21,14 @@
                 </xs:sequence>
                 <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
                 <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000"/>
+                <xs:attribute name="key-prefix" type="xs:string" use="optional">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Prepend this string to all the keys inserted in memcache,
+                            useful in case the caching backend is shared with other applications
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
                 <xs:attribute name="digest" type="xs:token"/>
                 <xs:attribute name="compression-mode" type="rbcs-memcache:compressionType"/>
                 <xs:attribute name="compression-level" type="rbcs:compressionLevelType" default="-1"/>

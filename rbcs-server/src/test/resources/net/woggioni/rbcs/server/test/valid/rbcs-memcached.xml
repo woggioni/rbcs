@@ -12,7 +12,7 @@
             chunk-size="456"/>
     <event-executor use-virtual-threads="false"/>
     <rate-limiter delay-response="true" message-buffer-size="65432" max-queued-messages="21"/>
-    <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" digest="SHA-256" compression-mode="deflate" compression-level="7">
+    <cache xs:type="rbcs-memcache:memcacheCacheType" max-age="P7D" key-prefix="some-prefix-string" digest="SHA-256" compression-mode="deflate" compression-level="7">
         <server host="127.0.0.1" port="11211" max-connections="10" connection-timeout="PT20S"/>
     </cache>
     <authentication>
