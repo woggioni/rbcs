@@ -146,9 +146,6 @@ class ThrottlingHandler(
                         if (head is LastHttpContent) break
                     }
                 }
-                log.debug {
-                    "Queue size: ${queuedContent.stream().filter { it !is RefusedRequest }.count()}"
-                }
                 if(queuedContent.isEmpty()) {
                     valveClosed = false
                 } else {
@@ -180,9 +177,6 @@ class ThrottlingHandler(
             }
         } else {
             super.channelRead(ctx, msg)
-            log.debug {
-                "Queue size: ${queuedContent.stream().filter { it !is RefusedRequest }.count()}"
-            }
         }
     }
 
