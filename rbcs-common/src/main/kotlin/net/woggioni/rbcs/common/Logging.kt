@@ -2,14 +2,14 @@ package net.woggioni.rbcs.common
 
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.logging.LogManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.slf4j.event.Level
 import org.slf4j.spi.LoggingEventBuilder
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.logging.LogManager
 
 inline fun <reified T> T.contextLogger() = LoggerFactory.getLogger(T::class.java)
 inline fun <reified T> createLogger() = LoggerFactory.getLogger(T::class.java)

@@ -2,6 +2,9 @@ package net.woggioni.rbcs.client
 
 import io.netty.util.concurrent.DefaultEventExecutorGroup
 import io.netty.util.concurrent.EventExecutorGroup
+import java.util.concurrent.CompletableFuture
+import java.util.stream.Stream
+import kotlin.random.Random
 import net.woggioni.rbcs.common.contextLogger
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.extension.ExtensionContext
@@ -9,9 +12,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
-import java.util.concurrent.CompletableFuture
-import java.util.stream.Stream
-import kotlin.random.Random
 
 class RetryTest {
 

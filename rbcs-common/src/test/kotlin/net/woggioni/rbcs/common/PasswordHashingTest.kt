@@ -1,14 +1,14 @@
 package net.woggioni.rbcs.common
 
+import java.security.Provider
+import java.security.Security
+import java.util.Base64
 import net.woggioni.rbcs.common.PasswordSecurity.decodePasswordHash
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
-import java.security.Provider
-import java.security.Security
-import java.util.Base64
 
 
 class PasswordHashingTest {

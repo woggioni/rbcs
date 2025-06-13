@@ -1,8 +1,9 @@
 package net.woggioni.rbcs.api;
 
-import java.io.Serializable;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+
+import java.io.Serializable;
 
 @Getter
 @RequiredArgsConstructor

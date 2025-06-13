@@ -1,9 +1,6 @@
 package net.woggioni.rbcs.server.cache
 
 import io.netty.buffer.ByteBuf
-import net.woggioni.rbcs.api.AsyncCloseable
-import net.woggioni.rbcs.api.CacheValueMetadata
-import net.woggioni.rbcs.common.createLogger
 import java.time.Duration
 import java.time.Instant
 import java.util.PriorityQueue
@@ -11,7 +8,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.withLock
-import net.woggioni.rbcs.common.debug
+import net.woggioni.rbcs.api.AsyncCloseable
+import net.woggioni.rbcs.api.CacheValueMetadata
+import net.woggioni.rbcs.common.createLogger
 
 private class CacheKey(private val value: ByteArray) {
     override fun equals(other: Any?) = if (other is CacheKey) {

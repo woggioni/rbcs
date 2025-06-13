@@ -1,14 +1,6 @@
 package net.woggioni.rbcs.server.test
 
 import io.netty.handler.codec.http.HttpResponseStatus
-import net.woggioni.rbcs.api.Configuration
-import net.woggioni.rbcs.common.RBCS.getFreePort
-import net.woggioni.rbcs.common.Xml
-import net.woggioni.rbcs.server.cache.InMemoryCacheConfiguration
-import net.woggioni.rbcs.server.configuration.Serializer
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Order
-import org.junit.jupiter.api.Test
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -19,6 +11,14 @@ import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.zip.Deflater
 import kotlin.random.Random
+import net.woggioni.rbcs.api.Configuration
+import net.woggioni.rbcs.common.RBCS.getFreePort
+import net.woggioni.rbcs.common.Xml
+import net.woggioni.rbcs.server.cache.InMemoryCacheConfiguration
+import net.woggioni.rbcs.server.configuration.Serializer
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Order
+import org.junit.jupiter.api.Test
 
 
 class NoAuthServerTest : AbstractServerTest() {

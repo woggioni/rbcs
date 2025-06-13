@@ -2,12 +2,12 @@ package net.woggioni.rbcs.server.memcache.client
 
 import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.Unpooled
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
 import kotlin.random.Random
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 
 class ByteBufferTest {
 

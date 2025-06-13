@@ -1,5 +1,7 @@
 package net.woggioni.rbcs.server.test
 
+import java.nio.file.Files
+import java.nio.file.Path
 import net.woggioni.rbcs.common.RBCS.toUrl
 import net.woggioni.rbcs.common.RbcsUrlStreamHandlerFactory
 import net.woggioni.rbcs.common.Xml
@@ -10,8 +12,6 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xml.sax.SAXParseException
-import java.nio.file.Files
-import java.nio.file.Path
 
 class ConfigurationTest {
 

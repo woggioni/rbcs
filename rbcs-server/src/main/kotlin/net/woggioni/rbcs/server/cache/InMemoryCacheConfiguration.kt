@@ -4,10 +4,10 @@ import io.netty.channel.ChannelFactory
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.socket.DatagramChannel
 import io.netty.channel.socket.SocketChannel
+import java.time.Duration
 import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.common.RBCS
-import java.time.Duration
 
 data class InMemoryCacheConfiguration(
     val maxAge: Duration,

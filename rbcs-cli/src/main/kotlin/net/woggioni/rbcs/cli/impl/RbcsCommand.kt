@@ -1,8 +1,8 @@
 package net.woggioni.rbcs.cli.impl
 
+import java.nio.file.Path
 import net.woggioni.jwo.Application
 import picocli.CommandLine
-import java.nio.file.Path
 
 
 abstract class RbcsCommand : Runnable {

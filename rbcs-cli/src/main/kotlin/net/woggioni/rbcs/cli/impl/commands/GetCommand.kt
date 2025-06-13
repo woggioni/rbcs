@@ -1,13 +1,13 @@
 package net.woggioni.rbcs.cli.impl.commands
 
+import java.io.OutputStream
+import java.nio.file.Files
+import java.nio.file.Path
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
-import java.io.OutputStream
-import java.nio.file.Files
-import java.nio.file.Path
 
 @CommandLine.Command(
     name = "get",

@@ -1,5 +1,7 @@
 package net.woggioni.rbcs.server.memcache
 
+import java.time.Duration
+import java.time.temporal.ChronoUnit
 import net.woggioni.rbcs.api.CacheProvider
 import net.woggioni.rbcs.api.exception.ConfigurationException
 import net.woggioni.rbcs.common.HostAndPort
@@ -9,8 +11,6 @@ import net.woggioni.rbcs.common.Xml.Companion.asIterable
 import net.woggioni.rbcs.common.Xml.Companion.renderAttribute
 import org.w3c.dom.Document
 import org.w3c.dom.Element
-import java.time.Duration
-import java.time.temporal.ChronoUnit
 
 
 class MemcacheCacheProvider : CacheProvider<MemcacheCacheConfiguration> {

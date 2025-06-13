@@ -1,5 +1,10 @@
 package net.woggioni.rbcs.cli.impl.commands
 
+import java.io.ByteArrayOutputStream
+import java.nio.file.Files
+import java.nio.file.Path
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 import net.woggioni.jwo.Application
 import net.woggioni.jwo.JWO
 import net.woggioni.rbcs.cli.impl.RbcsCommand
@@ -10,11 +15,6 @@ import net.woggioni.rbcs.common.info
 import net.woggioni.rbcs.server.RemoteBuildCacheServer
 import net.woggioni.rbcs.server.RemoteBuildCacheServer.Companion.DEFAULT_CONFIGURATION_URL
 import picocli.CommandLine
-import java.io.ByteArrayOutputStream
-import java.nio.file.Files
-import java.nio.file.Path
-import java.time.Duration
-import java.util.concurrent.TimeUnit
 
 @CommandLine.Command(
     name = "server",

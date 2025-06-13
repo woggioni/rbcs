@@ -1,14 +1,14 @@
 package net.woggioni.rbcs.server.cache
 
+import java.nio.file.Path
+import java.time.Duration
+import java.util.zip.Deflater
 import net.woggioni.rbcs.api.CacheProvider
 import net.woggioni.rbcs.common.RBCS
 import net.woggioni.rbcs.common.Xml
 import net.woggioni.rbcs.common.Xml.Companion.renderAttribute
 import org.w3c.dom.Document
 import org.w3c.dom.Element
-import java.nio.file.Path
-import java.time.Duration
-import java.util.zip.Deflater
 
 class FileSystemCacheProvider : CacheProvider<FileSystemCacheConfiguration> {
 

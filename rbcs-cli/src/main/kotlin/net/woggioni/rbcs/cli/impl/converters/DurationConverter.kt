@@ -1,7 +1,7 @@
 package net.woggioni.rbcs.cli.impl.converters
 
-import picocli.CommandLine
 import java.time.Duration
+import picocli.CommandLine
 
 
 class DurationConverter : CommandLine.ITypeConverter<Duration> {

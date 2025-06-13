@@ -1,11 +1,11 @@
 package net.woggioni.rbcs.server.throttling
 
-import net.woggioni.jwo.Bucket
-import net.woggioni.rbcs.api.Configuration
 import java.net.InetSocketAddress
 import java.util.Arrays
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
+import net.woggioni.jwo.Bucket
+import net.woggioni.rbcs.api.Configuration
 
 class BucketManager private constructor(
     private val bucketsByUser: Map<Configuration.User, List<Bucket>> = HashMap(),

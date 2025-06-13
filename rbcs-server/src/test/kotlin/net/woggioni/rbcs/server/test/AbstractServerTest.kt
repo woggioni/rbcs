@@ -1,5 +1,6 @@
 package net.woggioni.rbcs.server.test
 
+import java.nio.file.Path
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.server.RemoteBuildCacheServer
 import org.junit.jupiter.api.AfterAll
@@ -8,7 +9,6 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.io.TempDir
-import java.nio.file.Path
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

@@ -1,7 +1,5 @@
 package net.woggioni.rbcs.common
 
-import net.woggioni.jwo.JWO
-import net.woggioni.jwo.Tuple2
 import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -21,6 +19,8 @@ import java.security.cert.X509Certificate
 import java.util.EnumSet
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
+import net.woggioni.jwo.JWO
+import net.woggioni.jwo.Tuple2
 
 object RBCS {
     fun String.toUrl() : URL = URL.of(URI(this), null)

@@ -1,8 +1,8 @@
 package net.woggioni.rbcs.server.test
 
+import javax.naming.ldap.LdapName
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import javax.naming.ldap.LdapName
 
 class X500NameTest {
 

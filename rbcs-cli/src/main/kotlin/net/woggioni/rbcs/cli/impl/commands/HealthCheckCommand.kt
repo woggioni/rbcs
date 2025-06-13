@@ -1,12 +1,12 @@
 package net.woggioni.rbcs.cli.impl.commands
 
+import java.security.SecureRandom
+import kotlin.random.Random
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
-import java.security.SecureRandom
-import kotlin.random.Random
 
 @CommandLine.Command(
     name = "health",

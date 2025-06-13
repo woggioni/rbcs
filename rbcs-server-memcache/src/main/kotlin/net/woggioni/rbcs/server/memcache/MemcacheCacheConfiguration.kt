@@ -5,17 +5,17 @@ import io.netty.channel.EventLoopGroup
 import io.netty.channel.pool.FixedChannelPool
 import io.netty.channel.socket.DatagramChannel
 import io.netty.channel.socket.SocketChannel
+import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import net.woggioni.rbcs.api.CacheHandler
 import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.common.HostAndPort
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.server.memcache.client.MemcacheClient
-import java.time.Duration
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
 
 data class MemcacheCacheConfiguration(
     val servers: List<Server>,

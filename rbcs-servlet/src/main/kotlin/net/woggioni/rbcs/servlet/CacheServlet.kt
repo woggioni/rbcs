@@ -7,8 +7,6 @@ import jakarta.servlet.annotation.WebServlet
 import jakarta.servlet.http.HttpServlet
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import net.woggioni.jwo.HttpClient.HttpStatus
-import net.woggioni.jwo.JWO
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
@@ -19,6 +17,8 @@ import java.util.concurrent.PriorityBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.logging.Logger
+import net.woggioni.jwo.HttpClient.HttpStatus
+import net.woggioni.jwo.JWO
 
 
 private class CacheKey(private val value: ByteArray) {

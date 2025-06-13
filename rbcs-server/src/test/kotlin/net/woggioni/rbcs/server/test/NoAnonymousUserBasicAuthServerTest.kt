@@ -1,14 +1,14 @@
 package net.woggioni.rbcs.server.test
 
 import io.netty.handler.codec.http.HttpResponseStatus
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 
 
 class NoAnonymousUserBasicAuthServerTest : AbstractBasicAuthServerTest() {

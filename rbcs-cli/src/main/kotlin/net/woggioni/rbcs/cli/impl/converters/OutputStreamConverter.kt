@@ -1,9 +1,9 @@
 package net.woggioni.rbcs.cli.impl.converters
 
-import picocli.CommandLine
 import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Paths
+import picocli.CommandLine
 
 
 class OutputStreamConverter : CommandLine.ITypeConverter<OutputStream> {

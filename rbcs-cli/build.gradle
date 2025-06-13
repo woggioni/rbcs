@@ -9,15 +9,10 @@ plugins {
     id 'maven-publish'
 }
 
-import net.woggioni.gradle.envelope.EnvelopePlugin
-import net.woggioni.gradle.envelope.EnvelopeJarTask
-import net.woggioni.gradle.graalvm.NativeImageConfigurationTask
-import net.woggioni.gradle.graalvm.NativeImageTask
-import net.woggioni.gradle.graalvm.NativeImagePlugin
-import net.woggioni.gradle.graalvm.UpxTask
-import net.woggioni.gradle.graalvm.JlinkPlugin
-import net.woggioni.gradle.graalvm.JlinkTask
 
+import net.woggioni.gradle.envelope.EnvelopeJarTask
+import net.woggioni.gradle.envelope.EnvelopePlugin
+import net.woggioni.gradle.graalvm.*
 
 sourceSets {
     configureNativeImage {

@@ -1,10 +1,5 @@
 package net.woggioni.rbcs.client.impl
 
-import net.woggioni.rbcs.api.exception.ConfigurationException
-import net.woggioni.rbcs.client.Configuration
-import net.woggioni.rbcs.common.Xml.Companion.asIterable
-import net.woggioni.rbcs.common.Xml.Companion.renderAttribute
-import org.w3c.dom.Document
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -13,6 +8,11 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import net.woggioni.rbcs.api.exception.ConfigurationException
+import net.woggioni.rbcs.client.Configuration
+import net.woggioni.rbcs.common.Xml.Companion.asIterable
+import net.woggioni.rbcs.common.Xml.Companion.renderAttribute
+import org.w3c.dom.Document
 
 object Parser {
 

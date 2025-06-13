@@ -1,8 +1,8 @@
 package net.woggioni.rbcs.server.configuration
 
+import java.util.ServiceLoader
 import net.woggioni.rbcs.api.CacheProvider
 import net.woggioni.rbcs.api.Configuration
-import java.util.ServiceLoader
 
 object CacheSerializers {
     val index = (Configuration::class.java.module.layer?.let { layer ->

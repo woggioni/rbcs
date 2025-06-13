@@ -1,13 +1,13 @@
 package net.woggioni.rbcs.client
 
-import net.woggioni.rbcs.client.impl.Parser
-import net.woggioni.rbcs.common.Xml
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.time.Duration
+import net.woggioni.rbcs.client.impl.Parser
+import net.woggioni.rbcs.common.Xml
 
 data class Configuration(
     val profiles: Map<String, Profile>

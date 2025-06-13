@@ -1,5 +1,9 @@
 package net.woggioni.rbcs.cli.impl.commands
 
+import java.io.InputStream
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.UUID
 import net.woggioni.jwo.Hash
 import net.woggioni.jwo.JWO
 import net.woggioni.jwo.NullOutputStream
@@ -9,10 +13,6 @@ import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.client.RemoteBuildCacheClient
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
-import java.io.InputStream
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.UUID
 
 @CommandLine.Command(
     name = "put",

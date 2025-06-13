@@ -1,5 +1,8 @@
 package net.woggioni.rbcs.server.configuration
 
+import java.nio.file.Paths
+import java.time.Duration
+import java.time.temporal.ChronoUnit
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.Configuration.Authentication
 import net.woggioni.rbcs.api.Configuration.BasicAuthentication
@@ -18,9 +21,6 @@ import net.woggioni.rbcs.common.Xml.Companion.renderAttribute
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.TypeInfo
-import java.nio.file.Paths
-import java.time.Duration
-import java.time.temporal.ChronoUnit
 
 object Parser {
     fun parse(document: Document): Configuration {

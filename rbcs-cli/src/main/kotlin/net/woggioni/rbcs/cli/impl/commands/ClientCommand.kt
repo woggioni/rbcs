@@ -1,12 +1,12 @@
 package net.woggioni.rbcs.cli.impl.commands
 
+import java.nio.file.Path
 import net.woggioni.jwo.Application
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.client.Configuration
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.debug
 import picocli.CommandLine
-import java.nio.file.Path
 
 @CommandLine.Command(
     name = "client",

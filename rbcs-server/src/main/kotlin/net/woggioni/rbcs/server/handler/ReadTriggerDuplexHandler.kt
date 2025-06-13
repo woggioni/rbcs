@@ -5,8 +5,6 @@ import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPromise
 import io.netty.handler.codec.http.LastHttpContent
-import net.woggioni.rbcs.common.createLogger
-import net.woggioni.rbcs.common.debug
 
 @Sharable
 object ReadTriggerDuplexHandler : ChannelDuplexHandler() {
