@@ -2,6 +2,8 @@ package net.woggioni.rbcs.server.cache
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterOutputStream
@@ -111,18 +113,23 @@ class InMemoryCacheHandler(
         handleCacheContent(ctx, msg)
         when (val req = inProgressRequest) {
             is InProgressGetRequest -> {
+//                this.inProgressRequest = null
                 cache.get(processCacheKey(req.request.key, null, digestAlgorithm))?.let { value ->
                     sendMessageAndFlush(ctx, CacheValueFoundResponse(req.request.key, value.metadata))
                     if (compressionEnabled) {
                         val buf = ctx.alloc().heapBuffer()
                         InflaterOutputStream(ByteBufOutputStream(buf)).use {
-                            value.content.readBytes(it, value.content.readableBytes())
-                            value.content.release()
+                            it.write(value.content)
                             buf.retain()
                         }
                         sendMessage(ctx, LastCacheContent(buf))
                     } else {
-                        sendMessage(ctx, LastCacheContent(value.content))
+                        val buf = ctx.alloc().heapBuffer()
+                        ByteBufOutputStream(buf).use {
+                            it.write(value.content)
+                            buf.retain()
+                        }
+                        sendMessage(ctx, LastCacheContent(buf))
                     }
                 } ?: sendMessage(ctx, CacheValueNotFoundResponse(req.request.key))
             }
@@ -132,8 +139,11 @@ class InMemoryCacheHandler(
                 val buf = req.buf
                 buf.retain()
                 req.close()
+
+                val bytes = ByteArray(buf.readableBytes()).also(buf::readBytes)
+                buf.release()
                 val cacheKey = processCacheKey(req.request.key, null, digestAlgorithm)
-                cache.put(cacheKey, CacheEntry(req.request.metadata, buf))
+                cache.put(cacheKey, CacheEntry(req.request.metadata, bytes))
                 sendMessageAndFlush(ctx, CachePutResponse(req.request.key))
             }
         }

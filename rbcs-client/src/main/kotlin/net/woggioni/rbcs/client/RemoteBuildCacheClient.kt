@@ -254,19 +254,25 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
     fun get(key: String): CompletableFuture<ByteArray?> {
         return executeWithRetry {
             sendRequest(profile.serverURI.resolve(key), HttpMethod.GET, null)
-        }.thenApply {
-            val status = it.status()
-            if (it.status() == HttpResponseStatus.NOT_FOUND) {
+        }.thenApply { response ->
+            val status = response.status()
+            if (response.status() == HttpResponseStatus.NOT_FOUND) {
+                response.release()
                 null
-            } else if (it.status() != HttpResponseStatus.OK) {
+            } else if (response.status() != HttpResponseStatus.OK) {
+                response.release()
                 throw HttpException(status)
             } else {
-                it.content()
+                response.content().also {
+                    it.retain()
+                    response.release()
+                }
             }
         }.thenApply { maybeByteBuf ->
-            maybeByteBuf?.let {
-                val result = ByteArray(it.readableBytes())
-                it.getBytes(0, result)
+            maybeByteBuf?.let { buf ->
+                val result = ByteArray(buf.readableBytes())
+                buf.getBytes(0, result)
+                buf.release()
                 result
             }
         }
@@ -318,7 +324,7 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                             response: FullHttpResponse
                         ) {
                             pipeline.remove(this)
-                            responseFuture.complete(response)
+                            responseFuture.complete(response.retainedDuplicate())
                             if (!profile.connection.requestPipelining) {
                                 pool.release(channel)
                             }

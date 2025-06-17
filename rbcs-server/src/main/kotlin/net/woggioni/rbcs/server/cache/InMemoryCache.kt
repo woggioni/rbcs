@@ -1,6 +1,5 @@
 package net.woggioni.rbcs.server.cache
 
-import io.netty.buffer.ByteBuf
 import java.time.Duration
 import java.time.Instant
 import java.util.PriorityQueue
@@ -22,7 +21,7 @@ private class CacheKey(private val value: ByteArray) {
 
 class CacheEntry(
     val metadata: CacheValueMetadata,
-    val content: ByteBuf
+    val content: ByteArray
 )
 
 class InMemoryCache(
@@ -66,17 +65,12 @@ class InMemoryCache(
                                 val removed = map.remove(el.key, value)
                                 if (removed) {
                                     updateSizeAfterRemoval(value.content)
-                                    //Decrease the reference count for map
-                                    value.content.release()
                                 }
                             } else {
                                 removalQueue.offer(el)
                                 val interval = minOf(Duration.between(now, el.expiry), Duration.ofSeconds(1))
                                 cond.await(interval.toMillis(), TimeUnit.MILLISECONDS)
                             }
-                        }
-                        map.forEach {
-                            it.value.content.release()
                         }
                         map.clear()
                     }
@@ -95,15 +89,13 @@ class InMemoryCache(
             val removed = map.remove(el.key, value)
             if (removed) {
                 val newSize = updateSizeAfterRemoval(value.content)
-                //Decrease the reference count for map
-                value.content.release()
                 return newSize
             }
         }
     }
 
-    private fun updateSizeAfterRemoval(removed: ByteBuf): Long {
-        mapSize -= removed.readableBytes()
+    private fun updateSizeAfterRemoval(removed: ByteArray): Long {
+        mapSize -= removed.size
         return mapSize
     }
 
@@ -117,7 +109,7 @@ class InMemoryCache(
 
     fun get(key: ByteArray) = lock.readLock().withLock {
         map[CacheKey(key)]?.run {
-            CacheEntry(metadata, content.retainedDuplicate())
+            CacheEntry(metadata, content)
         }
     }
 
@@ -127,12 +119,8 @@ class InMemoryCache(
     ) {
         val cacheKey = CacheKey(key)
         lock.writeLock().withLock {
-            val oldSize = map.put(cacheKey, value)?.let { old ->
-                val result = old.content.readableBytes()
-                old.content.release()
-                result
-            } ?: 0
-            val delta = value.content.readableBytes() - oldSize
+            val oldSize = map.put(cacheKey, value)?.content?.size ?: 0
+            val delta = value.content.size - oldSize
             mapSize += delta
             removalQueue.offer(RemovalQueueElement(cacheKey, value, Instant.now().plus(maxAge)))
             while (mapSize > maxSize) {
