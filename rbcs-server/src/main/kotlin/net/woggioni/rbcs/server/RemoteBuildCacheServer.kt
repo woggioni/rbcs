@@ -345,7 +345,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 maxChunkSize = cfg.connection.chunkSize
             }
             pipeline.addLast(HttpServerCodec(httpDecoderConfig))
-            pipeline.addLast(ReadTriggerDuplexHandler.NAME, ReadTriggerDuplexHandler)
+            pipeline.addLast(ReadTriggerDuplexHandler.NAME, ReadTriggerDuplexHandler())
             pipeline.addLast(MaxRequestSizeHandler.NAME, MaxRequestSizeHandler(cfg.connection.maxRequestSize))
             pipeline.addLast(HttpChunkContentCompressor(1024))
             pipeline.addLast(ChunkedWriteHandler())
