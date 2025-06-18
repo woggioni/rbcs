@@ -19,6 +19,8 @@ to `memcacheCacheType`.
 
 The plugins currently supports the following configuration attributes:
 - `max-age`: the amount of time cache entries will be retained on memcache
+- `key-prefix`: a string that will be prepended to all the keys inserted in memcache,
+  useful in case the caching backend is shared with other applications
 - `digest`: digest algorithm to use on the key before submission 
   to memcache (optional, no digest is applied if omitted)
 - `compression`: compression algorithm to apply to cache values before, 
@@ -35,6 +37,7 @@ The plugins currently supports the following configuration attributes:
     ...
     <cache xs:type="rbcs-memcache:memcacheCacheType" 
            max-age="P7D"
+           key-prefix="rbcs-"
            digest="SHA-256"
            compression-mode="deflate"
            compression-level="6">
