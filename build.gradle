@@ -46,6 +46,7 @@ allprojects { subproject ->
             testImplementation catalog.junit.jupiter.api
             testImplementation catalog.junit.jupiter.params
             testRuntimeOnly catalog.junit.jupiter.engine
+            testRuntimeOnly catalog.junit.platform.launcher
         }
 
         test {
