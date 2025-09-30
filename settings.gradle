@@ -1,5 +1,16 @@
 pluginManagement {
     repositories {
+//        mavenLocal {
+//            content {
+//                includeGroup 'net.woggioni.gradle'
+//                includeGroup 'net.woggioni.gradle.jpms-check'
+//                includeGroup 'net.woggioni.gradle.lombok'
+//                includeGroup 'net.woggioni.gradle.jdeps'
+//                includeGroup 'net.woggioni.gradle.sambal'
+//                includeGroup 'net.woggioni.gradle.graalvm.jlink'
+//                includeGroup 'net.woggioni.gradle.graalvm.native-image'
+//            }
+//        }
         maven {
             url = getProperty('gitea.maven.url')
         }
@@ -19,6 +30,8 @@ dependencyResolutionManagement {
     versionCatalogs {
         catalog {
             from group: 'com.lys', name: 'lys-catalog', version: getProperty('lys.version')
+//            version('my-gradle-plugins', '2025.04.16')
+//            version('junit', '5.12.0')
         }
     }
 }
@@ -33,3 +46,4 @@ include 'rbcs-client'
 include 'rbcs-server'
 include 'rbcs-servlet'
 include 'docker'
+//include 'bug'
