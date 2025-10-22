@@ -36,6 +36,8 @@
     "pattern":"\\Qnet/woggioni/rbcs/server/memcache/schema/rbcs-memcache.xsd\\E"
   }, {
     "pattern":"\\Qnet/woggioni/rbcs/server/schema/rbcs-server.xsd\\E"
+  }, {
+    "pattern":"jdk.jfr:\\Qjdk/jfr/internal/types/metadata.bin\\E"
   }]},
   "bundles":[{
     "name":"com.sun.org.apache.xerces.internal.impl.xpath.regex.message",

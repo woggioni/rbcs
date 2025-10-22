@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jre-alpine AS base-release
+FROM eclipse-temurin:25-jre-alpine AS base-release
 RUN adduser -D luser
 USER luser
 WORKDIR /home/luser

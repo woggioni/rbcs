@@ -184,9 +184,6 @@
   "methods":[{"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
 },
 {
-  "name":"io.netty.channel.embedded.EmbeddedChannel$2"
-},
-{
   "name":"io.netty.channel.pool.SimpleChannelPool$1"
 },
 {
@@ -195,7 +192,7 @@
 },
 {
   "name":"io.netty.handler.codec.ByteToMessageDecoder",
-  "methods":[{"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, {"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
+  "methods":[{"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
 },
 {
   "name":"io.netty.handler.codec.MessageAggregator",
@@ -214,7 +211,8 @@
   "methods":[{"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
 },
 {
-  "name":"io.netty.handler.codec.compression.JdkZlibDecoder"
+  "name":"io.netty.handler.codec.compression.JdkZlibDecoder",
+  "methods":[{"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }]
 },
 {
   "name":"io.netty.handler.codec.compression.JdkZlibEncoder",
@@ -226,6 +224,10 @@
 {
   "name":"io.netty.handler.codec.http.HttpContentDecoder",
   "methods":[{"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }]
+},
+{
+  "name":"io.netty.handler.codec.http.HttpContentDecoder$ByteBufForwarder",
+  "methods":[{"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
 },
 {
   "name":"io.netty.handler.codec.http.HttpContentDecompressor"
@@ -279,8 +281,12 @@
   "fields":[{"name":"result"}]
 },
 {
+  "name":"io.netty.util.concurrent.MpscIntQueue$MpscAtomicIntegerArrayQueue",
+  "fields":[{"name":"consumerIndex"}, {"name":"producerIndex"}, {"name":"producerLimit"}]
+},
+{
   "name":"io.netty.util.concurrent.SingleThreadEventExecutor",
-  "fields":[{"name":"state"}, {"name":"threadProperties"}]
+  "fields":[{"name":"accumulatedActiveTimeNanos"}, {"name":"consecutiveBusyCycles"}, {"name":"consecutiveIdleCycles"}, {"name":"state"}, {"name":"threadProperties"}]
 },
 {
   "name":"io.netty.util.internal.shaded.org.jctools.queues.BaseMpscLinkedArrayQueueColdProducerFields",
@@ -566,7 +572,7 @@
 },
 {
   "name":"net.woggioni.rbcs.server.handler.ReadTriggerDuplexHandler",
-  "methods":[{"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, {"name":"write","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object","io.netty.channel.ChannelPromise"] }]
+  "methods":[{"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, {"name":"write","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object","io.netty.channel.ChannelPromise"] }]
 },
 {
   "name":"net.woggioni.rbcs.server.handler.ServerHandler",

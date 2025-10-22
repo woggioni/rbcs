@@ -5,7 +5,7 @@ There are 3 image flavours:
 - native
 
 The `vanilla` image only contains the envelope 
-jar file with no plugins and is based on `eclipse-temurin:21-jre-alpine`
+jar file with no plugins and is based on `eclipse-temurin:25-jre-alpine`
 
 The `memcache` image is similar to the `vanilla` image, except that it also contains
 the `rbcs-server-memcache` plugin in the `plugins` folder, use this image if you don't want to use the `native`

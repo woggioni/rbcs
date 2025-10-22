@@ -89,7 +89,7 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named(EnvelopePlugin.E
 
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
         vendor = JvmVendorSpec.GRAAL_VM
     }
     mainClass = "net.woggioni.rbcs.cli.graal.GraalNativeImageConfiguration"
@@ -107,7 +107,7 @@ tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfi
 
 nativeImage {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(23)
+        languageVersion = JavaLanguageVersion.of(25)
         vendor = JvmVendorSpec.GRAAL_VM
     }
     mainClass = mainClassName
