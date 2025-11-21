@@ -5,7 +5,7 @@ on:
       - '*'
 jobs:
   build:
-    runs-on: hostinger
+    runs-on: woryzen
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
