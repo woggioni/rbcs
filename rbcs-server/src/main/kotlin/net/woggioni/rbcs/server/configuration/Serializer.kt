@@ -33,6 +33,17 @@ object Serializer {
                 attr("host", conf.host)
                 attr("port", conf.port.toString())
                 attr("incoming-connections-backlog-size", conf.incomingConnectionsBacklogSize.toString())
+                attr("proxy-protocol", conf.isProxyProtocolEnabled.toString())
+
+                if (conf.trustedProxyIPs.isNotEmpty()) {
+                    node("trusted-proxies") {
+                        for(trustedProxy in conf.trustedProxyIPs) {
+                            node("allow") {
+                                attr("cidr", trustedProxy.toString())
+                            }
+                        }
+                    }
+                }
             }
             node("connection") {
                 conf.connection.let { connection ->

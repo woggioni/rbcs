@@ -140,6 +140,9 @@ abstract class AbstractTlsServerTest : AbstractServerTest() {
         cfg = Configuration(
             "127.0.0.1",
             getFreePort(),
+            false,
+            emptyList(),
+
             100,
             serverPath,
             Configuration.EventExecutor(false),

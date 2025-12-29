@@ -197,7 +197,8 @@ class ThrottlingHandler(
             }
         }
         if (user == null && groups.isEmpty()) {
-            bucketManager.getBucketByAddress(ctx.channel().remoteAddress() as InetSocketAddress)?.let(buckets::add)
+            val clientAddress = ctx.channel().attr<InetSocketAddress>(RemoteBuildCacheServer.clientIp).get()
+            bucketManager.getBucketByAddress(clientAddress)?.let(buckets::add)
         }
 
         var nextAttempt = -1L

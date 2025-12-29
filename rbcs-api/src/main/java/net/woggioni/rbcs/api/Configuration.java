@@ -4,10 +4,12 @@ package net.woggioni.rbcs.api;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
+import net.woggioni.rbcs.common.Cidr;
 
 import java.nio.file.Path;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
 public class Configuration {
     String host;
     int port;
+    boolean proxyProtocolEnabled;
+    List<Cidr> trustedProxyIPs;
     int incomingConnectionsBacklogSize;
     String serverPath;
     @NonNull
@@ -29,6 +33,7 @@ public class Configuration {
     Cache cache;
     Authentication authentication;
     Tls tls;
+
 
     @Value
     public static class RateLimiter {
@@ -140,6 +145,8 @@ public class Configuration {
     public static Configuration of(
             String host,
             int port,
+            boolean proxyProtocolEnabled,
+            List<Cidr> trustedProxyIPs,
             int incomingConnectionsBacklogSize,
             String serverPath,
             EventExecutor eventExecutor,
@@ -154,6 +161,8 @@ public class Configuration {
         return new Configuration(
                 host,
                 port,
+                proxyProtocolEnabled,
+                trustedProxyIPs,
                 incomingConnectionsBacklogSize,
                 serverPath != null && !serverPath.isEmpty() && !serverPath.equals("/") ? serverPath : null,
                 eventExecutor,

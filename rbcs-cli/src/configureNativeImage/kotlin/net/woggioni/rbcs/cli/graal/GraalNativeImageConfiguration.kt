@@ -97,6 +97,8 @@ object GraalNativeImageConfiguration {
             val serverConfiguration = Configuration(
                 "127.0.0.1",
                 serverPort,
+                false,
+                emptyList(),
                 100,
                 null,
                 Configuration.EventExecutor(true),

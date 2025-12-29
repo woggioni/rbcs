@@ -34,6 +34,8 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
         cfg = Configuration.of(
             "127.0.0.1",
             getFreePort(),
+            false,
+            emptyList(),
             50,
             serverPath,
             Configuration.EventExecutor(false),

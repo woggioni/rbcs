@@ -33,6 +33,7 @@ ENTRYPOINT ["/usr/bin/rbcs-cli", "-XX:MaximumHeapSizePercent=70"]
 FROM debian:12-slim AS release-jlink
 RUN mkdir -p /usr/share/java/rbcs
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-cli*.tar -C /usr/share/java/rbcs
+RUN chmod 755 /usr/share/java/rbcs/bin/*
 ADD --chmod=755 rbcs-cli.sh /usr/local/bin/rbcs-cli
 RUN adduser -u 1000 luser
 USER luser

@@ -16,6 +16,7 @@ module net.woggioni.rbcs.server {
     requires io.netty.buffer;
     requires io.netty.common;
     requires io.netty.codec;
+    requires io.netty.codec.haproxy;
     requires org.slf4j;
 
     exports net.woggioni.rbcs.server;

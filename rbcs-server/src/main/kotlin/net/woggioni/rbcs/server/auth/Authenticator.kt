@@ -72,5 +72,4 @@ abstract class AbstractNettyHttpAuthenticator(private val authorizer: Authorizer
         ReferenceCountUtil.release(msg)
         ctx.writeAndFlush(NOT_AUTHORIZED.retainedDuplicate()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
     }
-
 }

@@ -126,7 +126,7 @@ Provider<UpxTask> upxTaskProvider = tasks.named(NativeImagePlugin.UPX_TASK_NAME,
 
 Provider<JlinkTask> jlinkTaskProvider = tasks.named(JlinkPlugin.JLINK_TASK_NAME, JlinkTask) {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
         vendor = JvmVendorSpec.GRAAL_VM
     }
 

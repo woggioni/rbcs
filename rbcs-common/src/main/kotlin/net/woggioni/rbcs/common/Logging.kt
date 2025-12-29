@@ -81,9 +81,6 @@ inline fun Logger.log(level: Level, channel: Channel, crossinline messageBuilder
         )
         withMDC(params) {
             val builder = makeLoggingEventBuilder(level)
-//            for ((key, value) in params) {
-//                builder.addKeyValue(key, value)
-//            }
             messageBuilder(builder)
             builder.log()
         }

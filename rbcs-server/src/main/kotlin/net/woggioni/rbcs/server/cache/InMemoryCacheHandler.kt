@@ -2,8 +2,6 @@ package net.woggioni.rbcs.server.cache
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterOutputStream

@@ -16,6 +16,7 @@ import net.woggioni.rbcs.api.Configuration.TrustStore
 import net.woggioni.rbcs.api.Configuration.User
 import net.woggioni.rbcs.api.Role
 import net.woggioni.rbcs.api.exception.ConfigurationException
+import net.woggioni.rbcs.common.Cidr
 import net.woggioni.rbcs.common.Xml.Companion.asIterable
 import net.woggioni.rbcs.common.Xml.Companion.renderAttribute
 import org.w3c.dom.Document
@@ -38,6 +39,8 @@ object Parser {
         var cache: Cache? = null
         var host = "127.0.0.1"
         var port = 11080
+        var proxyProtocolEnabled = false
+        var trustedProxies = emptyList<Cidr>()
         var users: Map<String, User> = mapOf(anonymousUser.name to anonymousUser)
         var groups = emptyMap<String, Group>()
         var tls: Tls? = null
@@ -98,9 +101,23 @@ object Parser {
                 "bind" -> {
                     host = child.renderAttribute("host") ?: throw ConfigurationException("host attribute is required")
                     port = Integer.parseInt(child.renderAttribute("port"))
+                    proxyProtocolEnabled = child.renderAttribute("proxy-protocol")
+                        ?.let(String::toBoolean) ?: false
                     incomingConnectionsBacklogSize = child.renderAttribute("incoming-connections-backlog-size")
                         ?.let(Integer::parseInt)
                         ?: 1024
+
+                    for(grandChild in child.asIterable()) {
+                        when(grandChild.localName) {
+                            "trusted-proxies" -> {
+                                trustedProxies = parseTrustedProxies(grandChild)
+                            }
+                        }
+                    }
+                    child.asIterable().filter {
+                        it.localName == "trusted-proxies"
+                    }.firstOrNull()?.let(::parseTrustedProxies)
+
                 }
 
                 "cache" -> {
@@ -195,6 +212,8 @@ object Parser {
         return Configuration.of(
             host,
             port,
+            proxyProtocolEnabled,
+            trustedProxies,
             incomingConnectionsBacklogSize,
             serverPath,
             eventExecutor,
@@ -216,6 +235,15 @@ object Parser {
             else -> throw UnsupportedOperationException("Illegal node '${it.localName}'")
         }
     }.toSet()
+
+    private fun parseTrustedProxies(root: Element) = root.asIterable().asSequence().map {
+        when (it.localName) {
+            "allow" -> it.renderAttribute("cidr")
+                ?.let(Cidr::from)
+                ?: throw ConfigurationException("Missing 'cidr' attribute")
+            else -> throw ConfigurationException("Unrecognized tag '${it.localName}'")
+        }
+    }.toList()
 
     private fun parseUserRefs(root: Element) = root.asIterable().asSequence().map {
         when (it.localName) {

@@ -12,6 +12,7 @@ dependencies {
     implementation catalog.netty.handler
     implementation catalog.netty.buffer
     implementation catalog.netty.transport
+    implementation catalog.netty.codec.haproxy
 
     api project(':rbcs-common')
     api project(':rbcs-api')

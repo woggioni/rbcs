@@ -20,6 +20,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.compression.CompressionOptions
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder
 import io.netty.handler.codec.http.DefaultHttpContent
 import io.netty.handler.codec.http.HttpContentCompressor
 import io.netty.handler.codec.http.HttpDecoderConfig
@@ -57,6 +58,7 @@ import javax.net.ssl.SSLPeerUnverifiedException
 import net.woggioni.rbcs.api.AsyncCloseable
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.exception.ConfigurationException
+import net.woggioni.rbcs.common.Cidr
 import net.woggioni.rbcs.common.PasswordSecurity.decodePasswordHash
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
 import net.woggioni.rbcs.common.RBCS.getTrustManager
@@ -73,6 +75,7 @@ import net.woggioni.rbcs.server.configuration.Parser
 import net.woggioni.rbcs.server.configuration.Serializer
 import net.woggioni.rbcs.server.exception.ExceptionHandler
 import net.woggioni.rbcs.server.handler.MaxRequestSizeHandler
+import net.woggioni.rbcs.server.handler.ProxyProtocolHandler
 import net.woggioni.rbcs.server.handler.ReadTriggerDuplexHandler
 import net.woggioni.rbcs.server.handler.ServerHandler
 import net.woggioni.rbcs.server.throttling.BucketManager
@@ -85,6 +88,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
 
         val userAttribute: AttributeKey<Configuration.User> = AttributeKey.valueOf("user")
         val groupAttribute: AttributeKey<Set<Configuration.Group>> = AttributeKey.valueOf("group")
+        val clientIp: AttributeKey<InetSocketAddress> = AttributeKey.valueOf("client-ip")
 
         val DEFAULT_CONFIGURATION_URL by lazy { "jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/rbcs-default.xml".toUrl() }
         private const val SSL_HANDLER_NAME = "sslHandler"
@@ -234,6 +238,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                             else ClientAuth.OPTIONAL
                         } ?: ClientAuth.NONE
                         clientAuth(clientAuth)
+
                     }.build()
                 }
             }
@@ -258,6 +263,9 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
 
             else -> null
         }
+
+        private val proxyProtocolEnabled: Boolean = cfg.isProxyProtocolEnabled
+        private val trustedProxyIPs: List<Cidr> = cfg.trustedProxyIPs
 
         private val sslContext: SslContext? = cfg.tls?.let(Companion::createSslCtx)
 
@@ -290,6 +298,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             }
 
         override fun initChannel(ch: Channel) {
+            ch.attr(clientIp).set(ch.remoteAddress() as InetSocketAddress)
             log.debug {
                 "Created connection ${ch.id().asShortText()} with ${ch.remoteAddress()}"
             }
@@ -338,6 +347,10 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                     }
                 }
             })
+            if(proxyProtocolEnabled) {
+                pipeline.addLast(HAProxyMessageDecoder())
+                pipeline.addLast(ProxyProtocolHandler(trustedProxyIPs))
+            }
             sslContext?.newHandler(ch.alloc())?.also {
                 pipeline.addLast(SSL_HANDLER_NAME, it)
             }
