@@ -24,14 +24,21 @@ class ProxyProtocolHandler(private val trustedProxyIPs : List<Cidr>) : SimpleCha
         val sourceAddress = ctx.channel().remoteAddress()
         if (sourceAddress is InetSocketAddress &&
             trustedProxyIPs.isEmpty() ||
-            trustedProxyIPs.any { it.contains((sourceAddress as InetSocketAddress).address) }) {
+            trustedProxyIPs.any { it.contains((sourceAddress as InetSocketAddress).address) }.also {
+                if(!it && log.isTraceEnabled) {
+                    log.trace {
+                        "Received a proxied connection request from $sourceAddress which is not a trusted proxy address, " +
+                                "the proxy server address will be used instead"
+                    }
+                }
+            }) {
             val proxiedClientAddress = InetSocketAddress(
                 InetAddress.ofLiteral(msg.sourceAddress()),
                 msg.sourcePort()
             )
             if(log.isTraceEnabled) {
                 log.trace {
-                    "Received proxied request from $sourceAddress forwarded for $proxiedClientAddress"
+                    "Received proxied connection request from $sourceAddress forwarded for $proxiedClientAddress"
                 }
             }
             ctx.channel().attr(RemoteBuildCacheServer.clientIp).set(proxiedClientAddress)
