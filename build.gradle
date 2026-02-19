@@ -55,7 +55,7 @@ allprojects { subproject ->
 
         tasks.withType(JavaCompile) {
             modularity.inferModulePath = true
-            options.release = 21
+            options.release = 25
         }
 
         tasks.named(JavaPlugin.COMPILE_JAVA_TASK_NAME, JavaCompile) {
@@ -80,7 +80,7 @@ allprojects { subproject ->
 
     pluginManager.withPlugin(catalog.plugins.kotlin.jvm.get().pluginId) {
         tasks.withType(KotlinCompile.class) {
-            compilerOptions.jvmTarget = JvmTarget.JVM_21
+            compilerOptions.jvmTarget = JvmTarget.JVM_25
         }
     }
 
