@@ -14,7 +14,20 @@ Configures server socket settings.
 **Attributes:**
 - `host` (required): Server bind address
 - `port` (required): Server port number
+- `proxy-protocol` (optional, default: false): Enable [HAProxy proxy protocol](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) support. When enabled, the server decodes proxy protocol headers to extract the real client IP address from proxied connections.
 - `incoming-connections-backlog-size` (optional, default: 1024): Maximum queue length for incoming connection indications
+
+**Child Elements:**
+
+##### `<trusted-proxies>`
+Restricts which proxy servers are trusted to provide accurate client IP information via the proxy protocol. Only used when `proxy-protocol` is set to `true`.
+
+If omitted or empty, all proxies are trusted. When specified, only connections originating from the listed CIDR ranges will have their forwarded client IP honored.
+
+- Contains `<allow>` elements:
+
+  **Attributes:**
+    - `cidr` (required): An IPv4 or IPv6 CIDR range identifying a trusted proxy address (e.g. `192.168.0.0/24`, `::1/128`)
 
 #### `<connection>`
 Configures connection handling parameters.
@@ -127,7 +140,12 @@ Configures TLS encryption.
              xmlns:rbcs="urn:net.woggioni.rbcs.server"
              xs:schemaLocation="urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs-server.xsd"
 >
-    <bind host="0.0.0.0" port="8080" incoming-connections-backlog-size="1024"/>
+    <bind host="0.0.0.0" port="8080" incoming-connections-backlog-size="1024" proxy-protocol="true">
+        <trusted-proxies>
+            <allow cidr="192.168.0.11/32"/>
+            <allow cidr="::1/128"/>
+        </trusted-proxies>
+    </bind>
     <connection
             max-request-size="67108864"
             idle-timeout="PT10S"

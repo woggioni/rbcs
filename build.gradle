@@ -28,7 +28,7 @@ allprojects { subproject ->
         mavenCentral()
     }
 
-    pluginManager.withPlugin('java-library') {
+    pluginManager.withPlugin('java') {
 
         ext {
             jpmsModuleName = subproject.group + '.' + subproject.name.replace('-', '.')
