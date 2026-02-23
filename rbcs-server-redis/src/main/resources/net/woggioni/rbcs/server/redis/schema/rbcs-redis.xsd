@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xs:schema targetNamespace="urn:net.woggioni.rbcs.server.redis"
+           xmlns:rbcs-redis="urn:net.woggioni.rbcs.server.redis"
+           xmlns:rbcs="urn:net.woggioni.rbcs.server"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+    <xs:import schemaLocation="jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs-server.xsd" namespace="urn:net.woggioni.rbcs.server"/>
+
+    <xs:complexType name="redisServerType">
+        <xs:attribute name="host" type="xs:token" use="required"/>
+        <xs:attribute name="port" type="xs:positiveInteger" use="required"/>
+        <xs:attribute name="connection-timeout" type="xs:duration"/>
+        <xs:attribute name="max-connections" type="xs:positiveInteger" default="1"/>
+        <xs:attribute name="password" type="xs:string" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Password for Redis AUTH command, used when the Redis server requires authentication
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="redisCacheType">
+        <xs:complexContent>
+            <xs:extension base="rbcs:cacheType">
+                <xs:sequence maxOccurs="unbounded">
+                    <xs:element name="server" type="rbcs-redis:redisServerType"/>
+                </xs:sequence>
+                <xs:attribute name="max-age" type="xs:duration" default="P1D"/>
+                <xs:attribute name="chunk-size" type="rbcs:byteSizeType" default="0x10000"/>
+                <xs:attribute name="key-prefix" type="xs:string" use="optional">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Prepend this string to all the keys inserted in Redis,
+                            useful in case the caching backend is shared with other applications
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="digest" type="xs:token"/>
+                <xs:attribute name="compression-mode" type="rbcs-redis:compressionType"/>
+                <xs:attribute name="compression-level" type="rbcs:compressionLevelType" default="-1"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:simpleType name="compressionType">
+        <xs:restriction base="xs:token">
+            <xs:enumeration value="deflate"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

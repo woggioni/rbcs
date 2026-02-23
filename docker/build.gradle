@@ -20,6 +20,7 @@ configurations {
 dependencies {
     docker project(path: ':rbcs-cli', configuration: 'release')
     docker project(path: ':rbcs-server-memcache', configuration: 'release')
+    docker project(path: ':rbcs-server-redis', configuration: 'release')
 }
 
 Provider<Task> cleanTaskProvider = tasks.named(BasePlugin.CLEAN_TASK_NAME) {}

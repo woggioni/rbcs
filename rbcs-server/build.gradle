@@ -24,6 +24,7 @@ dependencies {
     testImplementation catalog.bcpkix.jdk18on
 
     testRuntimeOnly project(":rbcs-server-memcache")
+    testRuntimeOnly project(":rbcs-server-redis")
 }
 
 test {

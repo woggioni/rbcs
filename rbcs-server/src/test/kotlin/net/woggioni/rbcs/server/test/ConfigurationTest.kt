@@ -21,6 +21,8 @@ class ConfigurationTest {
             "classpath:net/woggioni/rbcs/server/test/valid/rbcs-memcached.xml",
             "classpath:net/woggioni/rbcs/server/test/valid/rbcs-tls.xml",
             "classpath:net/woggioni/rbcs/server/test/valid/rbcs-memcached-tls.xml",
+            "classpath:net/woggioni/rbcs/server/test/valid/rbcs-redis.xml",
+            "classpath:net/woggioni/rbcs/server/test/valid/rbcs-redis-tls.xml",
         ]
     )
     @ParameterizedTest

@@ -1,0 +1,108 @@
+package net.woggioni.rbcs.server.redis
+
+import java.time.Duration
+import java.time.temporal.ChronoUnit
+
+import net.woggioni.rbcs.api.CacheProvider
+import net.woggioni.rbcs.api.exception.ConfigurationException
+import net.woggioni.rbcs.common.HostAndPort
+import net.woggioni.rbcs.common.RBCS
+import net.woggioni.rbcs.common.Xml
+import net.woggioni.rbcs.common.Xml.Companion.asIterable
+import net.woggioni.rbcs.common.Xml.Companion.renderAttribute
+
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+
+
+class RedisCacheProvider : CacheProvider<RedisCacheConfiguration> {
+    override fun getXmlSchemaLocation() = "jpms://net.woggioni.rbcs.server.redis/net/woggioni/rbcs/server/redis/schema/rbcs-redis.xsd"
+
+    override fun getXmlType() = "redisCacheType"
+
+    override fun getXmlNamespace() = "urn:net.woggioni.rbcs.server.redis"
+
+    val xmlNamespacePrefix: String
+        get() = "rbcs-redis"
+
+    override fun deserialize(el: Element): RedisCacheConfiguration {
+        val servers = mutableListOf<RedisCacheConfiguration.Server>()
+        val maxAge = el.renderAttribute("max-age")
+            ?.let(Duration::parse)
+            ?: Duration.ofDays(1)
+        val compressionLevel = el.renderAttribute("compression-level")
+            ?.let(Integer::decode)
+            ?: -1
+        val compressionMode = el.renderAttribute("compression-mode")
+            ?.let {
+                when (it) {
+                    "deflate" -> RedisCacheConfiguration.CompressionMode.DEFLATE
+                    else -> RedisCacheConfiguration.CompressionMode.DEFLATE
+                }
+            }
+        val keyPrefix = el.renderAttribute("key-prefix")
+        val digestAlgorithm = el.renderAttribute("digest")
+        for (child in el.asIterable()) {
+            when (child.nodeName) {
+                "server" -> {
+                    val host = child.renderAttribute("host") ?: throw ConfigurationException("host attribute is required")
+                    val port = child.renderAttribute("port")?.toInt() ?: throw ConfigurationException("port attribute is required")
+                    val maxConnections = child.renderAttribute("max-connections")?.toInt() ?: 1
+                    val connectionTimeout = child.renderAttribute("connection-timeout")
+                        ?.let(Duration::parse)
+                        ?.let(Duration::toMillis)
+                        ?.let(Long::toInt)
+                        ?: 10000
+                    val password = child.renderAttribute("password")
+                    servers.add(RedisCacheConfiguration.Server(HostAndPort(host, port), connectionTimeout, maxConnections, password))
+                }
+            }
+        }
+        return RedisCacheConfiguration(
+            servers,
+            maxAge,
+            keyPrefix,
+            digestAlgorithm,
+            compressionMode,
+            compressionLevel
+        )
+    }
+
+    override fun serialize(doc: Document, cache: RedisCacheConfiguration) = cache.run {
+        val result = doc.createElement("cache")
+        Xml.of(doc, result) {
+            attr("xmlns:${xmlNamespacePrefix}", xmlNamespace, namespaceURI = "http://www.w3.org/2000/xmlns/")
+            attr("xs:type", "${xmlNamespacePrefix}:$xmlType", RBCS.XML_SCHEMA_NAMESPACE_URI)
+            for (server in servers) {
+                node("server") {
+                    attr("host", server.endpoint.host)
+                    attr("port", server.endpoint.port.toString())
+                    server.connectionTimeoutMillis?.let { connectionTimeoutMillis ->
+                        attr("connection-timeout", Duration.of(connectionTimeoutMillis.toLong(), ChronoUnit.MILLIS).toString())
+                    }
+                    attr("max-connections", server.maxConnections.toString())
+                    server.password?.let { password ->
+                        attr("password", password)
+                    }
+                }
+
+            }
+            attr("max-age", maxAge.toString())
+            keyPrefix?.let {
+                attr("key-prefix", it)
+            }
+            digestAlgorithm?.let { digestAlgorithm ->
+                attr("digest", digestAlgorithm)
+            }
+            compressionMode?.let { compressionMode ->
+                attr(
+                    "compression-mode", when (compressionMode) {
+                        RedisCacheConfiguration.CompressionMode.DEFLATE -> "deflate"
+                    }
+                )
+            }
+            attr("compression-level", compressionLevel.toString())
+        }
+        result
+    }
+}
