@@ -27,16 +27,27 @@ import net.woggioni.rbcs.server.cache.FileSystemCacheConfiguration
 import net.woggioni.rbcs.server.cache.InMemoryCacheConfiguration
 import net.woggioni.rbcs.server.configuration.Parser
 import net.woggioni.rbcs.server.memcache.MemcacheCacheConfiguration
+import net.woggioni.rbcs.server.redis.RedisCacheConfiguration
 
 object GraalNativeImageConfiguration {
     @JvmStatic
     fun main(vararg args : String) {
 
-        val serverURL = URI.create("file:conf/rbcs-server.xml").toURL()
-        val serverDoc = serverURL.openStream().use {
-            Xml.parseXml(serverURL, it)
+        let {
+            val serverURL = URI.create("file:conf/rbcs-server.xml").toURL()
+            val serverDoc = serverURL.openStream().use {
+                Xml.parseXml(serverURL, it)
+            }
+            Parser.parse(serverDoc)
         }
-        Parser.parse(serverDoc)
+
+        let {
+            val serverURL = URI.create("file:conf/rbcs-server-redis.xml").toURL()
+            val serverDoc = serverURL.openStream().use {
+                Xml.parseXml(serverURL, it)
+            }
+            Parser.parse(serverDoc)
+        }
 
         val url = URI.create("file:conf/rbcs-client.xml").toURL()
         val clientDoc = url.openStream().use {
@@ -82,6 +93,18 @@ object GraalNativeImageConfiguration {
             MemcacheCacheConfiguration(
                 listOf(MemcacheCacheConfiguration.Server(
                     HostAndPort("127.0.0.1", 11211),
+                    1000,
+                    4)
+                ),
+                Duration.ofSeconds(60),
+                "someCustomPrefix",
+                "MD5",
+                null,
+                1,
+            ),
+            RedisCacheConfiguration(
+                listOf(RedisCacheConfiguration.Server(
+                    HostAndPort("127.0.0.1", 6379),
                     1000,
                     4)
                 ),

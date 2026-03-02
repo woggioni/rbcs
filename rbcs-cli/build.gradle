@@ -50,6 +50,7 @@ configurations {
 dependencies {
     configureNativeImageImplementation project
     configureNativeImageImplementation project(':rbcs-server-memcache')
+    configureNativeImageImplementation project(':rbcs-server-redis')
 
     implementation catalog.jwo
     implementation catalog.slf4j.api
@@ -62,6 +63,7 @@ dependencies {
     runtimeOnly catalog.logback.classic
 //    runtimeOnly catalog.slf4j.simple
     nativeImage project(':rbcs-server-memcache')
+    nativeImage project(':rbcs-server-redis')
 
 }
 
@@ -138,6 +140,7 @@ Provider<JlinkTask> jlinkTaskProvider = tasks.named(JlinkPlugin.JLINK_TASK_NAME,
     )
     additionalModules = [
         'net.woggioni.rbcs.server.memcache',
+        'net.woggioni.rbcs.server.redis',
         'ch.qos.logback.classic',
         'jdk.crypto.ec'
     ]

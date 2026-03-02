@@ -16,6 +16,15 @@ WORKDIR /home/luser
 ADD logback.xml .
 ENTRYPOINT ["java", "-Dlogback.configurationFile=logback.xml", "-XX:MaxRAMPercentage=70", "-XX:GCTimeRatio=24", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "/home/luser/rbcs.jar"]
 
+FROM base-release AS release-redis
+ADD --chown=luser:luser rbcs-cli-envelope-*.jar rbcs.jar
+RUN mkdir plugins
+WORKDIR /home/luser/plugins
+RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-server-redis*.tar
+WORKDIR /home/luser
+ADD logback.xml .
+ENTRYPOINT ["java", "-Dlogback.configurationFile=logback.xml", "-XX:MaxRAMPercentage=70", "-XX:GCTimeRatio=24", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "/home/luser/rbcs.jar"]
+
 FROM busybox:musl AS base-native
 RUN mkdir -p /var/lib/rbcs /etc/rbcs
 RUN adduser -D -u 1000 rbcs -h /var/lib/rbcs
