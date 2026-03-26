@@ -32,8 +32,8 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:vanilla
-            gitea.woggioni.net/woggioni/rbcs:vanilla-${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:latest
+            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}
           target: release-vanilla
       -
         name: Build rbcs memcache Docker image
@@ -45,10 +45,8 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:latest
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}
             gitea.woggioni.net/woggioni/rbcs:memcache
-            gitea.woggioni.net/woggioni/rbcs:memcache-${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-memcache
           target: release-memcache
       -
         name: Build rbcs redis Docker image
@@ -60,10 +58,8 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:latest
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}
             gitea.woggioni.net/woggioni/rbcs:redis
-            gitea.woggioni.net/woggioni/rbcs:redis-${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-redis
           target: release-redis
       -
         name: Build rbcs native Docker image
@@ -76,7 +72,7 @@ jobs:
           pull: true
           tags: |
             gitea.woggioni.net/woggioni/rbcs:native
-            gitea.woggioni.net/woggioni/rbcs:native-${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-native
           target: release-native
       -
         name: Build rbcs jlink Docker image
@@ -89,7 +85,7 @@ jobs:
           pull: true
           tags: |
             gitea.woggioni.net/woggioni/rbcs:jlink
-            gitea.woggioni.net/woggioni/rbcs:jlink-${{ steps.retrieve-version.outputs.VERSION }}-jlink
+            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-jlink
           target: release-jlink
       - name: Publish artifacts
         env:
