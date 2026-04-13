@@ -12,15 +12,18 @@ import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.util.ReferenceCountUtil
+import java.net.InetSocketAddress
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.Configuration.Group
 import net.woggioni.rbcs.api.Role
+import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.server.RemoteBuildCacheServer
-
 
 abstract class AbstractNettyHttpAuthenticator(private val authorizer: Authorizer) : ChannelInboundHandlerAdapter() {
 
     companion object {
+        private val log = createLogger<AbstractNettyHttpAuthenticator>()
+
         private val AUTHENTICATION_FAILED: FullHttpResponse = DefaultFullHttpResponse(
             HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED, Unpooled.EMPTY_BUFFER
         ).apply {
@@ -53,6 +56,16 @@ abstract class AbstractNettyHttpAuthenticator(private val authorizer: Authorizer
                         result.groups.asSequence().flatMap { it.roles.asSequence() }
             ).toSet()
             val authorized = authorizer.authorize(roles, msg)
+            if(log.isDebugEnabled) {
+                val authorizedMessage = if(authorized) { "Authorized" } else { "Forbidden" }
+                val clientAddress = ctx.channel().attr<InetSocketAddress>(RemoteBuildCacheServer.clientIp).get()
+                val roleString = "[" + roles.asSequence().map { "\"" + it + "\""}.joinToString(", ") + "]"
+                result.user?.name?.takeUnless(String::isEmpty)?.let { username ->
+                    log.debug("$authorizedMessage ${msg.method()} request from user $username with address $clientAddress, granted roles $roleString")
+                } ?: {
+                    log.debug("$authorizedMessage anonymous ${msg.method()} request with address $clientAddress, granted roles $roleString")
+                }
+            }
             if (authorized) {
                 super.channelRead(ctx, msg)
             } else {

@@ -136,6 +136,13 @@ public class Configuration {
         TlsCertificateExtractor groupExtractor;
     }
 
+    @Value
+    public static class ForwardedClientCertificateAuthentication implements Authentication {
+        String headerName;
+        TlsCertificateExtractor userExtractor;
+        TlsCertificateExtractor groupExtractor;
+    }
+
     public interface Cache {
         CacheHandlerFactory materialize();
         String getNamespaceURI();

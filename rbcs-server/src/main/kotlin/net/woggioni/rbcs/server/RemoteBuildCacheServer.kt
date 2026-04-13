@@ -159,6 +159,59 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
     }
 
     @Sharable
+    private class ForwardedClientCertificateAuthenticator(
+        authorizer: Authorizer,
+        private val anonymousUserGroups: Set<Configuration.Group>?,
+        private val subjectDnUserExtractor: SubjectDnExtractor?,
+        private val subjectDnGroupExtractor: SubjectDnExtractor?,
+        private val headerName: String,
+        private val trustedProxyIPs: List<Cidr>,
+        private val users: Map<String, Configuration.User>,
+        private val groups: Map<String, Configuration.Group>,
+    ) : AbstractNettyHttpAuthenticator(authorizer) {
+
+        companion object {
+            private val log = createLogger<ForwardedClientCertificateAuthenticator>()
+        }
+
+        override fun authenticate(ctx: ChannelHandlerContext, req: HttpRequest): AuthenticationResult? {
+            val clientIp = ctx.channel().attr(clientIp).get()
+            if (clientIp == null || trustedProxyIPs.none { it.contains(clientIp.address) }) {
+                log.debug(ctx) {
+                    "Rejecting forwarded client certificate authentication from untrusted address: $clientIp"
+                }
+                return null
+            }
+            val subjectDn = req.headers()[headerName]
+                ?: return anonymousUserGroups?.let { AuthenticationResult(null, it) }
+            val ldapName = try {
+                LdapName(subjectDn)
+            } catch (e: Exception) {
+                log.debug(ctx) {
+                    "Invalid subject DN in header $headerName: $subjectDn"
+                }
+                return anonymousUserGroups?.let { AuthenticationResult(null, it) }
+            }
+            val user = subjectDnUserExtractor?.extract(ldapName)?.let { userName ->
+                users[userName] ?: throw RuntimeException("Failed to extract user '$userName'")
+            }
+            val group = subjectDnGroupExtractor?.extract(ldapName)?.let { groupName ->
+                groups[groupName] ?: throw RuntimeException("Failed to extract group '$groupName'")
+            }
+            val allGroups = ((user?.groups ?: emptySet()).asSequence() + sequenceOf(group).filterNotNull()).toSet()
+            return AuthenticationResult(user, allGroups)
+        }
+    }
+
+    private data class SubjectDnExtractor(val rdnType: String, val pattern: Pattern) {
+        fun extract(ldapName: LdapName): String? {
+            return ldapName.rdns.find { it.type == rdnType }
+                ?.let { pattern.matcher(it.value.toString()) }
+                ?.takeIf(Matcher::matches)?.group(1)
+        }
+    }
+
+    @Sharable
     private class NettyHttpBasicAuthenticator(
         private val users: Map<String, Configuration.User>, authorizer: Authorizer
     ) : AbstractNettyHttpAuthenticator(authorizer) {
@@ -261,6 +314,23 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                     cfg.users[""]?.groups,
                     userExtractor(auth),
                     groupExtractor(auth)
+                )
+            }
+
+            is Configuration.ForwardedClientCertificateAuthentication -> {
+                ForwardedClientCertificateAuthenticator(
+                    RoleAuthorizer(),
+                    cfg.users[""]?.groups,
+                    auth.userExtractor?.let { extractor ->
+                        SubjectDnExtractor(extractor.rdnType, Pattern.compile(extractor.pattern))
+                    },
+                    auth.groupExtractor?.let { extractor ->
+                        SubjectDnExtractor(extractor.rdnType, Pattern.compile(extractor.pattern))
+                    },
+                    auth.headerName,
+                    cfg.trustedProxyIPs,
+                    cfg.users,
+                    cfg.groups,
                 )
             }
 

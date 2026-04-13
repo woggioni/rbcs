@@ -311,6 +311,45 @@
         </xs:sequence>
     </xs:complexType>
 
+    <xs:complexType name="forwardedClientCertificateAuthorizationType">
+        <xs:annotation>
+            <xs:documentation>
+                Authenticate clients based on a custom HTTP header containing the client TLS certificate
+                subject DN, forwarded by a reverse proxy that performs TLS termination. The proxy must be
+                listed in the trusted-proxies configuration for the header to be accepted.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:sequence>
+            <xs:element name="group-extractor" type="rbcs:X500NameExtractorType" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        A regex based extractor that will be used to determine which group the client belongs to,
+                        based on the X.500 name of the subject DN forwarded by the reverse proxy.
+                        When this is set RBAC works even if the user isn't listed in the &lt;users/&gt; section as
+                        the client will be assigned role solely based on the group he is found to belong to.
+                        Note that this does not allow for a client to be part of multiple groups.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="user-extractor" type="rbcs:X500NameExtractorType" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        A regex based extractor that will be used to assign a user to a connected client,
+                        based on the X.500 name of the subject DN forwarded by the reverse proxy.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="header-name" type="xs:token">
+            <xs:annotation>
+                <xs:documentation>
+                    Name of the HTTP header containing the client certificate subject DN
+                    forwarded by the reverse proxy. Defaults to "X-Client-Cert-Subject-DN".
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
     <xs:complexType name="X500NameExtractorType">
         <xs:annotation>
             <xs:documentation>
@@ -377,6 +416,15 @@
                 <xs:annotation>
                     <xs:documentation>
                         Enable TLS certificate authentication
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="forwarded-client-certificate" type="rbcs:forwardedClientCertificateAuthorizationType">
+                <xs:annotation>
+                    <xs:documentation>
+                        Enable forwarded client certificate authentication. Authenticates clients based on
+                        a custom HTTP header containing the client certificate subject DN, forwarded by a
+                        reverse proxy that performs TLS termination. Requires trusted-proxies to be configured.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>

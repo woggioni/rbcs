@@ -8,6 +8,7 @@ import net.woggioni.rbcs.api.Configuration.Authentication
 import net.woggioni.rbcs.api.Configuration.BasicAuthentication
 import net.woggioni.rbcs.api.Configuration.Cache
 import net.woggioni.rbcs.api.Configuration.ClientCertificateAuthentication
+import net.woggioni.rbcs.api.Configuration.ForwardedClientCertificateAuthentication
 import net.woggioni.rbcs.api.Configuration.Group
 import net.woggioni.rbcs.api.Configuration.KeyStore
 import net.woggioni.rbcs.api.Configuration.Tls
@@ -76,6 +77,28 @@ object Parser {
                                     }
                                 }
                                 authentication = ClientCertificateAuthentication(tlsExtractorUser, tlsExtractorGroup)
+                            }
+
+                            "forwarded-client-certificate" -> {
+                                val headerName = gchild.renderAttribute("header-name") ?: "X-Client-Cert-Subject-DN"
+                                var tlsExtractorUser: TlsCertificateExtractor? = null
+                                var tlsExtractorGroup: TlsCertificateExtractor? = null
+                                for (ggchild in gchild.asIterable()) {
+                                    when (ggchild.localName) {
+                                        "group-extractor" -> {
+                                            val attrName = ggchild.renderAttribute("attribute-name")
+                                            val pattern = ggchild.renderAttribute("pattern")
+                                            tlsExtractorGroup = TlsCertificateExtractor(attrName, pattern)
+                                        }
+
+                                        "user-extractor" -> {
+                                            val attrName = ggchild.renderAttribute("attribute-name")
+                                            val pattern = ggchild.renderAttribute("pattern")
+                                            tlsExtractorUser = TlsCertificateExtractor(attrName, pattern)
+                                        }
+                                    }
+                                }
+                                authentication = ForwardedClientCertificateAuthentication(headerName, tlsExtractorUser, tlsExtractorGroup)
                             }
                         }
                     }

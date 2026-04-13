@@ -165,6 +165,23 @@ object Serializer {
                                 }
                             }
                         }
+                        is Configuration.ForwardedClientCertificateAuthentication -> {
+                            node("forwarded-client-certificate") {
+                                attr("header-name", authentication.headerName)
+                                authentication.groupExtractor?.let { extractor ->
+                                    node("group-extractor") {
+                                        attr("attribute-name", extractor.rdnType)
+                                        attr("pattern", extractor.pattern)
+                                    }
+                                }
+                                authentication.userExtractor?.let { extractor ->
+                                    node("user-extractor") {
+                                        attr("attribute-name", extractor.rdnType)
+                                        attr("pattern", extractor.pattern)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
