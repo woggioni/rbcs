@@ -32,7 +32,7 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:vanilla-dev
+            gitea.woggioni.net/woggioni/rbcs:dev-vanilla
           target: release-vanilla
       -
         name: Build rbcs memcache Docker image
@@ -44,7 +44,7 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:memcache-dev
+            gitea.woggioni.net/woggioni/rbcs:dev-memcache
           target: release-memcache
       -
         name: Build rbcs redis Docker image
@@ -56,7 +56,7 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:redis-dev
+            gitea.woggioni.net/woggioni/rbcs:dev-redis
           target: release-redis
       -
         name: Build rbcs native Docker image
@@ -68,7 +68,7 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:native-dev
+            gitea.woggioni.net/woggioni/rbcs:dev-native
           target: release-native
       -
         name: Build rbcs jlink Docker image
@@ -80,6 +80,6 @@ jobs:
           push: true
           pull: true
           tags: |
-            gitea.woggioni.net/woggioni/rbcs:jlink-dev
+            gitea.woggioni.net/woggioni/rbcs:dev-jlink
           target: release-jlink
 
