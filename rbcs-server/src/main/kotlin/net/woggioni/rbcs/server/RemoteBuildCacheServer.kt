@@ -149,7 +149,10 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                         ((user?.groups ?: emptySet()).asSequence() + sequenceOf(group).filterNotNull()).toSet()
                     AuthenticationResult(user, allGroups)
                 } ?: anonymousUserGroups?.let { AuthenticationResult(null, it) }
-            } catch (es: SSLPeerUnverifiedException) {
+            } catch (ex: SSLPeerUnverifiedException) {
+                log.debug(ctx) {
+                    ex.message ?: "Error witch client certificate authentication"
+                }
                 anonymousUserGroups?.let { AuthenticationResult(null, it) }
             }
         }
