@@ -34,10 +34,11 @@ class NoAuthServerTest : AbstractServerTest() {
         cfg = Configuration(
             "127.0.0.1",
             getFreePort(),
+            serverPath,
             false,
             emptyList(),
+            false,
             100,
-            serverPath,
             Configuration.EventExecutor(false),
             Configuration.RateLimiter(true, 0x100000, 50),
             Configuration.Connection(

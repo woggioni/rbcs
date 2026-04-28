@@ -2,16 +2,8 @@ package net.woggioni.rbcs.server
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.ByteBuf
-import io.netty.channel.Channel
-import io.netty.channel.ChannelFactory
-import io.netty.channel.ChannelFuture
+import io.netty.channel.*
 import io.netty.channel.ChannelHandler.Sharable
-import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.ChannelInboundHandlerAdapter
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.ChannelOption
-import io.netty.channel.ChannelPromise
-import io.netty.channel.MultiThreadIoEventLoopGroup
 import io.netty.channel.nio.NioIoHandler
 import io.netty.channel.socket.DatagramChannel
 import io.netty.channel.socket.ServerSocketChannel
@@ -21,12 +13,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.compression.CompressionOptions
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder
-import io.netty.handler.codec.http.DefaultHttpContent
-import io.netty.handler.codec.http.HttpContentCompressor
-import io.netty.handler.codec.http.HttpDecoderConfig
-import io.netty.handler.codec.http.HttpHeaderNames
-import io.netty.handler.codec.http.HttpRequest
-import io.netty.handler.codec.http.HttpServerCodec
+import io.netty.handler.codec.http.*
 import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContext
 import io.netty.handler.ssl.SslContextBuilder
@@ -37,37 +24,15 @@ import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.AttributeKey
 import io.netty.util.concurrent.EventExecutorGroup
-import java.io.OutputStream
-import java.net.InetSocketAddress
-import java.nio.file.Files
-import java.nio.file.Path
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
-import java.time.Duration
-import java.time.Instant
-import java.util.Arrays
-import java.util.Base64
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
-import java.util.regex.Matcher
-import java.util.regex.Pattern
-import javax.naming.ldap.LdapName
-import javax.net.ssl.SSLPeerUnverifiedException
 import net.woggioni.rbcs.api.AsyncCloseable
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.exception.ConfigurationException
-import net.woggioni.rbcs.common.Cidr
+import net.woggioni.rbcs.common.*
 import net.woggioni.rbcs.common.PasswordSecurity.decodePasswordHash
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
 import net.woggioni.rbcs.common.RBCS.getTrustManager
 import net.woggioni.rbcs.common.RBCS.loadKeystore
 import net.woggioni.rbcs.common.RBCS.toUrl
-import net.woggioni.rbcs.common.Xml
-import net.woggioni.rbcs.common.createLogger
-import net.woggioni.rbcs.common.debug
-import net.woggioni.rbcs.common.info
 import net.woggioni.rbcs.server.auth.AbstractNettyHttpAuthenticator
 import net.woggioni.rbcs.server.auth.Authorizer
 import net.woggioni.rbcs.server.auth.RoleAuthorizer
@@ -78,8 +43,26 @@ import net.woggioni.rbcs.server.handler.MaxRequestSizeHandler
 import net.woggioni.rbcs.server.handler.ProxyProtocolHandler
 import net.woggioni.rbcs.server.handler.ReadTriggerDuplexHandler
 import net.woggioni.rbcs.server.handler.ServerHandler
+import net.woggioni.rbcs.server.otel.OtelSdkIntegration
 import net.woggioni.rbcs.server.throttling.BucketManager
 import net.woggioni.rbcs.server.throttling.ThrottlingHandler
+import java.io.OutputStream
+import java.net.InetSocketAddress
+import java.nio.file.Files
+import java.nio.file.Path
+import java.security.PrivateKey
+import java.security.cert.X509Certificate
+import java.time.Duration
+import java.time.Instant
+import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+import javax.naming.ldap.LdapName
+import javax.net.ssl.SSLPeerUnverifiedException
 
 class RemoteBuildCacheServer(private val cfg: Configuration) {
 
@@ -431,6 +414,9 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 maxChunkSize = cfg.connection.chunkSize
             }
             pipeline.addLast(HttpServerCodec(httpDecoderConfig))
+            if(cfg.isEnableTelemetry) {
+                OtelSdkIntegration.createHandler().let { pipeline.addLast(it) }
+            }
             pipeline.addLast(ReadTriggerDuplexHandler.NAME, ReadTriggerDuplexHandler())
             pipeline.addLast(MaxRequestSizeHandler.NAME, MaxRequestSizeHandler(cfg.connection.maxRequestSize))
             pipeline.addLast(HttpChunkContentCompressor(1024))
@@ -525,6 +511,9 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
     }
 
     fun run(): ServerHandle {
+        if(cfg.isEnableTelemetry) {
+            OtelSdkIntegration.initialize()
+        }
         // Create the multithreaded event loops for the server
         val bossGroup = MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory())
         val channelFactory = ChannelFactory<SocketChannel> { NioSocketChannel() }

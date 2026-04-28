@@ -13,6 +13,11 @@ dependencies {
     implementation catalog.netty.buffer
     implementation catalog.netty.transport
     implementation catalog.netty.codec.haproxy
+    compileOnly catalog.opentelemetry.netty['4']['1']
+    compileOnly catalog.opentelemetry.sdk.extension.autoconfigure
+    compileOnly catalog.opentelemetry.logback.appender['1']['0']
+    compileOnly catalog.opentelemetry.extension.trace.propagators
+    compileOnly catalog.logback.classic
 
     api project(':rbcs-common')
     api project(':rbcs-api')

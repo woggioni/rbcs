@@ -59,6 +59,14 @@
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
+        <xs:attribute name="enable-telemetry" type="xs:boolean" use="optional" default="false">
+            <xs:annotation>
+                <xs:documentation>
+                    Enable OpenTelemetry distributed tracing for the server.
+                    Even when enabled, telemetry only activates if OpenTelemetry classes are present on the classpath.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="bindType">

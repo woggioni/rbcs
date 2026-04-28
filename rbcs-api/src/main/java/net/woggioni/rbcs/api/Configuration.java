@@ -18,10 +18,11 @@ import java.util.stream.Collectors;
 public class Configuration {
     String host;
     int port;
+    String serverPath;
     boolean proxyProtocolEnabled;
     List<Cidr> trustedProxyIPs;
+    boolean enableTelemetry;
     int incomingConnectionsBacklogSize;
-    String serverPath;
     @NonNull
     EventExecutor eventExecutor;
     @NonNull
@@ -150,6 +151,7 @@ public class Configuration {
     }
 
     public static Configuration of(
+            boolean enableTelemetry,
             String host,
             int port,
             boolean proxyProtocolEnabled,
@@ -168,10 +170,11 @@ public class Configuration {
         return new Configuration(
                 host,
                 port,
+                serverPath != null && !serverPath.isEmpty() && !serverPath.equals("/") ? serverPath : null,
                 proxyProtocolEnabled,
                 trustedProxyIPs,
+                enableTelemetry,
                 incomingConnectionsBacklogSize,
-                serverPath != null && !serverPath.isEmpty() && !serverPath.equals("/") ? serverPath : null,
                 eventExecutor,
                 rateLimiter,
                 connection,

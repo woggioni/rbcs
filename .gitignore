@@ -5,3 +5,8 @@
 build
 
 rbcs-cli/native-image/*.json
+
+# Ignore JDTLS files
+.classpath
+.project
+.settings

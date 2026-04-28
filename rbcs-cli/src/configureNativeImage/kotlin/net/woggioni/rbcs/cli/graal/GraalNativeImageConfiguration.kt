@@ -120,10 +120,11 @@ object GraalNativeImageConfiguration {
             val serverConfiguration = Configuration(
                 "127.0.0.1",
                 serverPort,
+                null,
                 false,
                 emptyList(),
+                false,
                 100,
-                null,
                 Configuration.EventExecutor(true),
                 Configuration.RateLimiter(
                     false, 0x100000, 10

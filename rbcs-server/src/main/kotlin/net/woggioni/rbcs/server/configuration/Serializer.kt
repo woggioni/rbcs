@@ -29,6 +29,7 @@ object Serializer {
                 ?.let { serverPath ->
                 attr("path", serverPath)
             }
+            attr("enable-telemetry", conf.isEnableTelemetry.toString())
             node("bind") {
                 attr("host", conf.host)
                 attr("port", conf.port.toString())

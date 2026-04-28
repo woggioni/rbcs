@@ -30,7 +30,6 @@ configurations {
         transitive = false
         canBeConsumed = true
         canBeResolved = true
-        visible = true
     }
 
     configureNativeImageImplementation {
@@ -51,6 +50,7 @@ dependencies {
     configureNativeImageImplementation project
     configureNativeImageImplementation project(':rbcs-server-memcache')
     configureNativeImageImplementation project(':rbcs-server-redis')
+//    configureNativeImageImplementation project(':rbcs-server-otel')
 
     implementation catalog.jwo
     implementation catalog.slf4j.api
@@ -59,9 +59,7 @@ dependencies {
     implementation project(':rbcs-client')
     implementation project(':rbcs-server')
 
-//    runtimeOnly catalog.slf4j.jdk14
     runtimeOnly catalog.logback.classic
-//    runtimeOnly catalog.slf4j.simple
     nativeImage project(':rbcs-server-memcache')
     nativeImage project(':rbcs-server-redis')
 
@@ -142,7 +140,12 @@ Provider<JlinkTask> jlinkTaskProvider = tasks.named(JlinkPlugin.JLINK_TASK_NAME,
         'net.woggioni.rbcs.server.memcache',
         'net.woggioni.rbcs.server.redis',
         'ch.qos.logback.classic',
-        'jdk.crypto.ec'
+        'jdk.crypto.ec',
+//        'io.opentelemetry.api',
+//        'io.opentelemetry.instrumentation.netty_4_1',
+//        'io.opentelemetry.sdk.autoconfigure',
+//        'io.opentelemetry.instrumentation.logback_appender_1_0',
+//        'io.opentelemetry.extension.trace.propagation'
     ]
     compressionLevel = 2
     stripDebug = false

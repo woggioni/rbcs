@@ -62,6 +62,19 @@ jobs:
             gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-redis
           target: release-redis
       -
+        name: Build rbcs full Docker image
+        uses: docker/build-push-action@v5.3.0
+        with:
+          builder: "multiplatform-builder"
+          context: "docker/build/docker"
+          platforms: linux/amd64,linux/arm64
+          push: true
+          pull: true
+          tags: |
+            gitea.woggioni.net/woggioni/rbcs:full
+            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-full
+          target: release-full
+      -
         name: Build rbcs native Docker image
         uses: docker/build-push-action@v5.3.0
         with:
