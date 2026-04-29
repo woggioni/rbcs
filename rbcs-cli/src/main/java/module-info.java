@@ -1,11 +1,11 @@
 module net.woggioni.rbcs.cli {
     requires org.slf4j;
+    requires net.woggioni.jwo;
     requires net.woggioni.rbcs.server;
     requires info.picocli;
     requires net.woggioni.rbcs.common;
     requires net.woggioni.rbcs.client;
     requires kotlin.stdlib;
-    requires net.woggioni.jwo;
     requires net.woggioni.rbcs.api;
 
     exports net.woggioni.rbcs.cli.impl.converters to info.picocli;
@@ -14,4 +14,6 @@ module net.woggioni.rbcs.cli {
     opens net.woggioni.rbcs.cli to info.picocli, net.woggioni.rbcs.common;
 
     exports net.woggioni.rbcs.cli;
+
+    uses net.woggioni.rbcs.api.TelemetryController;
 }

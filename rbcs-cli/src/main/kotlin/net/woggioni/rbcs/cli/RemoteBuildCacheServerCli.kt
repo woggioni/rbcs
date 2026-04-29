@@ -1,6 +1,8 @@
 package net.woggioni.rbcs.cli
 
 import net.woggioni.jwo.Application
+import net.woggioni.jwo.LoggerController
+import net.woggioni.rbcs.api.TelemetryController
 import net.woggioni.rbcs.cli.impl.AbstractVersionProvider
 import net.woggioni.rbcs.cli.impl.RbcsCommand
 import net.woggioni.rbcs.cli.impl.commands.BenchmarkCommand
@@ -14,6 +16,8 @@ import net.woggioni.rbcs.common.RbcsUrlStreamHandlerFactory
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
 import picocli.CommandLine.Model.CommandSpec
+import java.util.ServiceLoader
+import net.woggioni.rbcs.common.RBCS.loadService
 
 
 @CommandLine.Command(
@@ -61,6 +65,10 @@ class RemoteBuildCacheServerCli : RbcsCommand() {
 
         @JvmStatic
         fun main(vararg args: String) {
+            loadService(TelemetryController::class.java)
+                .firstOrNull()
+                ?.initialize()
+            LoggerController.initializeLoggers()
             System.exit(createCommandLine().execute(*args))
         }
     }

@@ -26,12 +26,14 @@ import io.netty.util.AttributeKey
 import io.netty.util.concurrent.EventExecutorGroup
 import net.woggioni.rbcs.api.AsyncCloseable
 import net.woggioni.rbcs.api.Configuration
+import net.woggioni.rbcs.api.TelemetryController
 import net.woggioni.rbcs.api.exception.ConfigurationException
 import net.woggioni.rbcs.common.*
 import net.woggioni.rbcs.common.PasswordSecurity.decodePasswordHash
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
 import net.woggioni.rbcs.common.RBCS.getTrustManager
 import net.woggioni.rbcs.common.RBCS.loadKeystore
+import net.woggioni.rbcs.common.RBCS.loadService
 import net.woggioni.rbcs.common.RBCS.toUrl
 import net.woggioni.rbcs.server.auth.AbstractNettyHttpAuthenticator
 import net.woggioni.rbcs.server.auth.Authorizer
@@ -43,7 +45,6 @@ import net.woggioni.rbcs.server.handler.MaxRequestSizeHandler
 import net.woggioni.rbcs.server.handler.ProxyProtocolHandler
 import net.woggioni.rbcs.server.handler.ReadTriggerDuplexHandler
 import net.woggioni.rbcs.server.handler.ServerHandler
-import net.woggioni.rbcs.server.otel.OtelSdkIntegration
 import net.woggioni.rbcs.server.throttling.BucketManager
 import net.woggioni.rbcs.server.throttling.ThrottlingHandler
 import java.io.OutputStream
@@ -415,7 +416,10 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
             }
             pipeline.addLast(HttpServerCodec(httpDecoderConfig))
             if(cfg.isEnableTelemetry) {
-                OtelSdkIntegration.createHandler().let { pipeline.addLast(it) }
+                loadService(TelemetryController::class.java)
+                    .firstOrNull()
+                    ?.createHandler()
+                    ?.let { pipeline.addLast(it) }
             }
             pipeline.addLast(ReadTriggerDuplexHandler.NAME, ReadTriggerDuplexHandler())
             pipeline.addLast(MaxRequestSizeHandler.NAME, MaxRequestSizeHandler(cfg.connection.maxRequestSize))
@@ -511,9 +515,6 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
     }
 
     fun run(): ServerHandle {
-        if(cfg.isEnableTelemetry) {
-            OtelSdkIntegration.initialize()
-        }
         // Create the multithreaded event loops for the server
         val bossGroup = MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory())
         val channelFactory = ChannelFactory<SocketChannel> { NioSocketChannel() }

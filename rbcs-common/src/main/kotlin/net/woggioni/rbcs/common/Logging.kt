@@ -2,6 +2,7 @@ package net.woggioni.rbcs.common
 
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
+import net.woggioni.jwo.LoggerController
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.logging.LogManager
@@ -11,8 +12,10 @@ import org.slf4j.MDC
 import org.slf4j.event.Level
 import org.slf4j.spi.LoggingEventBuilder
 
-inline fun <reified T> T.contextLogger() = LoggerFactory.getLogger(T::class.java)
-inline fun <reified T> createLogger() = LoggerFactory.getLogger(T::class.java)
+fun <T> lazyLogger(cls: Class<T>) = LoggerController.lazyLogger(cls)
+
+inline fun <reified T> T.contextLogger() = lazyLogger(T::class.java)
+inline fun <reified T> createLogger() = lazyLogger(T::class.java)
 
 inline fun Logger.traceParam(messageBuilder: () -> Pair<String, Array<Any>>) {
     if (isTraceEnabled) {

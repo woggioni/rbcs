@@ -8,7 +8,7 @@ module net.woggioni.rbcs.api {
     requires io.netty.buffer;
     requires org.slf4j;
     requires java.xml;
-
+    requires org.jetbrains.annotations;
 
     exports net.woggioni.rbcs.api;
     exports net.woggioni.rbcs.api.exception;

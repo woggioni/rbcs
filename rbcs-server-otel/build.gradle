@@ -5,10 +5,19 @@ plugins {
 }
 
 configurations {
+
     bundle {
+        canBeResolved = false
+        canBeConsumed = false
+        transitive = true
+    }
+
+    filteredBundle {
         canBeResolved = true
         canBeConsumed = false
         transitive = true
+
+        extendsFrom bundle
 
         resolutionStrategy {
             dependencies {
@@ -19,27 +28,39 @@ configurations {
         }
     }
 
-    implementation {
-        extendsFrom bundle
-    }
-
     release {
         transitive = false
         canBeConsumed = true
         canBeResolved = true
     }
+
+    compileOnly {
+        extendsFrom bundle
+    }
 }
 
 dependencies {
-    bundle catalog.opentelemetry.netty['4']['1']
+    compileOnly project(':rbcs-common')
+    compileOnly project(':rbcs-api')
+
+    compileOnly catalog.netty.transport
+    compileOnly catalog.slf4j.api
+    compileOnly catalog.kotlin.stdlib.jdk8
+    compileOnly catalog.logback.core
+    compileOnly catalog.logback.classic
+
+    bundle catalog.opentelemetry.netty.'4'.'1'
     bundle catalog.opentelemetry.sdk.extension.autoconfigure
-    bundle catalog.opentelemetry.logback.appender['1']['0']
+    bundle catalog.opentelemetry.logback.appender.'1'.'0'
+    bundle catalog.opentelemetry.logback.mdc.'1'.'0'
     bundle catalog.opentelemetry.extension.trace.propagators
     bundle catalog.opentelemetry.exporter.otlp
+    bundle catalog.opentelemetry.runtime.telemetry
 }
 
 Provider<Tar> bundleTask = tasks.register("bundle", Tar) {
-    from(configurations.bundle)
+    from(tasks.named(JavaPlugin.JAR_TASK_NAME))
+    from(configurations.filteredBundle)
     group = BasePlugin.BUILD_GROUP
 }
 

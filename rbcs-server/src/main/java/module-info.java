@@ -17,11 +17,6 @@ module net.woggioni.rbcs.server {
     requires io.netty.common;
     requires io.netty.codec;
     requires io.netty.codec.haproxy;
-    requires static io.opentelemetry.api;
-    requires static io.opentelemetry.instrumentation.netty_4_1;
-    requires static io.opentelemetry.sdk.autoconfigure;
-    requires static io.opentelemetry.instrumentation.logback_appender_1_0;
-    requires static io.opentelemetry.extension.trace.propagation;
     requires org.slf4j;
 
     exports net.woggioni.rbcs.server;
@@ -31,5 +26,6 @@ module net.woggioni.rbcs.server {
 
 
     uses CacheProvider;
+    uses net.woggioni.rbcs.api.TelemetryController;
     provides CacheProvider with FileSystemCacheProvider, InMemoryCacheProvider;
 }
