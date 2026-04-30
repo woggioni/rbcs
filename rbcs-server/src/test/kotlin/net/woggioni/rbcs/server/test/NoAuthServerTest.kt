@@ -37,7 +37,6 @@ class NoAuthServerTest : AbstractServerTest() {
             serverPath,
             false,
             emptyList(),
-            false,
             100,
             Configuration.EventExecutor(false),
             Configuration.RateLimiter(true, 0x100000, 50),

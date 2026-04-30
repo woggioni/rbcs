@@ -32,7 +32,6 @@ abstract class AbstractBasicAuthServerTest : AbstractServerTest() {
     override fun setUp() {
         this.cacheDir = testDir.resolve("cache")
         cfg = Configuration.of(
-            false,
             "127.0.0.1",
             getFreePort(),
             false,

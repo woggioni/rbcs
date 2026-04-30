@@ -5,7 +5,6 @@ The root element that contains all server configuration.
 
 **Attributes:**
 - `path` (optional): URI path prefix for cache requests. Example: if set to "cache", requests would be made to "http://www.example.com/cache/KEY"
-- `enable-telemetry` (optional): If set to "true" it will enable opentelemetry integration (you will need to make sure the `rbcs-server-otel` has been unpacked in the `plugins` folder)
 
 #### Child Elements
 
@@ -140,7 +139,7 @@ Configures TLS encryption.
 <rbcs:server xmlns:xs="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:rbcs="urn:net.woggioni.rbcs.server"
              xs:schemaLocation="urn:net.woggioni.rbcs.server jpms://net.woggioni.rbcs.server/net/woggioni/rbcs/server/schema/rbcs-server.xsd"
-             path="/my/custom/path" enable-telemetry="true"
+             path="/my/custom/path"
 >
     <bind host="0.0.0.0" port="8080" incoming-connections-backlog-size="1024" proxy-protocol="true">
         <trusted-proxies>

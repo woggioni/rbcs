@@ -21,7 +21,6 @@ public class Configuration {
     String serverPath;
     boolean proxyProtocolEnabled;
     List<Cidr> trustedProxyIPs;
-    boolean enableTelemetry;
     int incomingConnectionsBacklogSize;
     @NonNull
     EventExecutor eventExecutor;
@@ -151,7 +150,6 @@ public class Configuration {
     }
 
     public static Configuration of(
-            boolean enableTelemetry,
             String host,
             int port,
             boolean proxyProtocolEnabled,
@@ -173,7 +171,6 @@ public class Configuration {
                 serverPath != null && !serverPath.isEmpty() && !serverPath.equals("/") ? serverPath : null,
                 proxyProtocolEnabled,
                 trustedProxyIPs,
-                enableTelemetry,
                 incomingConnectionsBacklogSize,
                 eventExecutor,
                 rateLimiter,

@@ -123,7 +123,6 @@ object GraalNativeImageConfiguration {
                 null,
                 false,
                 emptyList(),
-                false,
                 100,
                 Configuration.EventExecutor(true),
                 Configuration.RateLimiter(

@@ -14,18 +14,6 @@ class OtelController : TelemetryController {
 
     private val log = createLogger<OtelController>()
 
-    private val appenderAvailable: Boolean by lazy {
-        runCatching {
-            Class.forName("io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender")
-        }.fold(
-            onSuccess = { true },
-            onFailure = {
-                log.info { "OpenTelemetry logback appender not on classpath" }
-                false
-            },
-        )
-    }
-
     override fun initialize() {
         log.info { "Initializing OpenTelemetry SDK with auto-configuration" }
 
@@ -35,14 +23,12 @@ class OtelController : TelemetryController {
             .openTelemetrySdk
         RuntimeTelemetry.create(sdk)
 
-        if (appenderAvailable) {
-            runCatching {
-                OpenTelemetryAppender.install(sdk)
-                log.info { "OpenTelemetry logback appender installed" }
-            }.onFailure { ex ->
-                val msg = ex.localizedMessage ?: ex.javaClass.name
-                log.info { "Failed to install OpenTelemetry logback appender: $msg" }
-            }
+        runCatching {
+            OpenTelemetryAppender.install(sdk)
+            log.info { "OpenTelemetry logback appender installed" }
+        }.onFailure { ex ->
+            val msg = ex.localizedMessage ?: ex.javaClass.name
+            log.info { "Failed to install OpenTelemetry logback appender: $msg" }
         }
         log.info { "OpenTelemetry SDK initialized successfully" }
     }
