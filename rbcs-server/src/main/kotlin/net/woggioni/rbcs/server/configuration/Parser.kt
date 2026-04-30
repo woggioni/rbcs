@@ -46,8 +46,6 @@ object Parser {
         var groups = emptyMap<String, Group>()
         var tls: Tls? = null
         val serverPath = root.renderAttribute("path")
-        var enableTelemetry = root.renderAttribute("enable-telemetry")
-            ?.let(String::toBoolean) ?: false
         var incomingConnectionsBacklogSize = 1024
         var authentication: Authentication? = null
         for (child in root.asIterable()) {
@@ -235,7 +233,6 @@ object Parser {
             }
         }
         return Configuration.of(
-            enableTelemetry,
             host,
             port,
             proxyProtocolEnabled,

@@ -7,7 +7,8 @@ FROM base-release AS release-vanilla
 ADD rbcs-cli-envelope-*.jar rbcs.jar
 ADD logback.xml /etc/rbcs/logback.xml
 ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
-ENTRYPOINT ["java", "-Dlogback.configurationFile=/etc/rbcs/logback.xml", "-XX:MaxRAMPercentage=70", "-XX:GCTimeRatio=24", "-XX:+UseZGC", "-jar", "/var/lib/rbcs/rbcs.jar"]
+ENV JDK_JAVA_OPTIONS=-Dlogback.configurationFile=/etc/rbcs/logback.xml\ -XX:MaxRAMPercentage=70\ -XX:GCTimeRatio=24\ -XX:+UseZGC
+ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM base-release AS release-memcache
 ADD --chown=rbcs:rbcs rbcs-cli-envelope-*.jar rbcs.jar
@@ -16,8 +17,7 @@ WORKDIR /var/lib/rbcs/plugins
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-server-memcache*.tar
 WORKDIR /var/lib/rbcs
 ADD logback.xml /etc/rbcs/logback.xml
-ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
-ENTRYPOINT ["java", "-Dlogback.configurationFile=/etc/rbcs/logback.xml", "-XX:MaxRAMPercentage=70", "-XX:GCTimeRatio=24", "-XX:+UseZGC", "-jar", "/var/lib/rbcs/rbcs.jar"]
+ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM base-release AS release-redis
 ADD --chown=rbcs:rbcs rbcs-cli-envelope-*.jar rbcs.jar
@@ -26,8 +26,7 @@ WORKDIR /var/lib/rbcs/plugins
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-server-redis*.tar
 WORKDIR /var/lib/rbcs
 ADD logback.xml /etc/rbcs/logback.xml
-ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
-ENTRYPOINT ["java", "-Dlogback.configurationFile=/etc/rbcs/logback.xml", "-XX:MaxRAMPercentage=70", "-XX:GCTimeRatio=24", "-XX:+UseZGC", "-jar", "/var/lib/rbcs/rbcs.jar"]
+ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM base-release AS release-full
 ADD --chown=rbcs:rbcs rbcs-cli-envelope-*.jar rbcs.jar
@@ -38,8 +37,8 @@ RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distri
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-server-otel*.tar
 WORKDIR /var/lib/rbcs
 ADD logback.xml /etc/rbcs/logback.xml
-ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
-ENTRYPOINT ["java", "-Dlogback.configurationFile=/etc/rbcs/logback.xml", "-XX:MaxRAMPercentage=70", "-XX:GCTimeRatio=24", "-XX:+UseZGC", "-jar", "/var/lib/rbcs/rbcs.jar"]
+ENV OTEL_SDK_DISABLED="true"
+ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM busybox:musl AS base-native
 RUN mkdir -p /var/lib/rbcs /var/tmp/rbcs /etc/rbcs
@@ -66,5 +65,5 @@ USER rbcs
 WORKDIR /var/lib/rbcs
 ADD logback.xml /etc/rbcs/logback.xml
 ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
-ENV JAVA_OPTS=-XX:-UseJVMCICompiler\ -Dlogback.configurationFile=/etc/rbcs/logback.xml\ -XX:MaxRAMPercentage=70\ -XX:GCTimeRatio=24\ -XX:+UseZGC
+ENV JDK_JAVA_OPTIONS=-XX:-UseJVMCICompiler\ -Dlogback.configurationFile=/etc/rbcs/logback.xml\ -XX:MaxRAMPercentage=70\ -XX:GCTimeRatio=24\ -XX:+UseZGC
 ENTRYPOINT ["/usr/local/bin/rbcs-cli"]

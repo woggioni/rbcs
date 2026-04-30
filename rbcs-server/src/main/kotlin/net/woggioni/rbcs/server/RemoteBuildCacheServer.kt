@@ -415,12 +415,10 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 maxChunkSize = cfg.connection.chunkSize
             }
             pipeline.addLast(HttpServerCodec(httpDecoderConfig))
-            if(cfg.isEnableTelemetry) {
-                loadService(TelemetryController::class.java)
-                    .firstOrNull()
-                    ?.createHandler()
-                    ?.let { pipeline.addLast(it) }
-            }
+            loadService(TelemetryController::class.java)
+                .firstOrNull()
+                ?.createHandler()
+                ?.let { pipeline.addLast(it) }
             pipeline.addLast(ReadTriggerDuplexHandler.NAME, ReadTriggerDuplexHandler())
             pipeline.addLast(MaxRequestSizeHandler.NAME, MaxRequestSizeHandler(cfg.connection.maxRequestSize))
             pipeline.addLast(HttpChunkContentCompressor(1024))
