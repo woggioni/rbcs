@@ -59,38 +59,28 @@ object ExceptionHandler : ChannelDuplexHandler() {
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
         when (cause) {
             is DecoderException -> {
-                if(log.isDebugEnabled) {
-                    log.debug(cause.message, cause)
-                }
+                log.debug(cause.message, cause)
                 ctx.close()
             }
 
             is ConnectException -> {
-                if(log.isErrorEnabled) {
-                    log.error(cause.message, cause)
-                }
+                log.error(cause.message, cause)
                 ctx.writeAndFlush(SERVER_ERROR.retainedDuplicate())
             }
 
             is SocketException -> {
-                if(log.isDebugEnabled) {
-                    log.debug(cause.message, cause)
-                }
+                log.debug(cause.message, cause)
                 ctx.close()
             }
 
             is SSLPeerUnverifiedException -> {
-                if(log.isDebugEnabled) {
-                    log.debug(cause.message, cause)
-                }
+                log.debug(cause.message, cause)
                 ctx.writeAndFlush(NOT_AUTHORIZED.retainedDuplicate())
                     .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
             }
 
             is SSLException -> {
-                if(log.isDebugEnabled) {
-                    log.debug(cause.message, cause)
-                }
+                log.debug(cause.message, cause)
                 ctx.close()
             }
 
@@ -119,17 +109,13 @@ object ExceptionHandler : ChannelDuplexHandler() {
             }
 
             is CacheException -> {
-                if(log.isErrorEnabled) {
-                    log.error(cause.message, cause)
-                }
+                log.error(cause.message, cause)
                 ctx.writeAndFlush(NOT_AVAILABLE.retainedDuplicate())
                     .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
             }
 
             else -> {
-                if(log.isErrorEnabled) {
-                    log.error(cause.message, cause)
-                }
+                log.error(cause.message, cause)
                 ctx.writeAndFlush(SERVER_ERROR.retainedDuplicate())
                     .addListener(ChannelFutureListener.CLOSE_ON_FAILURE)
             }
