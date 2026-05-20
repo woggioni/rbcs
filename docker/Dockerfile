@@ -6,8 +6,6 @@ WORKDIR /var/lib/rbcs
 FROM base-release AS release-vanilla
 ADD rbcs-cli-envelope-*.jar rbcs.jar
 ADD logback.xml /etc/rbcs/logback.xml
-ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
-ENV JDK_JAVA_OPTIONS=-Dlogback.configurationFile=/etc/rbcs/logback.xml\ -XX:MaxRAMPercentage=70\ -XX:GCTimeRatio=24\ -XX:+UseZGC
 ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM base-release AS release-memcache
@@ -17,8 +15,6 @@ WORKDIR /var/lib/rbcs/plugins
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-server-memcache*.tar
 WORKDIR /var/lib/rbcs
 ADD logback.xml /etc/rbcs/logback.xml
-ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
-ENV JDK_JAVA_OPTIONS=-Dlogback.configurationFile=/etc/rbcs/logback.xml\ -XX:MaxRAMPercentage=70\ -XX:GCTimeRatio=24\ -XX:+UseZGC
 ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM base-release AS release-redis
@@ -28,8 +24,6 @@ WORKDIR /var/lib/rbcs/plugins
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-server-redis*.tar
 WORKDIR /var/lib/rbcs
 ADD logback.xml /etc/rbcs/logback.xml
-ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
-ENV JDK_JAVA_OPTIONS=-Dlogback.configurationFile=/etc/rbcs/logback.xml\ -XX:MaxRAMPercentage=70\ -XX:GCTimeRatio=24\ -XX:+UseZGC
 ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM base-release AS release-full
@@ -54,7 +48,6 @@ COPY --from=base-native /etc/passwd /etc/passwd
 COPY --from=base-native /etc/rbcs /etc/rbcs
 COPY --from=base-native /var/lib/rbcs /var/lib/rbcs
 ADD rbcs-cli.upx /usr/bin/rbcs-cli
-ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
 USER rbcs
 WORKDIR /var/lib/rbcs
 ENTRYPOINT ["/usr/bin/rbcs-cli", "-XX:MaximumHeapSizePercent=70", "-Dio.netty.tmpdir=/var/tmp/rbcs", "-Dlogback.configurationFile=/etc/rbcs/logback.xml"]
@@ -68,6 +61,4 @@ RUN adduser -u 1000 rbcs
 USER rbcs
 WORKDIR /var/lib/rbcs
 ADD logback.xml /etc/rbcs/logback.xml
-ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
-ENV JDK_JAVA_OPTIONS=-XX:-UseJVMCICompiler\ -Dlogback.configurationFile=/etc/rbcs/logback.xml\ -XX:MaxRAMPercentage=70\ -XX:GCTimeRatio=24\ -XX:+UseZGC
 ENTRYPOINT ["/usr/local/bin/rbcs-cli"]
