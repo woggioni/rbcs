@@ -1,9 +1,9 @@
 package net.woggioni.rbcs.server.test
 
-import io.netty.handler.codec.http.HttpResponseStatus
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import io.netty.handler.codec.http.HttpResponseStatus
 import net.woggioni.rbcs.api.Configuration
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Order

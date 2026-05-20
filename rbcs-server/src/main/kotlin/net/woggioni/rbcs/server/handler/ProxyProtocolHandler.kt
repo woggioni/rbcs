@@ -1,10 +1,10 @@
 package net.woggioni.rbcs.server.handler
 
+import java.net.InetAddress
+import java.net.InetSocketAddress
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.handler.codec.haproxy.HAProxyMessage
-import java.net.InetAddress
-import java.net.InetSocketAddress
 import net.woggioni.rbcs.common.Cidr
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.trace

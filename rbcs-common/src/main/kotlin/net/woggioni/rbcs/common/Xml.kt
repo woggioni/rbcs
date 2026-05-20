@@ -16,13 +16,13 @@ import javax.xml.transform.stream.StreamResult
 import javax.xml.transform.stream.StreamSource
 import javax.xml.validation.Schema
 import javax.xml.validation.SchemaFactory
+import org.xml.sax.ErrorHandler as ErrHandler
 import net.woggioni.jwo.JWO
 import org.slf4j.event.Level
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 import org.w3c.dom.NodeList
-import org.xml.sax.ErrorHandler as ErrHandler
 import org.xml.sax.SAXNotRecognizedException
 import org.xml.sax.SAXNotSupportedException
 import org.xml.sax.SAXParseException

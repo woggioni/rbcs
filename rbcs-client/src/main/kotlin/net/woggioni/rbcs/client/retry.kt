@@ -1,10 +1,10 @@
 package net.woggioni.rbcs.client
 
-import io.netty.util.concurrent.EventExecutorGroup
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.math.pow
 import kotlin.random.Random
+import io.netty.util.concurrent.EventExecutorGroup
 
 sealed class OperationOutcome<T> {
     class Success<T>(val result: T) : OperationOutcome<T>()

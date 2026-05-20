@@ -1,5 +1,9 @@
 package net.woggioni.rbcs.server.exception
 
+import java.net.ConnectException
+import java.net.SocketException
+import javax.net.ssl.SSLException
+import javax.net.ssl.SSLPeerUnverifiedException
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelFutureListener
@@ -13,16 +17,11 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.handler.timeout.ReadTimeoutException
 import io.netty.handler.timeout.WriteTimeoutException
-import java.net.ConnectException
-import java.net.SocketException
-import javax.net.ssl.SSLException
-import javax.net.ssl.SSLPeerUnverifiedException
 import net.woggioni.rbcs.api.exception.CacheException
 import net.woggioni.rbcs.api.exception.ContentTooLargeException
 import net.woggioni.rbcs.common.contextLogger
 import net.woggioni.rbcs.common.debug
 import net.woggioni.rbcs.common.log
-import net.woggioni.rbcs.server.RemoteBuildCacheServer
 import org.slf4j.event.Level
 import org.slf4j.spi.LoggingEventBuilder
 

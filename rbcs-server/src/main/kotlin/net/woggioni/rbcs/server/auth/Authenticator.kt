@@ -1,5 +1,6 @@
 package net.woggioni.rbcs.server.auth
 
+import java.net.InetSocketAddress
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
@@ -12,7 +13,6 @@ import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.util.ReferenceCountUtil
-import java.net.InetSocketAddress
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.Configuration.Group
 import net.woggioni.rbcs.api.Role

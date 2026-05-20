@@ -1,5 +1,6 @@
 package net.woggioni.rbcs.server.handler
 
+import java.nio.file.Path
 import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelHandlerContext
@@ -18,7 +19,6 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpUtil
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.handler.codec.http.LastHttpContent
-import java.nio.file.Path
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.api.message.CacheMessage
 import net.woggioni.rbcs.api.message.CacheMessage.CacheContent

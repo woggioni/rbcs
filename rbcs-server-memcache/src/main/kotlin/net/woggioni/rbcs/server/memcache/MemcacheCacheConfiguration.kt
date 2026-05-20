@@ -1,15 +1,15 @@
 package net.woggioni.rbcs.server.memcache
 
-import io.netty.channel.ChannelFactory
-import io.netty.channel.EventLoopGroup
-import io.netty.channel.pool.FixedChannelPool
-import io.netty.channel.socket.DatagramChannel
-import io.netty.channel.socket.SocketChannel
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import io.netty.channel.ChannelFactory
+import io.netty.channel.EventLoopGroup
+import io.netty.channel.pool.FixedChannelPool
+import io.netty.channel.socket.DatagramChannel
+import io.netty.channel.socket.SocketChannel
 import net.woggioni.rbcs.api.CacheHandler
 import net.woggioni.rbcs.api.CacheHandlerFactory
 import net.woggioni.rbcs.api.Configuration

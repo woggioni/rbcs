@@ -1,7 +1,7 @@
 package net.woggioni.rbcs.common
 
-import io.netty.buffer.ByteBuf
 import java.io.InputStream
+import io.netty.buffer.ByteBuf
 
 class ByteBufInputStream(private val buf : ByteBuf) : InputStream() {
     override fun read(): Int {

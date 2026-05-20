@@ -1,6 +1,5 @@
 package net.woggioni.rbcs.server.test
 
-import io.netty.handler.codec.http.HttpResponseStatus
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -11,6 +10,7 @@ import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.zip.Deflater
 import kotlin.random.Random
+import io.netty.handler.codec.http.HttpResponseStatus
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.common.RBCS.getFreePort
 import net.woggioni.rbcs.common.Xml

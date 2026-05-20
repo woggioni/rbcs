@@ -1,12 +1,5 @@
 package net.woggioni.rbcs.servlet
 
-import jakarta.annotation.PreDestroy
-import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
-import jakarta.servlet.annotation.WebServlet
-import jakarta.servlet.http.HttpServlet
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
@@ -17,6 +10,13 @@ import java.util.concurrent.PriorityBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.logging.Logger
+import jakarta.annotation.PreDestroy
+import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
+import jakarta.servlet.annotation.WebServlet
+import jakarta.servlet.http.HttpServlet
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import net.woggioni.jwo.HttpClient.HttpStatus
 import net.woggioni.jwo.JWO
 

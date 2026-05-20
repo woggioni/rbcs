@@ -1,5 +1,18 @@
 package net.woggioni.rbcs.client
 
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.URI
+import java.security.cert.X509Certificate
+import java.util.Base64
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
+import kotlin.random.Random
+import io.netty.util.concurrent.Future as NettyFuture
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
@@ -34,20 +47,7 @@ import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.concurrent.Future
-import io.netty.util.concurrent.Future as NettyFuture
 import io.netty.util.concurrent.GenericFutureListener
-import java.io.IOException
-import java.net.InetSocketAddress
-import java.net.URI
-import java.security.cert.X509Certificate
-import java.util.Base64
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
-import java.util.concurrent.atomic.AtomicInteger
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
-import kotlin.random.Random
 import net.woggioni.rbcs.api.CacheValueMetadata
 import net.woggioni.rbcs.common.RBCS.loadKeystore
 import net.woggioni.rbcs.common.createLogger

@@ -1,5 +1,11 @@
 package net.woggioni.rbcs.server.redis.client
 
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import io.netty.util.concurrent.Future as NettyFuture
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.Unpooled
@@ -22,15 +28,7 @@ import io.netty.handler.codec.redis.RedisBulkStringAggregator
 import io.netty.handler.codec.redis.RedisDecoder
 import io.netty.handler.codec.redis.RedisEncoder
 import io.netty.handler.codec.redis.RedisMessage
-import io.netty.util.concurrent.Future as NettyFuture
 import io.netty.util.concurrent.GenericFutureListener
-
-import java.io.IOException
-import java.net.InetSocketAddress
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
-
 import net.woggioni.rbcs.common.HostAndPort
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.trace

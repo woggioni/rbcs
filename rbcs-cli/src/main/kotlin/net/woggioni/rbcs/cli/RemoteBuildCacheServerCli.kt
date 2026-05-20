@@ -12,12 +12,11 @@ import net.woggioni.rbcs.cli.impl.commands.HealthCheckCommand
 import net.woggioni.rbcs.cli.impl.commands.PasswordHashCommand
 import net.woggioni.rbcs.cli.impl.commands.PutCommand
 import net.woggioni.rbcs.cli.impl.commands.ServerCommand
+import net.woggioni.rbcs.common.RBCS.loadService
 import net.woggioni.rbcs.common.RbcsUrlStreamHandlerFactory
 import net.woggioni.rbcs.common.createLogger
 import picocli.CommandLine
 import picocli.CommandLine.Model.CommandSpec
-import java.util.ServiceLoader
-import net.woggioni.rbcs.common.RBCS.loadService
 
 
 @CommandLine.Command(

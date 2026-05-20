@@ -1,11 +1,11 @@
 package net.woggioni.rbcs.server.test
 
-import io.netty.handler.codec.http.HttpResponseStatus
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import io.netty.handler.codec.http.HttpResponseStatus
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.Role
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword

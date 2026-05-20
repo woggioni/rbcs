@@ -1,13 +1,12 @@
 package net.woggioni.rbcs.common
 
-import io.netty.channel.Channel
-import io.netty.channel.ChannelHandlerContext
-import net.woggioni.jwo.LoggerController
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.logging.LogManager
+import io.netty.channel.Channel
+import io.netty.channel.ChannelHandlerContext
+import net.woggioni.jwo.LoggerController
 import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.slf4j.event.Level
 import org.slf4j.spi.LoggingEventBuilder

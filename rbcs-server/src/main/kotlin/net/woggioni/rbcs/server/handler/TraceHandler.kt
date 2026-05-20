@@ -1,5 +1,6 @@
 package net.woggioni.rbcs.server.handler
 
+import java.nio.file.Path
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
@@ -10,7 +11,6 @@ import io.netty.handler.codec.http.HttpHeaderValues
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.LastHttpContent
-import java.nio.file.Path
 
 @Sharable
 object TraceHandler : ChannelInboundHandlerAdapter() {

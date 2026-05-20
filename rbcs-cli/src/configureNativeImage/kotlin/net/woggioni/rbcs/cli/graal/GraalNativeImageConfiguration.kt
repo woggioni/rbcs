@@ -7,6 +7,8 @@ import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutionException
 import java.util.zip.Deflater
+import net.woggioni.rbcs.client.Configuration as ClientConfiguration
+import net.woggioni.rbcs.client.impl.Parser as ClientConfigurationParser
 import net.woggioni.jwo.NullOutputStream
 import net.woggioni.rbcs.api.Configuration
 import net.woggioni.rbcs.api.Configuration.User
@@ -16,8 +18,6 @@ import net.woggioni.rbcs.cli.impl.commands.BenchmarkCommand
 import net.woggioni.rbcs.cli.impl.commands.GetCommand
 import net.woggioni.rbcs.cli.impl.commands.HealthCheckCommand
 import net.woggioni.rbcs.cli.impl.commands.PutCommand
-import net.woggioni.rbcs.client.Configuration as ClientConfiguration
-import net.woggioni.rbcs.client.impl.Parser as ClientConfigurationParser
 import net.woggioni.rbcs.common.HostAndPort
 import net.woggioni.rbcs.common.PasswordSecurity.hashPassword
 import net.woggioni.rbcs.common.RBCS

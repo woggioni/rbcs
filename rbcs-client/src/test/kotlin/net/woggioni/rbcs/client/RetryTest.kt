@@ -1,10 +1,10 @@
 package net.woggioni.rbcs.client
 
-import io.netty.util.concurrent.DefaultEventExecutorGroup
-import io.netty.util.concurrent.EventExecutorGroup
 import java.util.concurrent.CompletableFuture
 import java.util.stream.Stream
 import kotlin.random.Random
+import io.netty.util.concurrent.DefaultEventExecutorGroup
+import io.netty.util.concurrent.EventExecutorGroup
 import net.woggioni.rbcs.common.contextLogger
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.extension.ExtensionContext

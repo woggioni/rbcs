@@ -1,6 +1,11 @@
 package net.woggioni.rbcs.server.memcache.client
 
 
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import io.netty.util.concurrent.Future as NettyFuture
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
@@ -20,12 +25,7 @@ import io.netty.handler.codec.memcache.MemcacheObject
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheClientCodec
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheRequest
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheResponse
-import io.netty.util.concurrent.Future as NettyFuture
 import io.netty.util.concurrent.GenericFutureListener
-import java.io.IOException
-import java.net.InetSocketAddress
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 import net.woggioni.rbcs.common.HostAndPort
 import net.woggioni.rbcs.common.createLogger
 import net.woggioni.rbcs.common.trace
