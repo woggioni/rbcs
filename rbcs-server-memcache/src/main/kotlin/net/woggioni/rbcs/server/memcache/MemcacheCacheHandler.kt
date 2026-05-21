@@ -9,9 +9,11 @@ import java.nio.channels.FileChannel
 import java.nio.channels.ReadableByteChannel
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+import java.net.InetSocketAddress
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicReference
 import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterOutputStream
@@ -39,8 +41,11 @@ import net.woggioni.rbcs.api.message.CacheMessage.CachePutResponse
 import net.woggioni.rbcs.api.message.CacheMessage.CacheValueFoundResponse
 import net.woggioni.rbcs.api.message.CacheMessage.CacheValueNotFoundResponse
 import net.woggioni.rbcs.api.message.CacheMessage.LastCacheContent
+import net.woggioni.rbcs.api.SpanHandle
+import net.woggioni.rbcs.api.TelemetryController
 import net.woggioni.rbcs.common.ByteBufInputStream
 import net.woggioni.rbcs.common.ByteBufOutputStream
+import net.woggioni.rbcs.common.RBCS.loadService
 import net.woggioni.rbcs.common.RBCS.processCacheKey
 import net.woggioni.rbcs.common.RBCS.toIntOrNull
 import net.woggioni.rbcs.common.createLogger
@@ -68,6 +73,10 @@ class MemcacheCacheHandler(
             return expirySeconds.toInt().takeIf { it.toLong() == expirySeconds }
                 ?: Instant.ofEpochSecond(expirySeconds).epochSecond.toInt()
         }
+    }
+
+    private val telemetryController by lazy {
+        loadService(TelemetryController::class.java).firstOrNull()
     }
 
     private interface InProgressRequest {
@@ -153,7 +162,9 @@ class MemcacheCacheHandler(
         metadata: CacheValueMetadata,
         val digest: ByteBuf,
         val requestController: CompletableFuture<MemcacheRequestController>,
-        private val alloc: ByteBufAllocator
+        private val alloc: ByteBufAllocator,
+        val entryKey: String,
+        val memcacheSpanRef: AtomicReference<SpanHandle?>,
     ) : InProgressRequest {
         private var totalSize = 0
         private var tmpFile: FileChannel? = null
@@ -251,6 +262,17 @@ class MemcacheCacheHandler(
         val key = ctx.alloc().buffer().also {
             it.writeBytes(processCacheKey(msg.key, keyPrefix, digestAlgorithm))
         }
+        val memcacheSpan = telemetryController?.startSpan("GET")?.apply {
+            setAttribute("db.system", "memcache")
+            setAttribute("db.operation.name", "GET")
+            val remoteAddr = ctx.channel().remoteAddress()
+            if (remoteAddr is InetSocketAddress) {
+                remoteAddr.hostString?.let {
+                    setAttribute("server.address", it)
+                }
+                setAttribute("server.port", remoteAddr.port.toLong())
+            }
+        }
         val responseHandler = object : MemcacheResponseHandler {
             override fun responseReceived(response: BinaryMemcacheResponse) {
                 val status = response.status()
@@ -266,7 +288,14 @@ class MemcacheCacheHandler(
                         log.debug(ctx) {
                             "Cache miss for key ${msg.key} on memcache"
                         }
+                        telemetryController?.endSpan(memcacheSpan)
                         sendMessageAndFlush(ctx, CacheValueNotFoundResponse(msg.key))
+                    }
+
+                    else -> {
+                        val ex = MemcacheException(status)
+                        telemetryController?.endSpan(memcacheSpan, ex)
+                        this@MemcacheCacheHandler.exceptionCaught(ctx, ex)
                     }
                 }
             }
@@ -282,11 +311,13 @@ class MemcacheCacheHandler(
                     if (content is LastMemcacheContent) {
                         inProgressRequest = null
                         inProgressGetRequest.commit()
+                        telemetryController?.endSpan(memcacheSpan)
                     }
                 }
             }
 
             override fun exceptionCaught(ex: Throwable) {
+                telemetryController?.endSpan(memcacheSpan, ex)
                 (inProgressRequest as? InProgressGetRequest).let { inProgressGetRequest ->
                     inProgressGetRequest?.let {
                         inProgressRequest = null
@@ -312,6 +343,7 @@ class MemcacheCacheHandler(
         val key = ctx.alloc().buffer().also {
             it.writeBytes(processCacheKey(msg.key, keyPrefix, digestAlgorithm))
         }
+        val memcacheSpanRef = AtomicReference<SpanHandle?>(null)
         val responseHandler = object : MemcacheResponseHandler {
             override fun responseReceived(response: BinaryMemcacheResponse) {
                 val status = response.status()
@@ -320,16 +352,22 @@ class MemcacheCacheHandler(
                         log.debug(ctx) {
                             "Inserted key ${msg.key} into memcache"
                         }
+                        telemetryController?.endSpan(memcacheSpanRef.get())
                         sendMessageAndFlush(ctx, CachePutResponse(msg.key))
                     }
 
-                    else -> this@MemcacheCacheHandler.exceptionCaught(ctx, MemcacheException(status))
+                    else -> {
+                        val ex = MemcacheException(status)
+                        telemetryController?.endSpan(memcacheSpanRef.get(), ex)
+                        this@MemcacheCacheHandler.exceptionCaught(ctx, ex)
+                    }
                 }
             }
 
             override fun contentReceived(content: MemcacheContent) {}
 
             override fun exceptionCaught(ex: Throwable) {
+                telemetryController?.endSpan(memcacheSpanRef.get(), ex)
                 this@MemcacheCacheHandler.exceptionCaught(ctx, ex)
             }
         }
@@ -339,7 +377,7 @@ class MemcacheCacheHandler(
                 this@MemcacheCacheHandler.exceptionCaught(ctx, ex)
             }
         }
-        inProgressRequest = InProgressPutRequest(ctx.channel(), msg.metadata, key, requestController, ctx.alloc())
+        inProgressRequest = InProgressPutRequest(ctx.channel(), msg.metadata, key, requestController, ctx.alloc(), msg.key, memcacheSpanRef)
     }
 
     private fun handleCacheContent(ctx: ChannelHandlerContext, msg: CacheContent) {
@@ -362,22 +400,41 @@ class MemcacheCacheHandler(
         val request = inProgressRequest
         when (request) {
             is InProgressPutRequest -> {
+                val putRequest = request
                 inProgressRequest = null
                 log.trace(ctx) {
                     "Received last chunk of ${msg.content().readableBytes()} bytes for memcache"
                 }
-                request.write(msg.content())
-                val key = request.digest.retainedDuplicate()
-                val (payloadSize, payloadSource) = request.commit()
+                putRequest.write(msg.content())
+                val memcacheSpan = telemetryController?.startSpan("SET",
+                )?.apply {
+                    setAttribute("db.system", "memcache")
+                    setAttribute("db.operation.name", "SET")
+                    val remoteAddr = ctx.channel().remoteAddress()
+                    if (remoteAddr is InetSocketAddress) {
+                        remoteAddr.hostString?.let {
+                            setAttribute("server.address", it)
+                        }
+                        setAttribute("server.port", remoteAddr.port.toLong())
+                    }
+                }
+                putRequest.memcacheSpanRef.set(memcacheSpan)
+                val key = putRequest.digest.retainedDuplicate()
+                val (payloadSize, payloadSource) = putRequest.commit()
                 val extras = ctx.alloc().buffer(8, 8)
                 extras.writeInt(0)
                 extras.writeInt(encodeExpiry(maxAge))
-                val totalBodyLength = request.digest.readableBytes() + extras.readableBytes() + payloadSize
+                val totalBodyLength = putRequest.digest.readableBytes() + extras.readableBytes() + payloadSize
                 log.trace(ctx) {
                     "Trying to send SET request to memcache"
                 }
-                request.requestController.whenComplete { requestController, ex ->
+                putRequest.requestController.whenComplete { requestController, ex ->
                     if (ex == null) {
+                        val remoteAddr = requestController.channel.remoteAddress()
+                        if (remoteAddr is InetSocketAddress) {
+                            remoteAddr.hostString?.let { memcacheSpan?.setAttribute("server.address", it) }
+                            memcacheSpan?.setAttribute("server.port", remoteAddr.port.toLong())
+                        }
                         log.trace(ctx) {
                             "Sending SET request to memcache"
                         }

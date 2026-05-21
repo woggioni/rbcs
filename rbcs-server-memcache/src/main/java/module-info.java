@@ -1,4 +1,5 @@
 import net.woggioni.rbcs.api.CacheProvider;
+import net.woggioni.rbcs.api.TelemetryController;
 
 module net.woggioni.rbcs.server.memcache {
     requires net.woggioni.rbcs.common;
@@ -15,6 +16,8 @@ module net.woggioni.rbcs.server.memcache {
     requires org.slf4j;
 
     provides CacheProvider with net.woggioni.rbcs.server.memcache.MemcacheCacheProvider;
+
+    uses TelemetryController;
 
     opens net.woggioni.rbcs.server.memcache.schema;
 }

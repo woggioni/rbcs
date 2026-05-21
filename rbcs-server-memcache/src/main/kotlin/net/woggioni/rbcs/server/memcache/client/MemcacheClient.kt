@@ -147,6 +147,8 @@ class MemcacheClient(
 
                     channel.pipeline().addLast(handler)
                     response.complete(object : MemcacheRequestController {
+                        override val channel: Channel = channel
+
                         private var channelReleased = false
 
                         override fun sendRequest(request: BinaryMemcacheRequest) {

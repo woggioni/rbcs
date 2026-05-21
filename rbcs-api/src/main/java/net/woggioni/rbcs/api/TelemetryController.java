@@ -4,13 +4,15 @@ import io.netty.channel.ChannelHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
+
 public interface TelemetryController {
     void initialize();
     @NotNull ChannelHandler createHandler();
 
-    @Nullable RedisSpan startRedisSpan(@NotNull String command, @NotNull String key);
+    @Nullable SpanHandle startSpan(@NotNull String command);
 
-    void endRedisSpan(@Nullable RedisSpan span);
+    void endSpan(@Nullable SpanHandle span);
 
-    void endRedisSpan(@Nullable RedisSpan span, @NotNull Throwable error);
+    void endSpan(@Nullable SpanHandle span, @NotNull Throwable error);
 }

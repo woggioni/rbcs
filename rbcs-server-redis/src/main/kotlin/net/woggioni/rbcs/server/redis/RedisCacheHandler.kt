@@ -36,7 +36,6 @@ import net.woggioni.rbcs.api.message.CacheMessage.CachePutResponse
 import net.woggioni.rbcs.api.message.CacheMessage.CacheValueFoundResponse
 import net.woggioni.rbcs.api.message.CacheMessage.CacheValueNotFoundResponse
 import net.woggioni.rbcs.api.message.CacheMessage.LastCacheContent
-import net.woggioni.rbcs.api.RedisSpan
 import net.woggioni.rbcs.api.TelemetryController
 import net.woggioni.rbcs.common.ByteBufInputStream
 import net.woggioni.rbcs.common.ByteBufOutputStream
@@ -250,48 +249,57 @@ class RedisCacheHandler(
         }
         val keyBytes = processCacheKey(msg.key, keyPrefix, digestAlgorithm)
         val keyString = String(keyBytes, StandardCharsets.UTF_8)
-        val redisSpan = telemetryController?.startRedisSpan("GET", keyString)
+        val redisSpan = telemetryController?.startSpan("GET")?.apply {
+            setAttribute("db.system", "redis")
+            setAttribute("db.operation.name", "GET")
+            val remoteAddr = ctx.channel().remoteAddress()
+            if (remoteAddr is InetSocketAddress) {
+                remoteAddr.hostString?.let {
+                    setAttribute("server.address", it)
+                }
+                setAttribute("server.port", remoteAddr.port.toLong())
+            }
+        }
         val responseHandler = object : RedisResponseHandler {
             override fun responseReceived(response: RedisMessage) {
-                try {
-                    when (response) {
-                        is FullBulkStringRedisMessage -> {
-                            if (response === FullBulkStringRedisMessage.NULL_INSTANCE || response.content().readableBytes() == 0) {
-                                log.debug(ctx) {
-                                    "Cache miss for key ${msg.key} on Redis"
-                                }
-                                sendMessageAndFlush(ctx, CacheValueNotFoundResponse(msg.key))
-                            } else {
-                                log.debug(ctx) {
-                                    "Cache hit for key ${msg.key} on Redis"
-                                }
-                                val getRequest = InProgressGetRequest(msg.key, ctx)
-                                inProgressRequest = getRequest
-                                getRequest.processResponse(response.content())
-                                inProgressRequest = null
+                when (response) {
+                    is FullBulkStringRedisMessage -> {
+                        if (response === FullBulkStringRedisMessage.NULL_INSTANCE || response.content().readableBytes() == 0) {
+                            log.debug(ctx) {
+                                "Cache miss for key ${msg.key} on Redis"
                             }
-                        }
-
-                        is ErrorRedisMessage -> {
-                            val ex = RedisException("Redis error for GET ${msg.key}: ${response.content()}")
-                            telemetryController?.endRedisSpan(redisSpan, ex)
-                            this@RedisCacheHandler.exceptionCaught(ctx, ex)
-                        }
-
-                        else -> {
-                            log.warn(ctx) {
-                                "Unexpected response type from Redis for key ${msg.key}: ${response.javaClass.name}"
-                            }
+                            telemetryController?.endSpan(redisSpan)
                             sendMessageAndFlush(ctx, CacheValueNotFoundResponse(msg.key))
+                        } else {
+                            log.debug(ctx) {
+                                "Cache hit for key ${msg.key} on Redis"
+                            }
+                            telemetryController?.endSpan(redisSpan)
+                            val getRequest = InProgressGetRequest(msg.key, ctx)
+                            inProgressRequest = getRequest
+                            getRequest.processResponse(response.content())
+                            inProgressRequest = null
                         }
                     }
-                } finally {
-                    telemetryController?.endRedisSpan(redisSpan)
+
+                    is ErrorRedisMessage -> {
+                        val ex = RedisException("Redis error for GET ${msg.key}: ${response.content()}")
+                        telemetryController?.endSpan(redisSpan, ex)
+                        this@RedisCacheHandler.exceptionCaught(ctx, ex)
+                    }
+
+                    else -> {
+                        log.warn(ctx) {
+                            "Unexpected response type from Redis for key ${msg.key}: ${response.javaClass.name}"
+                        }
+                        telemetryController?.endSpan(redisSpan)
+                        sendMessageAndFlush(ctx, CacheValueNotFoundResponse(msg.key))
+                    }
                 }
             }
 
             override fun exceptionCaught(ex: Throwable) {
-                telemetryController?.endRedisSpan(redisSpan, ex)
+                telemetryController?.endSpan(redisSpan, ex)
                 this@RedisCacheHandler.exceptionCaught(ctx, ex)
             }
         }
@@ -361,38 +369,45 @@ class RedisCacheHandler(
 
                 val expirySeconds = maxAge.toSeconds().toString()
 
-                val redisSpan = telemetryController?.startRedisSpan("SET", request.keyString)
+                val redisSpan = telemetryController?.startSpan("SET")?.apply {
+                    setAttribute("db.system", "redis")
+                    setAttribute("db.operation.name", "SET")
+                    val remoteAddr = ctx.channel().remoteAddress()
+                    if (remoteAddr is InetSocketAddress) {
+                        remoteAddr.hostString?.let {
+                            setAttribute("server.address", it)
+                        }
+                        setAttribute("server.port", remoteAddr.port.toLong())
+                    }
+                }
 
                 val responseHandler = object : RedisResponseHandler {
                     override fun responseReceived(response: RedisMessage) {
-                        try {
-                            when (response) {
-                                is SimpleStringRedisMessage -> {
-                                    log.debug(ctx) {
-                                        "Inserted key ${request.keyString} into Redis"
-                                    }
-                                    sendMessageAndFlush(ctx, CachePutResponse(request.keyString))
+                        when (response) {
+                            is SimpleStringRedisMessage -> {
+                                log.debug(ctx) {
+                                    "Inserted key ${request.keyString} into Redis"
                                 }
-
-                                is ErrorRedisMessage -> {
-                                    val ex = RedisException("Redis error for SET ${request.keyString}: ${response.content()}")
-                                    telemetryController?.endRedisSpan(redisSpan, ex)
-                                    this@RedisCacheHandler.exceptionCaught(ctx, ex)
-                                }
-
-                                else -> {
-                                    val ex = RedisException("Unexpected response for SET ${request.keyString}: ${response.javaClass.name}")
-                                    telemetryController?.endRedisSpan(redisSpan, ex)
-                                    this@RedisCacheHandler.exceptionCaught(ctx, ex)
-                                }
+                                telemetryController?.endSpan(redisSpan)
+                                sendMessageAndFlush(ctx, CachePutResponse(request.keyString))
                             }
-                        } finally {
-                            telemetryController?.endRedisSpan(redisSpan)
+
+                            is ErrorRedisMessage -> {
+                                val ex = RedisException("Redis error for SET ${request.keyString}: ${response.content()}")
+                                telemetryController?.endSpan(redisSpan, ex)
+                                this@RedisCacheHandler.exceptionCaught(ctx, ex)
+                            }
+
+                            else -> {
+                                val ex = RedisException("Unexpected response for SET ${request.keyString}: ${response.javaClass.name}")
+                                telemetryController?.endSpan(redisSpan, ex)
+                                this@RedisCacheHandler.exceptionCaught(ctx, ex)
+                            }
                         }
                     }
 
                     override fun exceptionCaught(ex: Throwable) {
-                        telemetryController?.endRedisSpan(redisSpan, ex)
+                        telemetryController?.endSpan(redisSpan, ex)
                         this@RedisCacheHandler.exceptionCaught(ctx, ex)
                     }
                 }
