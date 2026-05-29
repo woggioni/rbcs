@@ -1,6 +1,7 @@
 FROM eclipse-temurin:25-jre-alpine AS base-release
 RUN adduser -D rbcs
 USER rbcs
+ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
 WORKDIR /var/lib/rbcs
 
 FROM base-release AS release-vanilla
@@ -47,9 +48,11 @@ FROM scratch AS release-native
 COPY --from=base-native /etc/passwd /etc/passwd
 COPY --from=base-native /etc/rbcs /etc/rbcs
 COPY --from=base-native /var/lib/rbcs /var/lib/rbcs
+COPY --from=base-native /var/tmp/rbcs /var/tmp/rbcs
 ADD rbcs-cli.upx /usr/bin/rbcs-cli
 USER rbcs
 WORKDIR /var/lib/rbcs
+ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
 ENTRYPOINT ["/usr/bin/rbcs-cli", "-XX:MaximumHeapSizePercent=70", "-Dio.netty.tmpdir=/var/tmp/rbcs", "-Dlogback.configurationFile=/etc/rbcs/logback.xml"]
 
 FROM debian:12-slim AS release-jlink
@@ -61,4 +64,5 @@ RUN adduser -u 1000 rbcs
 USER rbcs
 WORKDIR /var/lib/rbcs
 ADD logback.xml /etc/rbcs/logback.xml
+ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"
 ENTRYPOINT ["/usr/local/bin/rbcs-cli"]
