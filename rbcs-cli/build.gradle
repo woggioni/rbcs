@@ -90,7 +90,7 @@ Provider<EnvelopeJarTask> envelopeJarTaskProvider = tasks.named(EnvelopePlugin.E
 tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfigurationTask) {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
-        vendor = JvmVendorSpec.GRAAL_VM
+        vendor = JvmVendorSpec.ORACLE
     }
     mainClass = "net.woggioni.rbcs.cli.graal.GraalNativeImageConfiguration"
     classpath = project.files(
@@ -108,10 +108,10 @@ tasks.named(NativeImagePlugin.CONFIGURE_NATIVE_IMAGE_TASK_NAME, NativeImageConfi
 nativeImage {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
-        vendor = JvmVendorSpec.GRAAL_VM
+        vendor = JvmVendorSpec.ORACLE
     }
     mainClass = mainClassName
-//    mainModule = mainModuleName
+    //mainModule = mainModuleName
     useMusl = true
     buildStaticImage = true
     linkAtBuildTime = false
@@ -119,6 +119,7 @@ nativeImage {
     compressExecutable = true
     compressionLevel = 6
     useLZMA = false
+    //verbose = true
 }
 
 Provider<UpxTask> upxTaskProvider = tasks.named(NativeImagePlugin.UPX_TASK_NAME, UpxTask) {
@@ -127,7 +128,7 @@ Provider<UpxTask> upxTaskProvider = tasks.named(NativeImagePlugin.UPX_TASK_NAME,
 Provider<JlinkTask> jlinkTaskProvider = tasks.named(JlinkPlugin.JLINK_TASK_NAME, JlinkTask) {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
-        vendor = JvmVendorSpec.GRAAL_VM
+        vendor = JvmVendorSpec.ORACLE
     }
 
     mainClass = mainClassName
@@ -152,7 +153,6 @@ Provider<JlinkTask> jlinkTaskProvider = tasks.named(JlinkPlugin.JLINK_TASK_NAME,
 }
 
 Provider<Tar> jlinkDistTarTaskProvider = tasks.named(JlinkPlugin.JLINK_DIST_TAR_TASK_NAME, Tar) {
-    exclude 'lib/libjvmcicompiler.so'
 }
 
 tasks.named(JavaPlugin.PROCESS_RESOURCES_TASK_NAME, ProcessResources) {

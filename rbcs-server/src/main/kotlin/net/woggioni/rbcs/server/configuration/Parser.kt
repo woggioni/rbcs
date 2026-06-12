@@ -344,14 +344,14 @@ object Parser {
                         roles = parseRoles(child)
                     }
                     "group-quota" -> {
-                        userQuota = parseQuota(child)
+                        groupQuota = parseQuota(child)
                     }
                     "user-quota" -> {
-                        groupQuota = parseQuota(child)
+                        userQuota = parseQuota(child)
                     }
                 }
             }
-            groupName to Group(groupName, roles, userQuota, groupQuota)
+            groupName to Group(groupName, roles, groupQuota, userQuota)
         }.toMap()
         val users = knownUsersMap.map { (name, user) ->
             name to User(name, user.password, userGroups[name]?.mapNotNull { groups[it] }?.toSet() ?: emptySet(), user.quota)

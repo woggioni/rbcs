@@ -171,7 +171,6 @@ class ServerHandler(private val serverPrefix: Path, private val cacheHandlerSupp
                 ctx.pipeline().addBefore(ExceptionHandler.NAME, null, cacheHandler)
                 key.let(::CacheGetRequest)
                     .let(ctx::fireChannelRead)
-                    ?: ctx.channel().write(CacheValueNotFoundResponse(key))
             } else {
                 cacheRequestInProgress = false
                 log.warn(ctx) {

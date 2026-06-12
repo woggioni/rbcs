@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509ExtendedTrustManager
 import javax.net.ssl.X509TrustManager
 import kotlin.random.Random
 import io.netty.util.concurrent.Future as NettyFuture
@@ -74,11 +75,23 @@ class RemoteBuildCacheClient(private val profile: Configuration.Profile) : AutoC
                     )
                     profile.tlsTruststore?.let { trustStore ->
                         if (!trustStore.verifyServerCertificate) {
-                            trustManager(object : X509TrustManager {
+                            trustManager(object : X509ExtendedTrustManager() {
                                 override fun checkClientTrusted(certChain: Array<out X509Certificate>, p1: String?) {
                                 }
 
+                                override fun checkClientTrusted(certChain: Array<out X509Certificate>, p1: String?, socket: java.net.Socket) {
+                                }
+
+                                override fun checkClientTrusted(certChain: Array<out X509Certificate>, p1: String?, engine: javax.net.ssl.SSLEngine) {
+                                }
+
                                 override fun checkServerTrusted(certChain: Array<out X509Certificate>, p1: String?) {
+                                }
+
+                                override fun checkServerTrusted(certChain: Array<out X509Certificate>, p1: String?, socket: java.net.Socket) {
+                                }
+
+                                override fun checkServerTrusted(certChain: Array<out X509Certificate>, p1: String?, engine: javax.net.ssl.SSLEngine) {
                                 }
 
                                 override fun getAcceptedIssuers() = null

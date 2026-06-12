@@ -50,6 +50,7 @@ COPY --from=base-native /etc/rbcs /etc/rbcs
 COPY --from=base-native /var/lib/rbcs /var/lib/rbcs
 COPY --from=base-native /var/tmp/rbcs /var/tmp/rbcs
 ADD rbcs-cli.upx /usr/bin/rbcs-cli
+ADD logback.xml /etc/rbcs/logback.xml
 USER rbcs
 WORKDIR /var/lib/rbcs
 ENV RBCS_CONFIGURATION_DIR="/etc/rbcs"

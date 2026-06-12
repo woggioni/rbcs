@@ -19,6 +19,7 @@ import java.security.cert.X509Certificate
 import java.util.EnumSet
 import java.util.ServiceLoader
 import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509ExtendedTrustManager
 import javax.net.ssl.X509TrustManager
 import net.woggioni.jwo.JWO
 import net.woggioni.jwo.Tuple2
@@ -124,7 +125,7 @@ object RBCS {
         return keystore
     }
 
-    fun getTrustManager(trustStore: KeyStore?, certificateRevocationEnabled: Boolean): X509TrustManager {
+    fun getTrustManager(trustStore: KeyStore?, certificateRevocationEnabled: Boolean): X509ExtendedTrustManager {
         return if (trustStore != null) {
             val certificateFactory = CertificateFactory.getInstance("X.509")
             val validator = CertPathValidator.getInstance("PKIX").apply {
@@ -136,7 +137,7 @@ object RBCS {
             val params = PKIXParameters(trustStore).apply {
                 isRevocationEnabled = certificateRevocationEnabled
             }
-            object : X509TrustManager {
+            object : X509ExtendedTrustManager() {
                 override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String) {
                     val clientCertificateChain = certificateFactory.generateCertPath(chain.toList())
                     try {
@@ -146,8 +147,24 @@ object RBCS {
                     }
                 }
 
+                override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String, socket: java.net.Socket) {
+                    checkClientTrusted(chain, authType)
+                }
+
+                override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String, engine: javax.net.ssl.SSLEngine) {
+                    checkClientTrusted(chain, authType)
+                }
+
                 override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String) {
                     throw NotImplementedError()
+                }
+
+                override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String, socket: java.net.Socket) {
+                    checkServerTrusted(chain, authType)
+                }
+
+                override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String, engine: javax.net.ssl.SSLEngine) {
+                    checkServerTrusted(chain, authType)
                 }
 
                 private val acceptedIssuers = trustStore.aliases().asSequence()
@@ -161,8 +178,8 @@ object RBCS {
             }
         } else {
             val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-            trustManagerFactory.trustManagers.asSequence().filter { it is X509TrustManager }
-                .single() as X509TrustManager
+            trustManagerFactory.trustManagers.asSequence().filter { it is X509ExtendedTrustManager }
+                .single() as X509ExtendedTrustManager
         }
     }
 

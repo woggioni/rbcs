@@ -4,8 +4,6 @@
 # Ignore Gradle build output directory
 build
 
-rbcs-cli/native-image/*.json
-
 # Ignore JDTLS files
 .classpath
 .project

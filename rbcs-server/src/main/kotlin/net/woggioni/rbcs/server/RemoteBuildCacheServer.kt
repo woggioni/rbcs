@@ -188,7 +188,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                 ?: return anonymousUserGroups?.let { AuthenticationResult(null, it) }
             val ldapName = try {
                 LdapName(subjectDn)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 log.debug(ctx) {
                     "Invalid subject DN in header $headerName: $subjectDn"
                 }
@@ -354,7 +354,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                     }?.let {
                         pattern.matcher(it.value.toString())
                     }?.takeIf(Matcher::matches)?.group(1)
-                    cfg.users[userName] ?: throw java.lang.RuntimeException("Failed to extract user")
+                    cfg.users[userName] ?: throw RuntimeException("Failed to extract user")
                 }
             }
 
@@ -368,7 +368,7 @@ class RemoteBuildCacheServer(private val cfg: Configuration) {
                     }?.let {
                         pattern.matcher(it.value.toString())
                     }?.takeIf(Matcher::matches)?.group(1)
-                    cfg.groups[groupName] ?: throw java.lang.RuntimeException("Failed to extract group")
+                    cfg.groups[groupName] ?: throw RuntimeException("Failed to extract group")
                 }
             }
 
