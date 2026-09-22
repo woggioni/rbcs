@@ -12,14 +12,14 @@ WORKDIR /var/lib/rbcs
 
 FROM base-release AS release-vanilla
 LABEL org.opencontainers.image.title=rbcs
-LABEL org.opencontainers.image.description=RBCS vanilla image
+LABEL org.opencontainers.image.description="RBCS vanilla image"
 ADD rbcs-cli-envelope-*.jar rbcs.jar
 ADD logback.xml /etc/rbcs/logback.xml
 ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM base-release AS release-memcache
 LABEL org.opencontainers.image.title=rbcs-memcache
-LABEL org.opencontainers.image.description=RBCS image with memcache plugin
+LABEL org.opencontainers.image.description="RBCS image with memcache plugin"
 ADD --chown=rbcs:rbcs rbcs-cli-envelope-*.jar rbcs.jar
 RUN mkdir plugins
 WORKDIR /var/lib/rbcs/plugins
@@ -30,7 +30,7 @@ ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM base-release AS release-redis
 LABEL org.opencontainers.image.title=rbcs-redis
-LABEL org.opencontainers.image.description=RBCS image with redis plugin
+LABEL org.opencontainers.image.description="RBCS image with redis plugin"
 ADD --chown=rbcs:rbcs rbcs-cli-envelope-*.jar rbcs.jar
 RUN mkdir plugins
 WORKDIR /var/lib/rbcs/plugins
@@ -41,7 +41,7 @@ ENTRYPOINT ["java", "-jar", "/var/lib/rbcs/rbcs.jar"]
 
 FROM base-release AS release-full
 LABEL org.opencontainers.image.title=rbcs-full
-LABEL org.opencontainers.image.description=RBCS image with all plugins
+LABEL org.opencontainers.image.description="RBCS image with all plugins"
 ADD --chown=rbcs:rbcs rbcs-cli-envelope-*.jar rbcs.jar
 RUN mkdir plugins
 WORKDIR /var/lib/rbcs/plugins
@@ -60,12 +60,12 @@ RUN chown rbcs:rbcs /var/tmp/rbcs
 
 FROM scratch AS release-native
 LABEL org.opencontainers.image.title=rbcs-native
-LABEL org.opencontainers.image.description=RBCS image with a native executable with GraalVM
+LABEL org.opencontainers.image.description="RBCS image with a native executable with GraalVM"
 COPY --from=base-native /etc/passwd /etc/passwd
 COPY --from=base-native /etc/rbcs /etc/rbcs
 COPY --from=base-native /var/lib/rbcs /var/lib/rbcs
 COPY --from=base-native /var/tmp/rbcs /var/tmp/rbcs
-ADD rbcs-cli.upx /usr/bin/rbcs-cli
+ADD --chmod=755 rbcs-cli.upx /usr/bin/rbcs-cli
 ADD logback.xml /etc/rbcs/logback.xml
 USER rbcs
 WORKDIR /var/lib/rbcs
@@ -74,7 +74,7 @@ ENTRYPOINT ["/usr/bin/rbcs-cli", "-XX:MaximumHeapSizePercent=70", "-Dio.netty.tm
 
 FROM debian:12-slim AS release-jlink
 LABEL org.opencontainers.image.title=rbcs-jlink
-LABEL org.opencontainers.image.description=RBCS image with a jlink distribution
+LABEL org.opencontainers.image.description="RBCS image with a jlink distribution"
 RUN mkdir -p /usr/share/java/rbcs
 RUN --mount=type=bind,source=.,target=/build/distributions tar -xf /build/distributions/rbcs-cli*.tar -C /usr/share/java/rbcs
 RUN chmod 755 /usr/share/java/rbcs/bin/*

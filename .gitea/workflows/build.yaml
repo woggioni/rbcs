@@ -3,111 +3,224 @@ on:
   push:
     tags:
       - '*'
+    branches:
+      - 'dev'
+env:
+  JAVA_VERSION: '25'
+  GRADLE_VERSION: '9.7.1'
 jobs:
   build:
-    runs-on: woryzen
+    name: Build and publish
+    runs-on: hostinger
+    timeout-minutes: 120
+    container:
+      image: gitea.woggioni.net/woggioni/gitea-runner/archlinux:latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'graalvm'
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+          cache-read-only: false
       - name: Execute Gradle build
-        run: ./gradlew build
+        run: ./gradlew --no-daemon build
       - name: Prepare Docker image build
-        run: ./gradlew prepareDockerBuild
-      - name: Get project version
-        id: retrieve-version
-        run: ./gradlew -q version >> "$GITHUB_OUTPUT"
+        run: ./gradlew --no-daemon prepareDockerBuild
+      - name: Publish artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: ./gradlew --no-daemon publish
+      - name: Upload Docker build context
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-context
+          path: docker/build/docker
+  docker-release:
+    name: Push release Docker images
+    runs-on: hostinger
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    timeout-minutes: 90
+    steps:
+      - name: Download Docker build context
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-context
+          path: docker/build/docker
       - name: Login to Gitea container registry
         uses: docker/login-action@v3
         with:
           registry: gitea.woggioni.net
           username: woggioni
           password: ${{ secrets.PUBLISHER_TOKEN }}
-      -
-        name: Build rbcs Docker image
-        uses: docker/build-push-action@v5.3.0
+      - name: Build rbcs Docker image
+        uses: docker/build-push-action@v6
         with:
           builder: "multiplatform-builder"
           context: "docker/build/docker"
-          build-args: VERSION=${{ steps.retrieve-version.outputs.VERSION }},REVISION=${{ github.sha }}
+          build-args: VERSION=${{ github.ref_name }},REVISION=${{ github.sha }}
           platforms: linux/amd64,linux/arm64
           push: true
           pull: true
           tags: |
             gitea.woggioni.net/woggioni/rbcs:latest
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}
+            gitea.woggioni.net/woggioni/rbcs:${{ github.ref_name }}
           target: release-vanilla
-      -
-        name: Build rbcs memcache Docker image
-        uses: docker/build-push-action@v5.3.0
+      - name: Build rbcs memcache Docker image
+        uses: docker/build-push-action@v6
         with:
           builder: "multiplatform-builder"
           context: "docker/build/docker"
-          build-args: VERSION=${{ steps.retrieve-version.outputs.VERSION }},REVISION=${{ github.sha }}
+          build-args: VERSION=${{ github.ref_name }},REVISION=${{ github.sha }}
           platforms: linux/amd64,linux/arm64
           push: true
           pull: true
           tags: |
             gitea.woggioni.net/woggioni/rbcs:memcache
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-memcache
+            gitea.woggioni.net/woggioni/rbcs:${{ github.ref_name }}-memcache
           target: release-memcache
-      -
-        name: Build rbcs redis Docker image
-        uses: docker/build-push-action@v5.3.0
+      - name: Build rbcs redis Docker image
+        uses: docker/build-push-action@v6
         with:
           builder: "multiplatform-builder"
           context: "docker/build/docker"
-          build-args: VERSION=${{ steps.retrieve-version.outputs.VERSION }},REVISION=${{ github.sha }}
+          build-args: VERSION=${{ github.ref_name }},REVISION=${{ github.sha }}
           platforms: linux/amd64,linux/arm64
           push: true
           pull: true
           tags: |
             gitea.woggioni.net/woggioni/rbcs:redis
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-redis
+            gitea.woggioni.net/woggioni/rbcs:${{ github.ref_name }}-redis
           target: release-redis
-      -
-        name: Build rbcs full Docker image
-        uses: docker/build-push-action@v5.3.0
+      - name: Build rbcs full Docker image
+        uses: docker/build-push-action@v6
         with:
           builder: "multiplatform-builder"
           context: "docker/build/docker"
-          build-args: VERSION=${{ steps.retrieve-version.outputs.VERSION }},REVISION=${{ github.sha }}
+          build-args: VERSION=${{ github.ref_name }},REVISION=${{ github.sha }}
           platforms: linux/amd64,linux/arm64
           push: true
           pull: true
           tags: |
             gitea.woggioni.net/woggioni/rbcs:full
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-full
+            gitea.woggioni.net/woggioni/rbcs:${{ github.ref_name }}-full
           target: release-full
-      -
-        name: Build rbcs native Docker image
-        uses: docker/build-push-action@v5.3.0
+      - name: Build rbcs native Docker image
+        uses: docker/build-push-action@v6
         with:
           builder: "multiplatform-builder"
           context: "docker/build/docker"
-          build-args: VERSION=${{ steps.retrieve-version.outputs.VERSION }},REVISION=${{ github.sha }}
+          build-args: VERSION=${{ github.ref_name }},REVISION=${{ github.sha }}
           platforms: linux/amd64
           push: true
           pull: true
           tags: |
             gitea.woggioni.net/woggioni/rbcs:native
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-native
+            gitea.woggioni.net/woggioni/rbcs:${{ github.ref_name }}-native
           target: release-native
-      -
-        name: Build rbcs jlink Docker image
-        uses: docker/build-push-action@v5.3.0
+      - name: Build rbcs jlink Docker image
+        uses: docker/build-push-action@v6
         with:
           builder: "multiplatform-builder"
           context: "docker/build/docker"
-          build-args: VERSION=${{ steps.retrieve-version.outputs.VERSION }},REVISION=${{ github.sha }}
+          build-args: VERSION=${{ github.ref_name }},REVISION=${{ github.sha }}
           platforms: linux/amd64
           push: true
           pull: true
           tags: |
             gitea.woggioni.net/woggioni/rbcs:jlink
-            gitea.woggioni.net/woggioni/rbcs:${{ steps.retrieve-version.outputs.VERSION }}-jlink
+            gitea.woggioni.net/woggioni/rbcs:${{ github.ref_name }}-jlink
           target: release-jlink
-      - name: Publish artifacts
-        env:
-          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-        run: ./gradlew publish
-
+  docker-dev:
+    name: Push dev Docker images
+    runs-on: hostinger
+    needs: build
+    if: github.ref == 'refs/heads/dev'
+    timeout-minutes: 90
+    steps:
+      - name: Download Docker build context
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-context
+          path: docker/build/docker
+      - name: Login to Gitea container registry
+        uses: docker/login-action@v3
+        with:
+          registry: gitea.woggioni.net
+          username: woggioni
+          password: ${{ secrets.PUBLISHER_TOKEN }}
+      - name: Build rbcs Docker image
+        uses: docker/build-push-action@v6
+        with:
+          builder: "multiplatform-builder"
+          context: "docker/build/docker"
+          platforms: linux/amd64,linux/arm64
+          push: true
+          pull: true
+          tags: |
+            gitea.woggioni.net/woggioni/rbcs:dev-vanilla
+          target: release-vanilla
+      - name: Build rbcs memcache Docker image
+        uses: docker/build-push-action@v6
+        with:
+          builder: "multiplatform-builder"
+          context: "docker/build/docker"
+          platforms: linux/amd64,linux/arm64
+          push: true
+          pull: true
+          tags: |
+            gitea.woggioni.net/woggioni/rbcs:dev-memcache
+          target: release-memcache
+      - name: Build rbcs redis Docker image
+        uses: docker/build-push-action@v6
+        with:
+          builder: "multiplatform-builder"
+          context: "docker/build/docker"
+          platforms: linux/amd64,linux/arm64
+          push: true
+          pull: true
+          tags: |
+            gitea.woggioni.net/woggioni/rbcs:dev-redis
+          target: release-redis
+      - name: Build rbcs full Docker image
+        uses: docker/build-push-action@v6
+        with:
+          builder: "multiplatform-builder"
+          context: "docker/build/docker"
+          platforms: linux/amd64,linux/arm64
+          push: true
+          pull: true
+          tags: |
+            gitea.woggioni.net/woggioni/rbcs:dev-full
+          target: release-full
+      - name: Build rbcs native Docker image
+        uses: docker/build-push-action@v6
+        with:
+          builder: "multiplatform-builder"
+          context: "docker/build/docker"
+          platforms: linux/amd64
+          push: true
+          pull: true
+          tags: |
+            gitea.woggioni.net/woggioni/rbcs:dev-native
+          target: release-native
+      - name: Build rbcs jlink Docker image
+        uses: docker/build-push-action@v6
+        with:
+          builder: "multiplatform-builder"
+          context: "docker/build/docker"
+          platforms: linux/amd64
+          push: true
+          pull: true
+          tags: |
+            gitea.woggioni.net/woggioni/rbcs:dev-jlink
+          target: release-jlink
