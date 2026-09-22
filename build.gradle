@@ -82,6 +82,9 @@ allprojects { subproject ->
         tasks.withType(KotlinCompile.class) {
             compilerOptions.jvmTarget = JvmTarget.JVM_25
         }
+        dependencies {
+            compileOnly catalog.lombok
+        }
     }
 
     pluginManager.withPlugin(catalog.plugins.lombok.get().pluginId) {
